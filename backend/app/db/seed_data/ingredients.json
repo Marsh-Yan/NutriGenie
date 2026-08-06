@@ -1,0 +1,537 @@
+[
+  {
+    "ingredient_id": 1,
+    "name": "番茄",
+    "category": "vegetable",
+    "unit": "个",
+    "unit_price": 2.5,
+    "season_tags": [
+      "夏季",
+      "秋季"
+    ],
+    "storage_days": 5
+  },
+  {
+    "ingredient_id": 2,
+    "name": "鸡蛋",
+    "category": "egg",
+    "unit": "个",
+    "unit_price": 1.2,
+    "season_tags": null,
+    "storage_days": 14
+  },
+  {
+    "ingredient_id": 3,
+    "name": "鸡胸肉",
+    "category": "meat",
+    "unit": "斤",
+    "unit_price": 15.0,
+    "season_tags": null,
+    "storage_days": 3
+  },
+  {
+    "ingredient_id": 4,
+    "name": "青椒",
+    "category": "vegetable",
+    "unit": "个",
+    "unit_price": 1.5,
+    "season_tags": [
+      "夏季",
+      "秋季"
+    ],
+    "storage_days": 5
+  },
+  {
+    "ingredient_id": 5,
+    "name": "猪里脊肉",
+    "category": "meat",
+    "unit": "斤",
+    "unit_price": 18.0,
+    "season_tags": null,
+    "storage_days": 3
+  },
+  {
+    "ingredient_id": 6,
+    "name": "豆腐",
+    "category": "other",
+    "unit": "块",
+    "unit_price": 3.0,
+    "season_tags": null,
+    "storage_days": 2
+  },
+  {
+    "ingredient_id": 7,
+    "name": "牛肉",
+    "category": "meat",
+    "unit": "斤",
+    "unit_price": 45.0,
+    "season_tags": null,
+    "storage_days": 3
+  },
+  {
+    "ingredient_id": 8,
+    "name": "西兰花",
+    "category": "vegetable",
+    "unit": "颗",
+    "unit_price": 5.0,
+    "season_tags": [
+      "春季",
+      "秋季"
+    ],
+    "storage_days": 5
+  },
+  {
+    "ingredient_id": 9,
+    "name": "虾仁",
+    "category": "seafood",
+    "unit": "斤",
+    "unit_price": 35.0,
+    "season_tags": null,
+    "storage_days": 2
+  },
+  {
+    "ingredient_id": 10,
+    "name": "大蒜",
+    "category": "condiment",
+    "unit": "头",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 30
+  },
+  {
+    "ingredient_id": 11,
+    "name": "生姜",
+    "category": "condiment",
+    "unit": "块",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 20
+  },
+  {
+    "ingredient_id": 12,
+    "name": "葱",
+    "category": "condiment",
+    "unit": "把",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 5
+  },
+  {
+    "ingredient_id": 13,
+    "name": "大米",
+    "category": "grain",
+    "unit": "斤",
+    "unit_price": 3.5,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 14,
+    "name": "鸡蛋面",
+    "category": "grain",
+    "unit": "斤",
+    "unit_price": 5.0,
+    "season_tags": null,
+    "storage_days": 180
+  },
+  {
+    "ingredient_id": 15,
+    "name": "黄瓜",
+    "category": "vegetable",
+    "unit": "根",
+    "unit_price": 2.0,
+    "season_tags": [
+      "夏季",
+      "秋季"
+    ],
+    "storage_days": 5
+  },
+  {
+    "ingredient_id": 16,
+    "name": "鲈鱼",
+    "category": "seafood",
+    "unit": "条",
+    "unit_price": 30.0,
+    "season_tags": [
+      "秋季",
+      "冬季"
+    ],
+    "storage_days": 1
+  },
+  {
+    "ingredient_id": 17,
+    "name": "土豆",
+    "category": "vegetable",
+    "unit": "个",
+    "unit_price": 1.5,
+    "season_tags": null,
+    "storage_days": 30
+  },
+  {
+    "ingredient_id": 18,
+    "name": "胡萝卜",
+    "category": "vegetable",
+    "unit": "根",
+    "unit_price": 1.5,
+    "season_tags": null,
+    "storage_days": 14
+  },
+  {
+    "ingredient_id": 19,
+    "name": "洋葱",
+    "category": "vegetable",
+    "unit": "个",
+    "unit_price": 2.0,
+    "season_tags": null,
+    "storage_days": 30
+  },
+  {
+    "ingredient_id": 20,
+    "name": "生菜",
+    "category": "vegetable",
+    "unit": "颗",
+    "unit_price": 3.0,
+    "season_tags": [
+      "春季",
+      "秋季"
+    ],
+    "storage_days": 3
+  },
+  {
+    "ingredient_id": 21,
+    "name": "菠菜",
+    "category": "vegetable",
+    "unit": "斤",
+    "unit_price": 4.0,
+    "season_tags": [
+      "春季",
+      "冬季"
+    ],
+    "storage_days": 3
+  },
+  {
+    "ingredient_id": 22,
+    "name": "空心菜",
+    "category": "vegetable",
+    "unit": "斤",
+    "unit_price": 3.5,
+    "season_tags": [
+      "夏季"
+    ],
+    "storage_days": 2
+  },
+  {
+    "ingredient_id": 23,
+    "name": "鸡腿肉",
+    "category": "meat",
+    "unit": "斤",
+    "unit_price": 14.0,
+    "season_tags": null,
+    "storage_days": 3
+  },
+  {
+    "ingredient_id": 24,
+    "name": "牛腩",
+    "category": "meat",
+    "unit": "斤",
+    "unit_price": 38.0,
+    "season_tags": null,
+    "storage_days": 3
+  },
+  {
+    "ingredient_id": 25,
+    "name": "三文鱼",
+    "category": "seafood",
+    "unit": "斤",
+    "unit_price": 68.0,
+    "season_tags": null,
+    "storage_days": 2
+  },
+  {
+    "ingredient_id": 26,
+    "name": "芦笋",
+    "category": "vegetable",
+    "unit": "把",
+    "unit_price": 8.0,
+    "season_tags": [
+      "春季"
+    ],
+    "storage_days": 3
+  },
+  {
+    "ingredient_id": 27,
+    "name": "柠檬",
+    "category": "fruit",
+    "unit": "个",
+    "unit_price": 3.0,
+    "season_tags": [
+      "夏季",
+      "秋季"
+    ],
+    "storage_days": 10
+  },
+  {
+    "ingredient_id": 28,
+    "name": "牛奶",
+    "category": "dairy",
+    "unit": "盒",
+    "unit_price": 3.5,
+    "season_tags": null,
+    "storage_days": 7
+  },
+  {
+    "ingredient_id": 29,
+    "name": "酸奶",
+    "category": "dairy",
+    "unit": "杯",
+    "unit_price": 4.0,
+    "season_tags": null,
+    "storage_days": 14
+  },
+  {
+    "ingredient_id": 30,
+    "name": "燕麦",
+    "category": "grain",
+    "unit": "斤",
+    "unit_price": 8.0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 31,
+    "name": "全麦面包",
+    "category": "grain",
+    "unit": "袋",
+    "unit_price": 10.0,
+    "season_tags": null,
+    "storage_days": 7
+  },
+  {
+    "ingredient_id": 32,
+    "name": "意面",
+    "category": "grain",
+    "unit": "斤",
+    "unit_price": 8.0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 33,
+    "name": "黄油",
+    "category": "dairy",
+    "unit": "块",
+    "unit_price": 15.0,
+    "season_tags": null,
+    "storage_days": 60
+  },
+  {
+    "ingredient_id": 34,
+    "name": "芝士",
+    "category": "dairy",
+    "unit": "片",
+    "unit_price": 2.0,
+    "season_tags": null,
+    "storage_days": 30
+  },
+  {
+    "ingredient_id": 35,
+    "name": "橄榄油",
+    "category": "condiment",
+    "unit": "瓶",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 36,
+    "name": "酱油",
+    "category": "condiment",
+    "unit": "瓶",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 37,
+    "name": "醋",
+    "category": "condiment",
+    "unit": "瓶",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 38,
+    "name": "料酒",
+    "category": "condiment",
+    "unit": "瓶",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 39,
+    "name": "盐",
+    "category": "condiment",
+    "unit": "袋",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 40,
+    "name": "白糖",
+    "category": "condiment",
+    "unit": "斤",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 41,
+    "name": "黑胡椒",
+    "category": "condiment",
+    "unit": "瓶",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 42,
+    "name": "老抽",
+    "category": "condiment",
+    "unit": "瓶",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 43,
+    "name": "蚝油",
+    "category": "condiment",
+    "unit": "瓶",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 44,
+    "name": "辣椒",
+    "category": "condiment",
+    "unit": "个",
+    "unit_price": 0,
+    "season_tags": [
+      "夏季",
+      "秋季"
+    ],
+    "storage_days": 14
+  },
+  {
+    "ingredient_id": 45,
+    "name": "番茄酱",
+    "category": "condiment",
+    "unit": "瓶",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 46,
+    "name": "鳕鱼",
+    "category": "seafood",
+    "unit": "斤",
+    "unit_price": 55.0,
+    "season_tags": [
+      "秋季",
+      "冬季"
+    ],
+    "storage_days": 2
+  },
+  {
+    "ingredient_id": 47,
+    "name": "牛油果",
+    "category": "fruit",
+    "unit": "个",
+    "unit_price": 8.0,
+    "season_tags": [
+      "夏季",
+      "秋季"
+    ],
+    "storage_days": 5
+  },
+  {
+    "ingredient_id": 48,
+    "name": "蘑菇",
+    "category": "vegetable",
+    "unit": "斤",
+    "unit_price": 8.0,
+    "season_tags": [
+      "春季",
+      "秋季"
+    ],
+    "storage_days": 3
+  },
+  {
+    "ingredient_id": 49,
+    "name": "金枪鱼罐头",
+    "category": "seafood",
+    "unit": "罐",
+    "unit_price": 12.0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 50,
+    "name": "牛排",
+    "category": "meat",
+    "unit": "块",
+    "unit_price": 35.0,
+    "season_tags": null,
+    "storage_days": 2
+  },
+  {
+    "ingredient_id": 51,
+    "name": "猪肉丝",
+    "category": "meat",
+    "unit": "斤",
+    "unit_price": 16.0,
+    "season_tags": null,
+    "storage_days": 3
+  },
+  {
+    "ingredient_id": 52,
+    "name": "花生",
+    "category": "other",
+    "unit": "斤",
+    "unit_price": 10.0,
+    "season_tags": null,
+    "storage_days": 180
+  },
+  {
+    "ingredient_id": 53,
+    "name": "干辣椒",
+    "category": "condiment",
+    "unit": "袋",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 54,
+    "name": "芝麻油",
+    "category": "condiment",
+    "unit": "瓶",
+    "unit_price": 0,
+    "season_tags": null,
+    "storage_days": 365
+  },
+  {
+    "ingredient_id": 55,
+    "name": "紫菜",
+    "category": "other",
+    "unit": "袋",
+    "unit_price": 5.0,
+    "season_tags": null,
+    "storage_days": 365
+  }
+]

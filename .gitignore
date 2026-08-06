@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+backend/venv*/
+backend/data/chroma/
+backend/evaluation/reports/
+*.sqlite
+*.sqlite3
+*.db
+.cache/
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+
+# JavaScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+*.env.local
+
+# IDE
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Images placeholder
+backend/app/db/seed_data/*.csv
+
+# Personal notes and internal project documents
+面试准备.md
+需求文档.md
+docs/

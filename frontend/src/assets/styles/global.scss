@@ -1,0 +1,128 @@
+@use 'variables' as *;
+
+/* ═══════════════════════════════════════════
+   NutriGenie — Global Styles
+   ═══════════════════════════════════════════ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: $font-family;
+  color: $color-text-primary;
+  background-color: $color-bg;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  &:focus-visible {
+    outline: 3px solid rgba($color-sage-dark, 0.35);
+    outline-offset: 2px;
+  }
+}
+
+a {
+  color: $color-sage-dark;
+  text-decoration: none;
+  transition: color 0.2s;
+
+  &:hover {
+    color: $color-sage;
+  }
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── 滚动条 ─────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $color-border;
+  border-radius: 3px;
+
+  &:hover {
+    background: $color-text-placeholder;
+  }
+}
+
+/* ── 工具类 ─────────────────────────────── */
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.card {
+  background: $color-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  border: 1px solid $color-border;
+  transition: box-shadow 0.3s, transform 0.2s;
+
+  &:hover {
+    box-shadow: $shadow-md;
+  }
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, $color-sage, $color-rose);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── 覆盖 Element Plus 主题色 ───────────── */
+
+:root {
+  --el-color-primary: #{$color-sage};
+  --el-color-primary-light-3: #{$color-sage-light};
+  --el-color-primary-dark-2: #{$color-sage-dark};
+  --el-color-success: #{$color-success};
+  --el-color-warning: #{$color-warning};
+  --el-color-danger: #{$color-danger};
+  --el-color-info: #{$color-info};
+  --el-border-radius-base: #{$radius-md};
+  --el-font-family: #{$font-family};
+}
+
+@media (max-width: $breakpoint-sm) {
+  body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .page-container { padding-left: 16px; padding-right: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

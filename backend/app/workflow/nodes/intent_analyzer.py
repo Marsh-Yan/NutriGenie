@@ -1,0 +1,269 @@
+"""意图分析节点
+
+使用 LLM（DeepSeek）Function Calling 将用户自然语言解析为结构化意图。
+LLM 不可用时降级为规则解析。
+"""
+
+import json
+import logging
+import re
+from typing import Any, Dict, List, Optional
+
+from langchain_core.messages import SystemMessage, HumanMessage
+from pydantic import BaseModel, Field
+
+from app.config import settings
+from app.workflow.llm import get_llm
+from app.workflow.state import WorkflowState
+
+logger = logging.getLogger(__name__)
+
+# ─── 结构化输出 Schema ───────────────────────────
+
+
+class IntentOutput(BaseModel):
+    """LLM 函数调用输出的结构化意图"""
+    health_goal: str = Field(description="fat_loss|muscle_gain|blood_sugar|healthy")
+    diet_type: str = Field(description="balanced|keto|high_protein|gluten_free|vegan|healthy")
+    duration_days: int = Field(description="规划天数")
+    total_budget: float = Field(description="总预算，0 表示不限制")
+    owned_ingredients: List[str] = Field(description="已有食材列表")
+    allergies_or_concerns: Optional[str] = Field(description="过敏或忌口，无则 null")
+    meal_count_per_day: int = Field(description="每日餐数")
+    additional_notes: Optional[str] = Field(description="补充说明")
+
+
+def _load_prompt() -> str:
+    """加载意图分析 System Prompt"""
+    try:
+        import os
+        prompt_path = os.path.join(os.path.dirname(__file__), "..", "prompts", "intent_system.txt")
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception:
+        return "你是一个饮食规划意图分析助手。从用户输入中提取健康目标、饮食类型、天数、预算等信息。"
+
+
+def _rule_based_parse(user_input: str) -> dict:
+    """规则解析：当 LLM 不可用时的降级方案
+
+    从用户输入中提取关键信息。
+    """
+    text = user_input.lower()
+
+    # 健康目标
+    health_goal = "healthy"
+    if any(kw in text for kw in ["减脂", "减肥", "瘦", "减重", "fat_loss", "减"]):
+        health_goal = "fat_loss"
+    elif any(kw in text for kw in ["增肌", "增重", "长肌肉", "muscle_gain", "增"]):
+        health_goal = "muscle_gain"
+    elif any(kw in text for kw in ["控糖", "血糖", "blood_sugar", "糖尿病"]):
+        health_goal = "blood_sugar"
+
+    # 饮食类型
+    diet_type = "balanced"
+    if any(kw in text for kw in ["生酮", "keto"]):
+        diet_type = "keto"
+    elif any(kw in text for kw in ["高蛋白", "high_protein"]):
+        diet_type = "high_protein"
+    elif any(kw in text for kw in ["无麸质", "gluten_free"]):
+        diet_type = "gluten_free"
+    elif any(kw in text for kw in ["素食", "vegan", "纯素"]):
+        diet_type = "vegan"
+    elif any(kw in text for kw in ["健康饮食", "healthy"]):
+        diet_type = "healthy"
+
+    # 天数
+    duration_days = 7
+    day_match = re.search(r"(\d+)\s*天", text)
+    if day_match:
+        duration_days = int(day_match.group(1))
+    else:
+        # 中文数字匹配
+        cn_num_map = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
+                      "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+        for cn, num in cn_num_map.items():
+            if f"{cn}天" in text or f"{cn}周" in text:
+                duration_days = num if "周" not in text or cn not in ("一",) else num * 7
+                break
+            if f"{cn}个月" in text:
+                duration_days = num * 30
+                break
+
+    # 预算
+    total_budget = 0.0
+    budget_match = re.search(r"预算[约大概]?(\d+(?:\.\d+)?)\s*元", text)
+    if budget_match:
+        total_budget = float(budget_match.group(1))
+
+    # 已有食材
+    owned_ingredients = []
+    # 匹配"有"后面的内容（简单字符串分割，避免正则字符集编码问题）
+    have_keywords = ["有", "现有", "家里有", "我有", "还有"]
+    have_pos = -1
+    for kw in have_keywords:
+        idx = text.find(kw)
+        if idx >= 0:
+            after = idx + len(kw)
+            if after > have_pos:
+                have_pos = after
+    if have_pos >= 0:
+        raw = text[have_pos:]
+        # 截断到关键词为止
+        for stop in ["预算", "不吃", "不要", "不能", "过敏", "忌口", "帮我", "我想", "我要", "准备", "打算"]:
+            idx = raw.find(stop)
+            if idx >= 0:
+                raw = raw[:idx]
+        items = re.split(r"[、，,和与]", raw)
+        for item in items:
+            item = item.strip()
+            if item and len(item) <= 10:
+                owned_ingredients.append(item)
+
+    # 过敏/忌口
+    allergies_or_concerns = None
+    for kw in ["不吃", "过敏", "忌口", "不能吃", "不要"]:
+        if kw in text:
+            idx = text.index(kw)
+            after = text[idx + len(kw):].strip().split("，")[0].split("。")[0]
+            if after and len(after) <= 20:
+                allergies_or_concerns = after.strip()
+                break
+
+    return {
+        "health_goal": health_goal,
+        "diet_type": diet_type,
+        "duration_days": duration_days,
+        "total_budget": total_budget,
+        "owned_ingredients": owned_ingredients,
+        "allergies_or_concerns": allergies_or_concerns,
+        "meal_count_per_day": 3,
+        "additional_notes": None,
+    }
+
+
+def _apply_explicit_intent_overrides(user_input: str, llm_intent: dict) -> dict:
+    """Keep explicit user constraints authoritative when an LLM disagrees.
+
+    A model may return a plausible but incorrect generic goal.  Health goal and
+    diet keywords are safety-relevant constraints, so an explicit keyword in
+    the user's text takes precedence over the model's inferred value.
+    """
+    merged = dict(llm_intent)
+    rule_intent = _rule_based_parse(user_input)
+    if rule_intent["health_goal"] != "healthy":
+        merged["health_goal"] = rule_intent["health_goal"]
+    if rule_intent["diet_type"] != "balanced":
+        merged["diet_type"] = rule_intent["diet_type"]
+    return merged
+
+
+async def analyze_intent(state: WorkflowState) -> WorkflowState:
+    """意图分析节点
+
+    依次尝试：
+    1. LLM + Function Calling
+    2. 规则解析（降级）
+    """
+    state.current_node = "intent_analyzer"
+
+    if not state.user_input:
+        state.intent_error = "用户输入为空"
+        state.errors.append(state.intent_error)
+        return state
+
+    # ── 尝试 LLM Function Calling ──
+    if settings.LLM_API_KEY:
+        try:
+            llm = get_llm(temperature=0.1)
+            system_prompt = _load_prompt()
+
+            # 绑定函数调用工具
+            llm_with_tools = llm.bind_tools([IntentOutput], tool_choice="IntentOutput")
+
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=state.user_input),
+            ]
+
+            response = await llm_with_tools.ainvoke(messages)
+
+            # 解析工具调用结果
+            if response.tool_calls:
+                tool_call = response.tool_calls[0]
+                intent_data = tool_call.get("args", {})
+            else:
+                # 没有工具调用，尝试从 content 中解析 JSON
+                content = response.content
+                intent_data = _parse_json_from_text(content) if content else {}
+
+            if intent_data:
+                intent_data = _apply_explicit_intent_overrides(
+                    state.user_input, intent_data
+                )
+                state.intent_analysis = intent_data
+                # 同步更新到 state 顶层字段
+                state.intent_explanation = _generate_intent_explanation(intent_data)
+                logger.info(f"Intent analyzed via LLM: {intent_data.get('health_goal')}")
+                return state
+
+        except Exception as e:
+            logger.warning(f"LLM intent analysis failed, falling back to rules: {e}")
+            state.intent_error = str(e)
+
+    # ── 降级：规则解析 ──
+    intent_data = _rule_based_parse(state.user_input)
+    state.intent_analysis = intent_data
+    state.intent_explanation = _generate_intent_explanation(intent_data) + "（基于规则解析）"
+    logger.info(f"Intent analyzed via rules: {intent_data.get('health_goal')}")
+
+    return state
+
+
+def _parse_json_from_text(text: str) -> dict:
+    """从文本中提取 JSON 对象"""
+    # 尝试找 ```json ... ``` 块
+    json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group(1))
+        except json.JSONDecodeError:
+            pass
+
+    # 尝试直接找第一个 { 到最后一个 }
+    brace_match = re.search(r"\{.*\}", text, re.DOTALL)
+    if brace_match:
+        try:
+            return json.loads(brace_match.group(0))
+        except json.JSONDecodeError:
+            pass
+
+    return {}
+
+
+def _generate_intent_explanation(intent: dict) -> str:
+    """生成意图分析的可解释文本"""
+    goal_names = {
+        "fat_loss": "减脂", "muscle_gain": "增肌",
+        "blood_sugar": "控糖", "healthy": "健康饮食",
+    }
+    diet_names = {
+        "balanced": "均衡饮食", "keto": "生酮饮食",
+        "high_protein": "高蛋白饮食", "gluten_free": "无麸质饮食",
+        "vegan": "素食", "healthy": "健康饮食",
+    }
+
+    goal = goal_names.get(intent.get("health_goal", ""), "健康饮食")
+    diet = diet_names.get(intent.get("diet_type", ""), "均衡饮食")
+    days = intent.get("duration_days", 7)
+    budget = intent.get("total_budget", 0)
+
+    parts = [f"目标：{goal}，饮食类型：{diet}，规划天数：{days}天"]
+    if budget > 0:
+        parts.append(f"总预算：{budget}元")
+    if intent.get("owned_ingredients"):
+        parts.append(f"已有食材：{'、'.join(intent['owned_ingredients'][:3])}")
+    if intent.get("allergies_or_concerns"):
+        parts.append(f"忌口：{intent['allergies_or_concerns']}")
+
+    return "，".join(parts)

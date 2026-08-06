@@ -1,0 +1,182 @@
+[
+  {
+    "recipe_id": 1, "name": "番茄炒蛋", "description": "经典家常菜，番茄酸甜搭配鸡蛋嫩滑，简单快手。", "category": "main_dish", "cuisine_type": "chinese", "difficulty": "easy", "prep_time": 5, "cook_time": 5, "servings": 2,
+    "steps": [{"step":1,"content":"番茄洗净切块，鸡蛋打散加少许盐"},{"step":2,"content":"热锅倒油，先炒鸡蛋至凝固盛出"},{"step":3,"content":"锅中再倒油，炒番茄至出汁"},{"step":4,"content":"倒回鸡蛋，翻炒均匀，加盐调味即可"}],
+    "total_calories": 150, "total_protein": 10, "total_fat": 8, "total_carbs": 5, "total_fiber": 1.5,
+    "tags": ["快手菜","减脂","家常菜"], "image_url": "/images/recipes/recipe_01.webp"
+  },
+  {
+    "recipe_id": 2, "name": "宫保鸡丁", "description": "经典川菜，鸡肉嫩滑，花生香脆，微辣回甜。", "category": "main_dish", "cuisine_type": "chinese", "difficulty": "medium", "prep_time": 15, "cook_time": 10, "servings": 2,
+    "steps": [{"step":1,"content":"鸡胸肉切丁，加料酒、淀粉腌制10分钟"},{"step":2,"content":"花生炒熟备用"},{"step":3,"content":"调碗汁：酱油、醋、糖、淀粉水混合"},{"step":4,"content":"热锅炒鸡丁至变色盛出"},{"step":5,"content":"爆香干辣椒和花椒，倒入鸡丁和碗汁翻炒"},{"step":6,"content":"最后加入花生翻炒均匀即可"}],
+    "total_calories": 380, "total_protein": 35, "total_fat": 18, "total_carbs": 15, "total_fiber": 2,
+    "tags": ["高蛋白","中式经典","下饭"], "image_url": "/images/recipes/recipe_02.webp"
+  },
+  {
+    "recipe_id": 3, "name": "清蒸鲈鱼", "description": "鲜嫩清蒸鲈鱼，保留鱼肉原汁原味，健康低脂。", "category": "main_dish", "cuisine_type": "chinese", "difficulty": "medium", "prep_time": 10, "cook_time": 12, "servings": 2,
+    "steps": [{"step":1,"content":"鲈鱼处理干净，两面划几刀"},{"step":2,"content":"鱼身抹盐和料酒，放姜片葱段腌制5分钟"},{"step":3,"content":"水开后上锅蒸8-10分钟"},{"step":4,"content":"倒掉蒸出的汁水，铺上葱丝姜丝"},{"step":5,"content":"淋上热油和蒸鱼豉油即可"}],
+    "total_calories": 210, "total_protein": 37, "total_fat": 7, "total_carbs": 1, "total_fiber": 0,
+    "tags": ["高蛋白","低脂","减脂","宴客菜"], "image_url": "/images/recipes/recipe_03.webp"
+  },
+  {
+    "recipe_id": 4, "name": "青椒肉丝", "description": "家常小炒，青椒脆嫩，肉丝滑嫩，下饭首选。", "category": "main_dish", "cuisine_type": "chinese", "difficulty": "easy", "prep_time": 10, "cook_time": 8, "servings": 2,
+    "steps": [{"step":1,"content":"猪肉丝加料酒、淀粉抓匀腌制"},{"step":2,"content":"青椒切丝备用"},{"step":3,"content":"热锅倒油，滑炒肉丝至变色盛出"},{"step":4,"content":"锅中留底油炒青椒至断生"},{"step":5,"content":"倒回肉丝，加酱油、盐翻炒均匀即可"}],
+    "total_calories": 280, "total_protein": 28, "total_fat": 14, "total_carbs": 6, "total_fiber": 1.5,
+    "tags": ["快手菜","高蛋白","家常菜"], "image_url": "/images/recipes/recipe_04.webp"
+  },
+  {
+    "recipe_id": 5, "name": "麻婆豆腐", "description": "川味经典，豆腐嫩滑入味，麻辣鲜香。", "category": "main_dish", "cuisine_type": "chinese", "difficulty": "easy", "prep_time": 8, "cook_time": 10, "servings": 2,
+    "steps": [{"step":1,"content":"豆腐切小块，焯水备用"},{"step":2,"content":"热锅倒油，炒香肉末"},{"step":3,"content":"加豆瓣酱炒出红油，加蒜末姜末"},{"step":4,"content":"加适量水烧开，放入豆腐轻轻推匀"},{"step":5,"content":"淋入淀粉水勾芡，撒葱花出锅"}],
+    "total_calories": 220, "total_protein": 15, "total_fat": 12, "total_carbs": 8, "total_fiber": 1,
+    "tags": ["素食可选","中式经典","下饭"], "image_url": "/images/recipes/recipe_05.webp"
+  },
+  {
+    "recipe_id": 6, "name": "西红柿牛腩", "description": "番茄酸甜与牛腩醇厚完美融合，汤浓味美。", "category": "main_dish", "cuisine_type": "chinese", "difficulty": "hard", "prep_time": 15, "cook_time": 60, "servings": 3,
+    "steps": [{"step":1,"content":"牛腩切块，冷水下锅焯水去血沫"},{"step":2,"content":"番茄切块，一部分炒成泥备用"},{"step":3,"content":"热锅爆香姜片，下牛腩翻炒"},{"step":4,"content":"加入番茄泥、足量热水，大火烧开转小火炖40分钟"},{"step":5,"content":"加入剩余番茄块，再炖15分钟"},{"step":6,"content":"加盐、糖调味，撒葱花即可"}],
+    "total_calories": 350, "total_protein": 30, "total_fat": 22, "total_carbs": 8, "total_fiber": 1.5,
+    "tags": ["高蛋白","下饭","宴客菜"], "image_url": "/images/recipes/recipe_06.webp"
+  },
+  {
+    "recipe_id": 7, "name": "西兰花炒虾仁", "description": "清爽高蛋白，西兰花脆嫩，虾仁鲜美。", "category": "main_dish", "cuisine_type": "chinese", "difficulty": "easy", "prep_time": 10, "cook_time": 8, "servings": 2,
+    "steps": [{"step":1,"content":"西兰花掰小朵，焯水1分钟捞出"},{"step":2,"content":"虾仁加料酒、盐腌制5分钟"},{"step":3,"content":"热锅倒油，炒香蒜末"},{"step":4,"content":"下虾仁炒至变色"},{"step":5,"content":"加入西兰花翻炒，加盐和蚝油调味即可"}],
+    "total_calories": 180, "total_protein": 22, "total_fat": 7, "total_carbs": 7, "total_fiber": 2.5,
+    "tags": ["减脂","高蛋白","快手菜"], "image_url": "/images/recipes/recipe_07.webp"
+  },
+  {
+    "recipe_id": 8, "name": "红烧鸡腿", "description": "色泽红亮，鸡肉鲜嫩多汁，简单又美味。", "category": "main_dish", "cuisine_type": "chinese", "difficulty": "medium", "prep_time": 10, "cook_time": 25, "servings": 2,
+    "steps": [{"step":1,"content":"鸡腿划几刀，焯水去血沫"},{"step":2,"content":"热锅倒油，煎鸡腿至两面金黄"},{"step":3,"content":"加姜片、葱段、料酒、酱油、老抽、糖"},{"step":4,"content":"加没过鸡腿的水，大火烧开转小火炖20分钟"},{"step":5,"content":"大火收汁即可出锅"}],
+    "total_calories": 320, "total_protein": 28, "total_fat": 18, "total_carbs": 6, "total_fiber": 0.5,
+    "tags": ["高蛋白","中式经典","下饭"], "image_url": "/images/recipes/recipe_08.webp"
+  },
+  {
+    "recipe_id": 9, "name": "蒜蓉空心菜", "description": "蒜香四溢，空心菜脆嫩爽口，简单快手素菜。", "category": "side_dish", "cuisine_type": "chinese", "difficulty": "easy", "prep_time": 5, "cook_time": 3, "servings": 2,
+    "steps": [{"step":1,"content":"空心菜洗净切段，蒜切末"},{"step":2,"content":"热锅倒油，爆香蒜末"},{"step":3,"content":"下空心菜大火快炒"},{"step":4,"content":"加盐调味，翻炒均匀即可出锅"}],
+    "total_calories": 60, "total_protein": 3, "total_fat": 3, "total_carbs": 4, "total_fiber": 2,
+    "tags": ["素食","快手菜","减脂"], "image_url": "/images/recipes/recipe_09.webp"
+  },
+  {
+    "recipe_id": 10, "name": "凉拌黄瓜", "description": "清爽开胃，脆嫩爽口，夏日必备凉菜。", "category": "side_dish", "cuisine_type": "chinese", "difficulty": "easy", "prep_time": 8, "cook_time": 0, "servings": 2,
+    "steps": [{"step":1,"content":"黄瓜拍碎切段"},{"step":2,"content":"蒜切末，加醋、酱油、糖、芝麻油调成汁"},{"step":3,"content":"将料汁倒入黄瓜中拌匀"},{"step":4,"content":"撒上蒜末和辣椒碎即可"}],
+    "total_calories": 40, "total_protein": 1, "total_fat": 2, "total_carbs": 4, "total_fiber": 0.8,
+    "tags": ["素食","快手菜","减脂","无油"], "image_url": "/images/recipes/recipe_10.webp"
+  },
+  {
+    "recipe_id": 11, "name": "紫菜蛋花汤", "description": "清淡鲜美，简单快手，适合搭配任何一餐。", "category": "soup", "cuisine_type": "chinese", "difficulty": "easy", "prep_time": 3, "cook_time": 5, "servings": 2,
+    "steps": [{"step":1,"content":"鸡蛋打散备用"},{"step":2,"content":"锅中烧水，水开后放入紫菜"},{"step":3,"content":"淋入蛋液，用筷子轻轻搅散"},{"step":4,"content":"加盐、香油调味，撒葱花出锅"}],
+    "total_calories": 60, "total_protein": 6, "total_fat": 3, "total_carbs": 2, "total_fiber": 0.5,
+    "tags": ["快手菜","素食可选","清淡"], "image_url": "/images/recipes/recipe_11.webp"
+  },
+  {
+    "recipe_id": 12, "name": "蛋炒饭", "description": "粒粒分明的经典蛋炒饭，简单却美味。", "category": "staple", "cuisine_type": "chinese", "difficulty": "easy", "prep_time": 5, "cook_time": 8, "servings": 2,
+    "steps": [{"step":1,"content":"鸡蛋打散，米饭提前打散"},{"step":2,"content":"热锅倒油，先炒鸡蛋至半熟"},{"step":3,"content":"加入米饭，大火翻炒"},{"step":4,"content":"加盐调味，撒葱花翻炒均匀即可"}],
+    "total_calories": 400, "total_protein": 12, "total_fat": 10, "total_carbs": 68, "total_fiber": 0.5,
+    "tags": ["主食","快手菜","家常菜"], "image_url": "/images/recipes/recipe_12.webp"
+  },
+  {
+    "recipe_id": 13, "name": "葱油拌面", "description": "葱香浓郁，简单快手，五分钟搞定一餐。", "category": "staple", "cuisine_type": "chinese", "difficulty": "easy", "prep_time": 3, "cook_time": 5, "servings": 1,
+    "steps": [{"step":1,"content":"葱切段，面条煮熟过凉水"},{"step":2,"content":"热锅倒油，小火炸葱段至焦黄"},{"step":3,"content":"碗中放酱油、醋、糖，浇上热葱油"},{"step":4,"content":"面条沥干放入碗中拌匀即可"}],
+    "total_calories": 380, "total_protein": 10, "total_fat": 12, "total_carbs": 60, "total_fiber": 1,
+    "tags": ["快手菜","主食","中式经典"], "image_url": "/images/recipes/recipe_13.webp"
+  },
+  {
+    "recipe_id": 14, "name": "白灼青菜", "description": "保留蔬菜原味和营养，清淡健康。", "category": "side_dish", "cuisine_type": "chinese", "difficulty": "easy", "prep_time": 3, "cook_time": 3, "servings": 2,
+    "steps": [{"step":1,"content":"青菜洗净"},{"step":2,"content":"水中加少许盐和油，烧开"},{"step":3,"content":"放入青菜焯烫1分钟捞出"},{"step":4,"content":"淋上酱油和热油即可"}],
+    "total_calories": 35, "total_protein": 2, "total_fat": 1.5, "total_carbs": 3, "total_fiber": 1.5,
+    "tags": ["素食","减脂","快手菜","无油"], "image_url": "/images/recipes/recipe_14.webp"
+  },
+  {
+    "recipe_id": 15, "name": "木须肉", "description": "北京传统名菜，肉蛋菜搭配，营养均衡。", "category": "main_dish", "cuisine_type": "chinese", "difficulty": "medium", "prep_time": 12, "cook_time": 10, "servings": 2,
+    "steps": [{"step":1,"content":"猪肉丝加料酒、淀粉腌制"},{"step":2,"content":"鸡蛋打散炒熟盛出，黄瓜切片备用"},{"step":3,"content":"热锅倒油，滑炒肉丝至变色"},{"step":4,"content":"加入黄瓜片翻炒"},{"step":5,"content":"倒回鸡蛋，加盐调味翻炒均匀即可"}],
+    "total_calories": 310, "total_protein": 28, "total_fat": 16, "total_carbs": 6, "total_fiber": 1,
+    "tags": ["高蛋白","中式经典","家常菜"], "image_url": "/images/recipes/recipe_15.webp"
+  },
+  {
+    "recipe_id": 16, "name": "Grilled Chicken Salad", "description": "香煎鸡胸肉搭配新鲜蔬菜，健康低脂营养均衡。", "category": "light_meal", "cuisine_type": "western", "difficulty": "easy", "prep_time": 10, "cook_time": 12, "servings": 1,
+    "steps": [{"step":1,"content":"鸡胸肉加盐、黑胡椒、橄榄油腌制"},{"step":2,"content":"热锅煎鸡胸肉，每面5分钟至金黄"},{"step":3,"content":"生菜、番茄、黄瓜切好放入碗中"},{"step":4,"content":"鸡胸肉切片放在沙拉上"},{"step":5,"content":"淋上橄榄油和柠檬汁即可"}],
+    "total_calories": 350, "total_protein": 35, "total_fat": 18, "total_carbs": 8, "total_fiber": 3,
+    "tags": ["减脂","高蛋白","轻食","西餐"], "image_url": "/images/recipes/recipe_16.webp"
+  },
+  {
+    "recipe_id": 17, "name": "Salmon with Asparagus", "description": "香煎三文鱼配芦笋，富含Omega-3的健康组合。", "category": "main_dish", "cuisine_type": "western", "difficulty": "medium", "prep_time": 8, "cook_time": 15, "servings": 1,
+    "steps": [{"step":1,"content":"三文鱼加盐、黑胡椒、柠檬汁腌制"},{"step":2,"content":"芦笋去老根，加橄榄油和盐拌匀"},{"step":3,"content":"热锅先煎三文鱼，每面3-4分钟"},{"step":4,"content":"同时用另一锅煎芦笋2-3分钟"},{"step":5,"content":"装盘，撒上黑胡椒和柠檬片即可"}],
+    "total_calories": 420, "total_protein": 38, "total_fat": 26, "total_carbs": 5, "total_fiber": 2,
+    "tags": ["高蛋白","健康脂肪","减脂","西餐"], "image_url": "/images/recipes/recipe_17.webp"
+  },
+  {
+    "recipe_id": 18, "name": "Pan-seared Beef Steak", "description": "香煎牛排，外焦里嫩，搭配简单蔬菜。", "category": "main_dish", "cuisine_type": "western", "difficulty": "medium", "prep_time": 5, "cook_time": 12, "servings": 1,
+    "steps": [{"step":1,"content":"牛排提前30分钟取出回温，用厨房纸吸干水分"},{"step":2,"content":"两面撒盐和黑胡椒"},{"step":3,"content":"热锅倒油，大火煎牛排每面2-3分钟"},{"step":4,"content":"加入黄油、大蒜、迷迭香，用勺子浇淋黄油"},{"step":5,"content":"取出静置5分钟，切片即可"}],
+    "total_calories": 450, "total_protein": 40, "total_fat": 32, "total_carbs": 1, "total_fiber": 0,
+    "tags": ["高蛋白","西餐","宴客菜"], "image_url": "/images/recipes/recipe_18.webp"
+  },
+  {
+    "recipe_id": 19, "name": "Mediterranean Pasta", "description": "地中海风味意面，番茄酱汁搭配蔬菜，健康美味。", "category": "main_dish", "cuisine_type": "western", "difficulty": "easy", "prep_time": 8, "cook_time": 15, "servings": 2,
+    "steps": [{"step":1,"content":"意面按包装说明煮至弹牙，留半杯面汤"},{"step":2,"content":"番茄切小块，洋葱、大蒜切末"},{"step":3,"content":"热锅倒橄榄油，炒香洋葱和蒜末"},{"step":4,"content":"加入番茄炒软，加番茄酱和盐调味"},{"step":5,"content":"加入煮好的意面，加一点面汤拌匀"},{"step":6,"content":"撒上芝士和黑胡椒即可"}],
+    "total_calories": 380, "total_protein": 14, "total_fat": 10, "total_carbs": 60, "total_fiber": 4,
+    "tags": ["西餐","素食可选","主食"], "image_url": "/images/recipes/recipe_19.webp"
+  },
+  {
+    "recipe_id": 20, "name": "Baked Cod with Lemon", "description": "柠檬烤鳕鱼，清淡鲜美，外酥里嫩。", "category": "main_dish", "cuisine_type": "western", "difficulty": "medium", "prep_time": 8, "cook_time": 18, "servings": 1,
+    "steps": [{"step":1,"content":"鳕鱼用厨房纸吸干，加盐、黑胡椒、柠檬汁腌制10分钟"},{"step":2,"content":"烤盘铺上芦笋，放上鳕鱼"},{"step":3,"content":"淋上橄榄油，放上柠檬片"},{"step":4,"content":"烤箱预热200°C，烤15-18分钟"},{"step":5,"content":"取出，撒上黑胡椒即可"}],
+    "total_calories": 240, "total_protein": 35, "total_fat": 10, "total_carbs": 3, "total_fiber": 1,
+    "tags": ["低脂","高蛋白","西餐","健康"], "image_url": "/images/recipes/recipe_20.webp"
+  },
+  {
+    "recipe_id": 21, "name": "Chicken Breast with Veggies", "description": "鸡胸肉搭配时蔬，简单健康的减脂餐。", "category": "main_dish", "cuisine_type": "western", "difficulty": "easy", "prep_time": 8, "cook_time": 15, "servings": 1,
+    "steps": [{"step":1,"content":"鸡胸肉加盐、黑胡椒、橄榄油腌制"},{"step":2,"content":"西兰花和胡萝卜焯水1分钟"},{"step":3,"content":"热锅煎鸡胸肉每面5-6分钟至熟"},{"step":4,"content":"取出鸡胸肉切片"},{"step":5,"content":"用锅中余油翻炒蔬菜，加盐调味，配上鸡肉即可"}],
+    "total_calories": 320, "total_protein": 36, "total_fat": 12, "total_carbs": 10, "total_fiber": 3,
+    "tags": ["减脂","高蛋白","健康","西餐"], "image_url": "/images/recipes/recipe_21.webp"
+  },
+  {
+    "recipe_id": 22, "name": "Greek Yogurt Bowl", "description": "希腊酸奶搭配水果和燕麦，快手健康早餐。", "category": "light_meal", "cuisine_type": "western", "difficulty": "easy", "prep_time": 5, "cook_time": 0, "servings": 1,
+    "steps": [{"step":1,"content":"酸奶倒入碗中"},{"step":2,"content":"牛油果切块放在酸奶上"},{"step":3,"content":"撒上燕麦片"},{"step":4,"content":"淋少许蜂蜜（可选）即可食用"}],
+    "total_calories": 280, "total_protein": 15, "total_fat": 12, "total_carbs": 30, "total_fiber": 5,
+    "tags": ["早餐","快手菜","健康","素食"], "image_url": "/images/recipes/recipe_22.webp"
+  },
+  {
+    "recipe_id": 23, "name": "Caesar Salad", "description": "经典凯撒沙拉，罗马生菜搭配帕玛森芝士和脆面包丁。", "category": "light_meal", "cuisine_type": "western", "difficulty": "easy", "prep_time": 10, "cook_time": 5, "servings": 1,
+    "steps": [{"step":1,"content":"生菜洗净沥干撕成小片"},{"step":2,"content":"面包切小丁，烤箱烤至金黄"},{"step":3,"content":"芝士刨成薄片"},{"step":4,"content":"碗中混合所有食材"},{"step":5,"content":"淋上凯撒沙拉酱，撒上黑胡椒即可"}],
+    "total_calories": 280, "total_protein": 12, "total_fat": 20, "total_carbs": 14, "total_fiber": 2,
+    "tags": ["轻食","西餐","低碳"], "image_url": "/images/recipes/recipe_23.webp"
+  },
+  {
+    "recipe_id": 24, "name": "Vegetable Omelette", "description": "蔬菜煎蛋卷，高蛋白快手餐，适合任何一餐。", "category": "light_meal", "cuisine_type": "western", "difficulty": "easy", "prep_time": 5, "cook_time": 6, "servings": 1,
+    "steps": [{"step":1,"content":"鸡蛋打散加盐和黑胡椒"},{"step":2,"content":"番茄切丁，菠菜切碎"},{"step":3,"content":"热锅倒油，倒入蛋液"},{"step":4,"content":"蛋液半凝固时放上番茄和菠菜"},{"step":5,"content":"对折叠起，煎至金黄即可"}],
+    "total_calories": 220, "total_protein": 18, "total_fat": 14, "total_carbs": 4, "total_fiber": 1,
+    "tags": ["高蛋白","快手菜","减脂","西餐"], "image_url": "/images/recipes/recipe_24.webp"
+  },
+  {
+    "recipe_id": 25, "name": "Oatmeal Bowl", "description": "温热燕麦粥配牛奶，健康的早餐选择。", "category": "staple", "cuisine_type": "western", "difficulty": "easy", "prep_time": 2, "cook_time": 8, "servings": 1,
+    "steps": [{"step":1,"content":"燕麦和牛奶放入小锅中"},{"step":2,"content":"中小火煮5-7分钟，不断搅拌"},{"step":3,"content":"煮至浓稠关火"},{"step":4,"content":"可根据喜好加水果或坚果点缀"}],
+    "total_calories": 350, "total_protein": 14, "total_fat": 10, "total_carbs": 55, "total_fiber": 8,
+    "tags": ["早餐","健康","素食","西餐"], "image_url": "/images/recipes/recipe_25.webp"
+  },
+  {
+    "recipe_id": 26, "name": "Whole Wheat Wrap", "description": "全麦卷饼包裹鸡肉和蔬菜，健康便携餐。", "category": "staple", "cuisine_type": "western", "difficulty": "easy", "prep_time": 10, "cook_time": 8, "servings": 1,
+    "steps": [{"step":1,"content":"鸡胸肉煎熟切条"},{"step":2,"content":"全麦饼皮加热30秒"},{"step":3,"content":"饼皮上铺生菜、鸡肉条、番茄片"},{"step":4,"content":"挤上酸奶酱或番茄酱"},{"step":5,"content":"卷紧后斜切两半即可"}],
+    "total_calories": 380, "total_protein": 28, "total_fat": 12, "total_carbs": 40, "total_fiber": 5,
+    "tags": ["高蛋白","西餐","快手餐"], "image_url": "/images/recipes/recipe_26.webp"
+  },
+  {
+    "recipe_id": 27, "name": "Minestrone Soup", "description": "意式蔬菜浓汤，番茄底搭配多种蔬菜和意面。", "category": "soup", "cuisine_type": "western", "difficulty": "medium", "prep_time": 12, "cook_time": 30, "servings": 3,
+    "steps": [{"step":1,"content":"洋葱、胡萝卜、番茄切丁"},{"step":2,"content":"热锅倒橄榄油，炒香洋葱"},{"step":3,"content":"加入胡萝卜丁翻炒"},{"step":4,"content":"加入番茄丁炒出汁，加水和番茄酱"},{"step":5,"content":"加入意面，煮10分钟"},{"step":6,"content":"加盐、黑胡椒调味，撒上芝士即可"}],
+    "total_calories": 180, "total_protein": 6, "total_fat": 5, "total_carbs": 28, "total_fiber": 4,
+    "tags": ["素食","西餐","健康","清淡"], "image_url": "/images/recipes/recipe_27.webp"
+  },
+  {
+    "recipe_id": 28, "name": "Tuna Salad", "description": "金枪鱼沙拉，高蛋白低碳水，适合减脂期。", "category": "light_meal", "cuisine_type": "western", "difficulty": "easy", "prep_time": 8, "cook_time": 0, "servings": 1,
+    "steps": [{"step":1,"content":"金枪鱼罐头沥干水分"},{"step":2,"content":"生菜洗净撕成小片，番茄切块"},{"step":3,"content":"洋葱切细丝"},{"step":4,"content":"所有食材放入大碗"},{"step":5,"content":"淋上橄榄油和柠檬汁，拌匀即可"}],
+    "total_calories": 250, "total_protein": 28, "total_fat": 12, "total_carbs": 6, "total_fiber": 1.5,
+    "tags": ["减脂","高蛋白","快手菜","西餐"], "image_url": "/images/recipes/recipe_28.webp"
+  },
+  {
+    "recipe_id": 29, "name": "Baked Chicken Thigh", "description": "烤鸡腿外皮酥脆，肉质嫩滑多汁，简单调味就很好吃。", "category": "main_dish", "cuisine_type": "western", "difficulty": "easy", "prep_time": 8, "cook_time": 30, "servings": 2,
+    "steps": [{"step":1,"content":"鸡腿加盐、黑胡椒、橄榄油、蒜末腌制15分钟"},{"step":2,"content":"烤箱预热200°C"},{"step":3,"content":"鸡腿放入烤盘，皮朝上"},{"step":4,"content":"烤25-30分钟至金黄酥脆"},{"step":5,"content":"取出静置3分钟即可"}],
+    "total_calories": 320, "total_protein": 26, "total_fat": 22, "total_carbs": 1, "total_fiber": 0,
+    "tags": ["高蛋白","西餐","简单"], "image_url": "/images/recipes/recipe_29.webp"
+  },
+  {
+    "recipe_id": 30, "name": "Mushroom Risotto", "description": "奶油蘑菇烩饭，口感丝滑浓郁，意式经典。", "category": "main_dish", "cuisine_type": "western", "difficulty": "medium", "prep_time": 10, "cook_time": 30, "servings": 2,
+    "steps": [{"step":1,"content":"蘑菇切片，洋葱切末"},{"step":2,"content":"热锅倒橄榄油，炒香洋葱"},{"step":3,"content":"加入蘑菇炒至出水"},{"step":4,"content":"加入大米翻炒1分钟"},{"step":5,"content":"分次加入温水，每次搅拌至吸收后再加"},{"step":6,"content":"约20分钟后米饭弹牙，加芝士和黄油拌匀即可"}],
+    "total_calories": 380, "total_protein": 10, "total_fat": 12, "total_carbs": 60, "total_fiber": 2,
+    "tags": ["素食","西餐","主食"], "image_url": "/images/recipes/recipe_30.webp"
+  }
+]
