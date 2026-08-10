@@ -58,7 +58,7 @@ function scrollTo(idx: number) {
         <span>当日总计</span>
         <span class="total-nutrition">
           {{ weeklyPlan[selectedDay].total_nutrition.calories.toFixed(0) }}kcal
-          · P{{ weeklyPlan[selectedDay].total_nutrition.protein.toFixed(0) }}g
+          · P{{ (weeklyPlan[selectedDay].total_nutrition.protein_g || 0).toFixed(0) }}g
         </span>
       </div>
     </div>

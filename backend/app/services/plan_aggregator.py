@@ -1,0 +1,230 @@
+"""Normalize and aggregate an AI-generated plan without recipe DB lookups."""
+
+from __future__ import annotations
+
+from collections import defaultdict
+from typing import Any
+from uuid import uuid4
+
+from app.services.ai_plan_models import GeneratedPlan, NutritionEstimate, PlanValidationResult
+from app.services.plan_validator import canonical_recipe_cost, canonical_recipe_nutrition
+
+
+def _round_nutrition(value: NutritionEstimate) -> dict:
+    return {
+        "calories": round(value.calories, 1),
+        "protein_g": round(value.protein_g, 1),
+        "fat_g": round(value.fat_g, 1),
+        "carbs_g": round(value.carbs_g, 1),
+        "fiber_g": round(value.fiber_g, 1),
+    }
+
+
+def _add_nutrition(left: NutritionEstimate, right: NutritionEstimate, factor: int = 1) -> NutritionEstimate:
+    return NutritionEstimate(
+        calories=left.calories + right.calories * factor,
+        protein_g=left.protein_g + right.protein_g * factor,
+        fat_g=left.fat_g + right.fat_g * factor,
+        carbs_g=left.carbs_g + right.carbs_g * factor,
+        fiber_g=left.fiber_g + right.fiber_g * factor,
+    )
+
+
+def _category_for(name: str) -> str:
+    text = name.lower()
+    if any(token in text for token in ("肉", "鸡", "鸭", "牛", "猪", "鱼", "虾", "蟹", "豆腐", "蛋")):
+        return "蛋白质"
+    if any(token in text for token in ("菜", "番茄", "西兰花", "菠菜", "胡萝卜", "菌", "瓜", "椒")):
+        return "蔬菜水果"
+    if any(token in text for token in ("米", "面", "麦", "藜麦", "燕麦", "土豆")):
+        return "主食"
+    if any(token in text for token in ("油", "盐", "酱", "醋", "糖", "料酒")):
+        return "调味品"
+    return "其他"
+
+
+def _owned(name: str, owned: list[str]) -> bool:
+    normalized = name.strip().lower()
+    return any(normalized in item.lower() or item.lower() in normalized for item in owned)
+
+
+def aggregate_generated_plan(
+    plan: GeneratedPlan,
+    validation: PlanValidationResult,
+    *,
+    duration_days: int,
+    intent: dict | None = None,
+    constraints: dict | None = None,
+    rag_meta: dict | None = None,
+    repair_attempts: int = 0,
+) -> dict:
+    draft_id = uuid4().hex[:8]
+    recipes: list[dict] = []
+    recipe_keys: dict[int, str] = {}
+
+    for index, recipe in enumerate(plan.recipes):
+        recipe_key = f"generated-{draft_id}-{index + 1}"
+        recipe_keys[index] = recipe_key
+        canonical_nutrition = canonical_recipe_nutrition(recipe)
+        canonical_cost = canonical_recipe_cost(recipe)
+        recipes.append(
+            {
+                "recipe_key": recipe_key,
+                "source": "llm_generated",
+                "name": recipe.name,
+                "category": recipe.category,
+                "cuisine_type": recipe.cuisine_type,
+                "difficulty": recipe.difficulty,
+                "prep_time_min": recipe.prep_time_min,
+                "cook_time_min": recipe.cook_time_min,
+                "servings": recipe.servings,
+                "ingredients": [
+                    {
+                        "name": item.name,
+                        "quantity": item.quantity,
+                        "unit": item.unit,
+                        "optional": item.optional,
+                        "nutrition_estimate": _round_nutrition(item.nutrition_estimate),
+                        "line_cost_estimate": round(item.line_cost_estimate, 2),
+                    }
+                    for item in recipe.ingredients
+                ],
+                "steps": recipe.steps,
+                "nutrition": _round_nutrition(canonical_nutrition),
+                "nutrition_estimate": _round_nutrition(canonical_nutrition),
+                "declared_nutrition": _round_nutrition(recipe.nutrition_estimate),
+                "estimated_cost": round(canonical_cost, 2),
+                "cost_estimate": round(canonical_cost, 2),
+                "declared_cost": round(recipe.cost_estimate, 2),
+                "estimate_source": "llm_estimate",
+                "generation_note": recipe.generation_note,
+            }
+        )
+
+    recipe_lookup = {key: item for key, item in zip(recipe_keys.values(), recipes)}
+    weekly_plan: list[dict] = []
+    shopping: dict[str, dict] = {}
+    daily_totals: dict[int, NutritionEstimate] = defaultdict(
+        lambda: NutritionEstimate(calories=0, protein_g=0, fat_g=0, carbs_g=0, fiber_g=0)
+    )
+    owned = list((intent or {}).get("owned_ingredients") or [])
+
+    for day in range(1, duration_days + 1):
+        day_meals: dict[str, dict] = {}
+        for meal in [item for item in plan.meals if item.day == day]:
+            recipe_key = recipe_keys.get(meal.recipe_index)
+            recipe = recipe_lookup.get(recipe_key or "")
+            if not recipe:
+                continue
+            nutrition = recipe["nutrition"]
+            scaled = {
+                key: round(float(value) * meal.servings, 1)
+                for key, value in nutrition.items()
+            }
+            day_meals[meal.slot] = {
+                "recipe_key": recipe_key,
+                "name": recipe["name"],
+                "serving_size": meal.servings,
+                "nutrition": scaled,
+            }
+            daily_totals[day] = _add_nutrition(
+                daily_totals[day],
+                NutritionEstimate(
+                    calories=nutrition["calories"],
+                    protein_g=nutrition["protein_g"],
+                    fat_g=nutrition["fat_g"],
+                    carbs_g=nutrition["carbs_g"],
+                    fiber_g=nutrition["fiber_g"],
+                ),
+                meal.servings,
+            )
+            for ingredient in recipe["ingredients"]:
+                if _owned(ingredient["name"], owned):
+                    continue
+                key = f"{ingredient['name']}::{ingredient['unit']}"
+                item = shopping.setdefault(
+                    key,
+                    {
+                        "ingredient_id": 0,
+                        "name": ingredient["name"],
+                        "quantity": 0.0,
+                        "unit": ingredient["unit"],
+                        "estimated_cost": 0.0,
+                        "for_recipes": [],
+                        "category": _category_for(ingredient["name"]),
+                    },
+                )
+                item["quantity"] += float(ingredient["quantity"]) * meal.servings
+                item["estimated_cost"] += float(ingredient["line_cost_estimate"]) * meal.servings
+                reference = {"recipe_key": recipe_key, "name": recipe["name"]}
+                if reference not in item["for_recipes"]:
+                    item["for_recipes"].append(reference)
+        total = _round_nutrition(daily_totals[day])
+        weekly_plan.append({"day": day, "meals": day_meals, "total_nutrition": total})
+
+    shopping_items = []
+    by_category: dict[str, list] = defaultdict(list)
+    for item in shopping.values():
+        item["quantity"] = round(item["quantity"], 2)
+        item["estimated_cost"] = round(item["estimated_cost"], 2)
+        item.pop("category", None)
+        shopping_items.append(item)
+        category = _category_for(item["name"])
+        by_category[category].append(
+            {
+                "name": item["name"],
+                "quantity": item["quantity"],
+                "unit": item["unit"],
+                "estimated_cost": item["estimated_cost"],
+            }
+        )
+
+    total_nutrition = NutritionEstimate(calories=0, protein_g=0, fat_g=0, carbs_g=0, fiber_g=0)
+    for day in daily_totals.values():
+        total_nutrition = _add_nutrition(total_nutrition, day)
+    total_calories = total_nutrition.calories
+    macro_total = total_nutrition.protein_g * 4 + total_nutrition.fat_g * 9 + total_nutrition.carbs_g * 4
+    nutrition_report = {
+        "avg_daily_calories": round(total_nutrition.calories / max(1, duration_days), 1),
+        "total_calories": round(total_nutrition.calories, 1),
+        "protein_g": round(total_nutrition.protein_g, 1),
+        "fat_g": round(total_nutrition.fat_g, 1),
+        "carbs_g": round(total_nutrition.carbs_g, 1),
+        "fiber_g": round(total_nutrition.fiber_g, 1),
+        "protein_pct": round(total_nutrition.protein_g * 4 / max(1, macro_total), 3),
+        "fat_pct": round(total_nutrition.fat_g * 9 / max(1, macro_total), 3),
+        "carbs_pct": round(total_nutrition.carbs_g * 4 / max(1, macro_total), 3),
+        "recommendation": "营养和预算数据为 AI 估算，建议根据实际食材包装信息调整。",
+    }
+
+    warnings = list(validation.warnings)
+    result = {
+        "schema_version": "ai_native_v1",
+        "recipes": recipes,
+        "weekly_plan": weekly_plan,
+        "nutrition_report": nutrition_report,
+        "shopping_list": {
+            "total_cost": round(sum(item["estimated_cost"] for item in shopping_items), 2),
+            "items": shopping_items,
+            "by_category": dict(by_category),
+        },
+        "validation": {
+            **validation.model_dump(mode="json"),
+            "warnings": warnings,
+        },
+        "generation_meta": {
+            "strategy": "ai_native_v1",
+            "rag_enabled": bool((rag_meta or {}).get("enabled")),
+            "rag_used": bool((rag_meta or {}).get("used")),
+            "rag_sources": (rag_meta or {}).get("sources", []),
+            "rag_error": (rag_meta or {}).get("error"),
+            "repair_attempts": repair_attempts,
+            "estimate_source": "llm_estimate",
+            # Keep the hard-constraint snapshot with the immutable version so
+            # later edits can preserve it without re-running intent analysis.
+            "intent_snapshot": intent or {},
+            "constraints_snapshot": constraints or {},
+        },
+        "summary": plan.summary or "AI 已生成完整饮食方案，营养和预算均为估算值。",
+    }
+    return result

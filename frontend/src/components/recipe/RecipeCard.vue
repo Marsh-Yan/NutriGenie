@@ -1,35 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { TopRecipe } from '@/types'
+import { computed, ref } from 'vue'
+import type { GeneratedRecipe, TopRecipe } from '@/types'
 import { ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import PremiumIcon from '@/components/common/PremiumIcon.vue'
 
 const props = defineProps<{
-  recipe: TopRecipe
+  recipe: GeneratedRecipe | TopRecipe
   rank: number
 }>()
 
 const expanded = ref(false)
-
-const scoreColors: Record<string, string> = {
-  health: '#8FAA9B',
-  budget: '#C9A9A6',
-  preference: '#B8C5B0',
-  season: '#D4B97A',
-  variety: '#C5B5C5',
-  utilization: '#D4897B',
-  semantic: '#7598C2',
-}
-
-const scoreLabels: Record<string, string> = {
-  health: '健康匹配',
-  budget: '预算匹配',
-  preference: '口味偏好',
-  season: '时令度',
-  variety: '多样性',
-  utilization: '利用率',
-  semantic: '语义场景',
-}
 
 const categoryLabels: Record<string, string> = {
   main_dish: '主菜',
@@ -38,6 +18,25 @@ const categoryLabels: Record<string, string> = {
   staple: '主食',
   light_meal: '轻食',
 }
+
+const isGenerated = computed(() => 'recipe_key' in props.recipe)
+const generatedRecipe = computed(() => props.recipe as GeneratedRecipe)
+const legacyRecipe = computed(() => props.recipe as TopRecipe)
+const displayNutrition = computed(() => {
+  if (isGenerated.value) return generatedRecipe.value.nutrition
+  const nutrition = legacyRecipe.value.nutrition
+  return {
+    calories: nutrition.calories,
+    protein_g: nutrition.protein,
+    fat_g: nutrition.fat,
+    carbs_g: nutrition.carbs,
+    fiber_g: nutrition.fiber,
+  }
+})
+const displayTime = computed(() => isGenerated.value
+  ? generatedRecipe.value.prep_time_min + generatedRecipe.value.cook_time_min
+  : legacyRecipe.value.prep_time + legacyRecipe.value.cook_time)
+const displayNote = computed(() => isGenerated.value ? generatedRecipe.value.generation_note : legacyRecipe.value.explanation)
 </script>
 
 <template>
@@ -50,28 +49,13 @@ const categoryLabels: Record<string, string> = {
         <div class="recipe-tags">
           <el-tag size="small" round>{{ categoryLabels[recipe.category] || recipe.category }}</el-tag>
           <el-tag size="small" round type="info">{{ recipe.difficulty === 'easy' ? '简单' : recipe.difficulty === 'medium' ? '中等' : '困难' }}</el-tag>
-          <span class="recipe-time">{{ recipe.prep_time + recipe.cook_time }}min</span>
+          <span class="recipe-time">{{ displayTime }}min</span>
         </div>
-      </div>
-
-      <div class="card-score">
-        <div class="score-ring">
-          <svg viewBox="0 0 36 36" class="score-svg">
-            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none" stroke="#E5E0DA" stroke-width="3" />
-            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none" :stroke="recipe.total_score > 0.7 ? '#8FAA9B' : recipe.total_score > 0.4 ? '#D4B97A' : '#D4897B'"
-              stroke-width="3"
-              :stroke-dasharray="`${recipe.total_score * 100} ${100 - recipe.total_score * 100}`" />
-          </svg>
-          <span class="score-text">{{ (recipe.total_score * 100).toFixed(0) }}</span>
-        </div>
-        <span class="score-label">综合评分</span>
       </div>
 
       <div class="card-cost">
         <span class="cost-value">¥{{ recipe.estimated_cost.toFixed(1) }}</span>
-        <span class="cost-label">预估成本</span>
+        <span class="cost-label">AI 估算成本</span>
       </div>
 
       <div class="card-expand">
@@ -88,55 +72,39 @@ const categoryLabels: Record<string, string> = {
           <h4 class="detail-title"><PremiumIcon name="salad" class="detail-icon" :size="14" :box-size="28" />营养数据</h4>
           <div class="nutrition-grid">
             <div class="nut-item">
-              <span class="nut-value">{{ recipe.nutrition.calories.toFixed(0) }}</span>
+              <span class="nut-value">{{ displayNutrition.calories.toFixed(0) }}</span>
               <span class="nut-label">热量 kcal</span>
             </div>
             <div class="nut-item">
-              <span class="nut-value">{{ recipe.nutrition.protein.toFixed(1) }}g</span>
+              <span class="nut-value">{{ displayNutrition.protein_g.toFixed(1) }}g</span>
               <span class="nut-label">蛋白质</span>
             </div>
             <div class="nut-item">
-              <span class="nut-value">{{ recipe.nutrition.fat.toFixed(1) }}g</span>
+              <span class="nut-value">{{ displayNutrition.fat_g.toFixed(1) }}g</span>
               <span class="nut-label">脂肪</span>
             </div>
             <div class="nut-item">
-              <span class="nut-value">{{ recipe.nutrition.carbs.toFixed(1) }}g</span>
+              <span class="nut-value">{{ displayNutrition.carbs_g.toFixed(1) }}g</span>
               <span class="nut-label">碳水</span>
             </div>
           </div>
         </div>
 
-        <div class="detail-section">
-          <h4 class="detail-title"><PremiumIcon name="nutrition" class="detail-icon" :size="14" :box-size="28" />六维评分</h4>
-          <div class="scores-grid">
-            <div v-for="(value, key) in recipe.scores" :key="key" class="score-bar-wrap">
-              <span class="score-bar-label">{{ scoreLabels[key] || key }}</span>
-              <div class="score-bar-track">
-                <div class="score-bar-fill"
-                  :style="{ width: `${(value as number) * 100}%`, background: scoreColors[key] || '#8FAA9B' }"
-                />
-              </div>
-              <span class="score-bar-value">{{ ((value as number) * 100).toFixed(0) }}</span>
-            </div>
+        <div class="detail-section" v-if="isGenerated">
+          <h4 class="detail-title"><PremiumIcon name="nutrition" class="detail-icon" :size="14" :box-size="28" />食材与步骤</h4>
+          <div class="ingredient-list">
+            <span v-for="ingredient in generatedRecipe.ingredients" :key="`${ingredient.name}-${ingredient.unit}`">
+              {{ ingredient.name }} {{ ingredient.quantity }}{{ ingredient.unit }}
+            </span>
           </div>
+          <ol class="step-list">
+            <li v-for="step in generatedRecipe.steps" :key="step">{{ step }}</li>
+          </ol>
         </div>
 
-        <div class="detail-section" v-if="recipe.explanation">
-          <h4 class="detail-title"><PremiumIcon name="plan" class="detail-icon" :size="14" :box-size="28" />推荐理由</h4>
-          <p class="explanation-text">{{ recipe.explanation }}</p>
-        </div>
-
-        <div class="detail-section" v-if="recipe.evidence">
-          <h4 class="detail-title"><PremiumIcon name="clipboard" class="detail-icon" :size="14" :box-size="28" />推荐证据</h4>
-          <div v-if="recipe.evidence.matched_preferences.length" class="evidence-tags">
-            <el-tag v-for="item in recipe.evidence.matched_preferences" :key="item" size="small" type="success" effect="plain">
-              {{ item }}
-            </el-tag>
-          </div>
-          <p class="evidence-text">召回来源：{{ recipe.evidence.retrieval_sources.join(' + ') }}</p>
-            <p v-for="warning in recipe.evidence.warnings" :key="warning" class="evidence-warning">
-              <PremiumIcon name="alert" :size="11" :box-size="22" />{{ warning }}
-            </p>
+        <div class="detail-section" v-if="displayNote">
+          <h4 class="detail-title"><PremiumIcon name="plan" class="detail-icon" :size="14" :box-size="28" />AI 生成理由</h4>
+          <p class="explanation-text">{{ displayNote }}</p>
         </div>
       </div>
     </transition>

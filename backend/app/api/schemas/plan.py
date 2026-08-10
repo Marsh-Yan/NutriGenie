@@ -1,127 +1,118 @@
-"""饮食规划 Pydantic Schemas"""
+"""API schemas for AI-native meal plans and conversational edits."""
+
+from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
-from pydantic import BaseModel, Field
+from typing import Dict, List, Literal, Optional
 
+from pydantic import BaseModel, ConfigDict, Field
 
-# ─── 创建规划 ─────────────────────────────────────
 
 class PlanCreate(BaseModel):
-    """创建饮食规划请求"""
     profile_id: int
     user_input: str = Field(..., min_length=1, max_length=1000)
-    duration_days: int = Field(default=7, ge=1, le=30)
+    duration_days: int = Field(default=7, ge=1, le=7)
     total_budget: float = Field(default=0, ge=0)
 
 
 class PlanCreateResponse(BaseModel):
-    """创建饮食规划响应 (202 Accepted)"""
     plan_id: int
     status: str
     created_at: datetime
     links: dict
 
 
-# ─── 规划状态 ─────────────────────────────────────
-
 class StepInfo(BaseModel):
-    """步骤信息"""
     name: str
-    status: str  # completed / running / pending
+    status: str
     order: int
 
 
 class ProgressInfo(BaseModel):
-    """进度信息"""
-    total_steps: int = 6
+    total_steps: int = 7
     completed_steps: int = 0
     current_step: int = 1
     step_name: str = ""
-    steps: List[StepInfo] = []
+    steps: List[StepInfo] = Field(default_factory=list)
 
 
 class PlanStatusResponse(BaseModel):
-    """规划状态响应"""
     plan_id: int
-    status: str  # pending / running / completed / failed
+    status: str
+    run_id: Optional[int] = None
+    run_status: Optional[str] = None
     current_node: Optional[str] = None
+    current_version_id: Optional[int] = None
+    has_current_version: bool = False
     progress: Optional[ProgressInfo] = None
     error: Optional[str] = None
+    last_error: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime] = None
 
 
-# ─── 规划结果 ─────────────────────────────────────
-
-class RecipeScore(BaseModel):
-    """菜谱评分"""
-    health: float = 0
-    budget: float = 0
-    preference: float = 0
-    season: float = 0
-    variety: float = 0
-    utilization: float = 0
+class PlanRunningResponse(BaseModel):
+    plan_id: int
+    status: str = "running"
+    message: str = "规划正在生成中，请稍后查看。"
+    current_node: Optional[str] = None
+    current_version_id: Optional[int] = None
+    has_current_version: bool = False
 
 
-class RecipeNutrition(BaseModel):
-    """菜谱营养"""
+class GeneratedNutrition(BaseModel):
     calories: float = 0
-    protein: float = 0
-    fat: float = 0
-    carbs: float = 0
-    fiber: float = 0
+    protein_g: float = 0
+    fat_g: float = 0
+    carbs_g: float = 0
+    fiber_g: float = 0
 
 
-class Top5Item(BaseModel):
-    """TOP5 推荐项"""
-    recipe_id: int
+class GeneratedIngredientItem(BaseModel):
     name: str
-    image_url: Optional[str] = None
+    quantity: float
+    unit: str
+    optional: bool = False
+    nutrition_estimate: GeneratedNutrition
+    line_cost_estimate: float = 0
+
+
+class GeneratedRecipeItem(BaseModel):
+    recipe_key: str
+    source: str = "llm_generated"
+    name: str
     category: str
-    cuisine_type: str
-    difficulty: str
-    prep_time: int
-    cook_time: int
-    scores: RecipeScore
-    total_score: float
-    nutrition: RecipeNutrition
-    estimated_cost: float
-    explanation: str
+    cuisine_type: str = "家常"
+    difficulty: str = "easy"
+    prep_time_min: int = 0
+    cook_time_min: int = 0
+    servings: int = 1
+    ingredients: List[GeneratedIngredientItem] = Field(default_factory=list)
+    steps: List[str] = Field(default_factory=list)
+    nutrition: GeneratedNutrition
+    nutrition_estimate: Optional[GeneratedNutrition] = None
+    declared_nutrition: Optional[GeneratedNutrition] = None
+    estimated_cost: float = 0
+    cost_estimate: Optional[float] = None
+    declared_cost: Optional[float] = None
+    estimate_source: str = "llm_estimate"
+    generation_note: str = ""
 
 
-class MealNutrition(BaseModel):
-    """每餐营养"""
-    calories: float = 0
-    protein: float = 0
-    fat: float = 0
-    carbs: float = 0
-
-
-class Meal(BaseModel):
-    """一餐"""
-    recipe_id: int
+class GeneratedMealItem(BaseModel):
+    recipe_key: str
     name: str
     serving_size: int = 1
-    nutrition: MealNutrition
-
-
-class DayMeals(BaseModel):
-    """一天的餐食"""
-    breakfast: Optional[Meal] = None
-    lunch: Optional[Meal] = None
-    dinner: Optional[Meal] = None
+    nutrition: GeneratedNutrition
 
 
 class WeeklyPlanItem(BaseModel):
-    """一周规划中的一天"""
     day: int
-    meals: DayMeals
-    total_nutrition: MealNutrition
+    meals: Dict[str, GeneratedMealItem] = Field(default_factory=dict)
+    total_nutrition: GeneratedNutrition
 
 
 class NutritionReport(BaseModel):
-    """营养报告"""
     avg_daily_calories: float = 0
     total_calories: float = 0
     protein_g: float = 0
@@ -135,33 +126,63 @@ class NutritionReport(BaseModel):
 
 
 class ShoppingItem(BaseModel):
-    """采购项"""
-    ingredient_id: int
+    ingredient_id: int = 0
     name: str
     quantity: float
     unit: str
     estimated_cost: float
-    for_recipes: List[dict] = []
+    for_recipes: List[dict] = Field(default_factory=list)
 
 
 class ShoppingList(BaseModel):
-    """采购清单"""
     total_cost: float = 0
-    items: List[ShoppingItem] = []
-    by_category: dict = {}
+    items: List[ShoppingItem] = Field(default_factory=list)
+    by_category: dict = Field(default_factory=dict)
+
+
+class ValidationIssue(BaseModel):
+    code: str
+    message: str
+    severity: Literal["error", "warning"]
+    path: Optional[str] = None
+
+
+class PlanValidation(BaseModel):
+    status: str = "passed"
+    passed: bool = True
+    issues: List[ValidationIssue] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+    derived: dict = Field(default_factory=dict)
+
+
+class GenerationMeta(BaseModel):
+    strategy: str = "ai_native_v1"
+    rag_enabled: bool = False
+    rag_used: bool = False
+    rag_sources: List[dict] = Field(default_factory=list)
+    rag_error: Optional[str] = None
+    repair_attempts: int = 0
+    estimate_source: str = "llm_estimate"
+    intent_snapshot: dict = Field(default_factory=dict)
+    constraints_snapshot: dict = Field(default_factory=dict)
 
 
 class PlanResult(BaseModel):
-    """规划完整结果"""
-    top5: List[Top5Item]
-    weekly_plan: List[WeeklyPlanItem]
+    model_config = ConfigDict(extra="allow")
+
+    schema_version: str = "ai_native_v1"
+    version_id: Optional[int] = None
+    version_no: Optional[int] = None
+    recipes: List[GeneratedRecipeItem] = Field(default_factory=list)
+    weekly_plan: List[WeeklyPlanItem] = Field(default_factory=list)
     nutrition_report: NutritionReport
     shopping_list: ShoppingList
+    validation: PlanValidation = Field(default_factory=PlanValidation)
+    generation_meta: GenerationMeta = Field(default_factory=GenerationMeta)
     summary: str = ""
 
 
 class PlanResultResponse(BaseModel):
-    """规划结果响应"""
     plan_id: int
     status: str
     profile_id: int
@@ -171,11 +192,28 @@ class PlanResultResponse(BaseModel):
     result: Optional[PlanResult] = None
 
 
-# ─── 简单结果（运行中） ──────────────────────────
+class PlanMessageCreate(BaseModel):
+    message: str = Field(default="", max_length=1000)
+    action: Optional[dict] = None
+    client_request_id: Optional[str] = Field(default=None, max_length=100)
 
-class PlanRunningResponse(BaseModel):
-    """规划运行中响应"""
+
+class PlanMessageResponse(BaseModel):
+    message_id: int
     plan_id: int
-    status: str = "running"
-    message: str = "规划正在生成中，请稍后查看。"
+    version_id: Optional[int] = None
+    role: str
+    content: str
+    action: Optional[dict] = None
+    status: str
+    created_at: datetime
+
+
+class PlanRunResponse(BaseModel):
+    run_id: int
+    plan_id: int
+    status: str
     current_node: Optional[str] = None
+    base_version_id: Optional[int] = None
+    output_version_id: Optional[int] = None
+    error: Optional[str] = None
