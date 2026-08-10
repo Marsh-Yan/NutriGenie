@@ -33,6 +33,7 @@ class MealPlan(Base):
     duration_days = Column(Integer, default=7)
     total_budget = Column(DECIMAL(8, 2), default=0)
     result_json = Column(JSON, default=None, comment="完整规划结果快照")
+    current_version_id = Column(Integer, nullable=True, index=True)
     current_node = Column(String(50), default=None, comment="当前执行节点")
     error_message = Column(Text, default=None)
     created_at = Column(DateTime, server_default=func.now())

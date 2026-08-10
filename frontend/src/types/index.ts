@@ -107,11 +107,52 @@ export type PlanStatus = 'pending' | 'running' | 'completed' | 'failed'
 export interface PlanStatusResponse {
   plan_id: number
   status: PlanStatus
+  run_id: number | null
+  run_status: string | null
   current_node: string | null
+  current_version_id: number | null
+  has_current_version: boolean
   progress: ProgressInfo | null
   error: string | null
+  last_error: string | null
   created_at: string
   completed_at: string | null
+}
+
+export interface PlanMessageRequest {
+  message?: string
+  action?: Record<string, any>
+  client_request_id?: string
+}
+
+export interface PlanRun {
+  run_id: number
+  plan_id: number
+  status: PlanStatus
+  current_node?: string | null
+  base_version_id?: number | null
+  output_version_id?: number | null
+  error?: string | null
+}
+
+export interface PlanMessage {
+  message_id: number
+  plan_id: number
+  version_id: number | null
+  role: 'user' | 'assistant' | string
+  content: string
+  action?: Record<string, any> | null
+  status: string
+  created_at: string
+}
+
+export interface PlanVersionSummary {
+  version_id: number
+  version_no: number
+  parent_version_id: number | null
+  validation: PlanValidation | Record<string, any> | null
+  created_at: string
+  is_current: boolean
 }
 
 export interface ProgressInfo {
@@ -139,37 +180,78 @@ export interface PlanResultResponse {
 }
 
 export interface PlanResult {
-  top5: TopRecipe[]
+  schema_version: string
+  version_id?: number
+  version_no?: number
+  recipes: GeneratedRecipe[]
   weekly_plan: WeeklyDay[]
   nutrition_report: NutritionReport
   shopping_list: ShoppingList
-  recommendation_meta?: RecommendationMeta
-  plan_validation?: PlanValidation
+  validation: PlanValidation
+  generation_meta: GenerationMeta
   summary: string
 }
 
-export interface RecommendationMeta {
-  strategy: string
-  rag_enabled: boolean
-  rag_used: boolean
-  fallback_used: boolean
-  candidate_count: number
-  weight_version: string
+export interface GeneratedNutrition {
+  calories: number
+  protein_g: number
+  fat_g: number
+  carbs_g: number
+  fiber_g: number
 }
 
 export interface PlanValidation {
+  status: 'passed' | 'warning' | 'failed' | string
   passed: boolean
-  missing_meals: { day: number; meal_slot: string }[]
-  avg_daily_calories: number
-  target_calorie_range: number[]
-  estimated_plan_cost: number
-  estimated_procurement_cost?: number
-  budget_target_range?: number[]
-  total_budget: number
-  max_recipe_repeats: number
+  issues: { code: string; message: string; severity: 'error' | 'warning'; path?: string | null }[]
+  derived: Record<string, any>
   warnings: string[]
 }
 
+export interface GenerationMeta {
+  strategy: string
+  rag_enabled: boolean
+  rag_used: boolean
+  rag_sources: { chunk_id: string; source_file?: string | null; section_title?: string | null; score: number }[]
+  rag_error?: string | null
+  repair_attempts: number
+  estimate_source: string
+  intent_snapshot?: Record<string, any>
+  constraints_snapshot?: Record<string, any>
+}
+
+export interface GeneratedIngredient {
+  name: string
+  quantity: number
+  unit: string
+  optional: boolean
+  nutrition_estimate: GeneratedNutrition
+  line_cost_estimate: number
+}
+
+export interface GeneratedRecipe {
+  recipe_key: string
+  source: string
+  name: string
+  category: string
+  cuisine_type: string
+  difficulty: string
+  prep_time_min: number
+  cook_time_min: number
+  servings: number
+  ingredients: GeneratedIngredient[]
+  steps: string[]
+  nutrition: GeneratedNutrition
+  nutrition_estimate?: GeneratedNutrition
+  declared_nutrition?: GeneratedNutrition
+  estimated_cost: number
+  cost_estimate?: number
+  declared_cost?: number
+  estimate_source: string
+  generation_note: string
+}
+
+// Legacy display type retained by the read-only demo page.
 export interface TopRecipe {
   recipe_id: number
   name: string
@@ -206,8 +288,8 @@ export interface RecommendationEvidence {
 
 export interface WeeklyDay {
   day: number
-  meals: DayMeals
-  total_nutrition: MealNutrition
+  meals: Record<string, MealItem | null>
+  total_nutrition: GeneratedNutrition
 }
 
 export interface DayMeals {
@@ -217,17 +299,22 @@ export interface DayMeals {
 }
 
 export interface MealItem {
-  recipe_id: number
+  recipe_key?: string
+  recipe_id?: number
   name: string
   serving_size: number
-  nutrition: MealNutrition
+  nutrition: MealNutrition | GeneratedNutrition
 }
 
 export interface MealNutrition {
   calories: number
-  protein: number
-  fat: number
-  carbs: number
+  protein?: number
+  fat?: number
+  carbs?: number
+  protein_g?: number
+  fat_g?: number
+  carbs_g?: number
+  fiber_g?: number
 }
 
 export interface NutritionReport {
@@ -250,12 +337,12 @@ export interface ShoppingList {
 }
 
 export interface ShoppingItem {
-  ingredient_id: number
+  ingredient_id?: number
   name: string
   quantity: number
   unit: string
   estimated_cost: number
-  for_recipes: { recipe_id: number; name: string }[]
+  for_recipes: { recipe_key?: string; recipe_id?: number; name: string }[]
 }
 
 export interface ShoppingCategoryItem {

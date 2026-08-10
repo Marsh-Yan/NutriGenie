@@ -4,7 +4,8 @@ from .ingredient import IngredientItem, IngredientListResponse, NutritionPer100g
 from .plan import (
     PlanCreate, PlanCreateResponse,
     PlanStatusResponse, PlanResultResponse, PlanRunningResponse,
-    ProgressInfo, StepInfo,
+    ProgressInfo, StepInfo, PlanMessageCreate, PlanMessageResponse,
+    PlanRunResponse,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "PlanCreate", "PlanCreateResponse",
     "PlanStatusResponse", "PlanResultResponse", "PlanRunningResponse",
     "ProgressInfo", "StepInfo",
+    "PlanMessageCreate", "PlanMessageResponse", "PlanRunResponse",
 ]

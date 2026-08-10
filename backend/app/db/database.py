@@ -36,6 +36,9 @@ def init_db():
         recipe_ingredient,
         ingredient_nutrition,
         meal_plan,
+        meal_plan_version,
+        meal_plan_message,
+        meal_plan_run,
         user,
         knowledge,
     )

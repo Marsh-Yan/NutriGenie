@@ -79,7 +79,7 @@ const weeklyPlan: WeeklyDay[] = [
       lunch: meal(1, '香煎鸡胸藜麦碗', { calories: 520, protein: 42, fat: 16, carbs: 48 }),
       dinner: meal(3, '香菇豆腐荞麦面', { calories: 430, protein: 24, fat: 12, carbs: 58 }),
     },
-    total_nutrition: { calories: 1270, protein: 84, fat: 40, carbs: 138 },
+    total_nutrition: { calories: 1270, protein_g: 84, fat_g: 40, carbs_g: 138, fiber_g: 24 },
   },
   {
     day: 2,
@@ -88,7 +88,7 @@ const weeklyPlan: WeeklyDay[] = [
       lunch: meal(2, '番茄虾仁全麦意面', { calories: 560, protein: 35, fat: 14, carbs: 66 }),
       dinner: meal(1, '鸡胸肉蔬菜卷', { calories: 480, protein: 38, fat: 15, carbs: 42 }),
     },
-    total_nutrition: { calories: 1400, protein: 95, fat: 42, carbs: 150 },
+    total_nutrition: { calories: 1400, protein_g: 95, fat_g: 42, carbs_g: 150, fiber_g: 26 },
   },
   {
     day: 3,
@@ -97,7 +97,7 @@ const weeklyPlan: WeeklyDay[] = [
       lunch: meal(1, '香煎鸡胸藜麦碗', { calories: 520, protein: 42, fat: 16, carbs: 48 }),
       dinner: meal(2, '虾仁番茄沙拉', { calories: 410, protein: 30, fat: 12, carbs: 38 }),
     },
-    total_nutrition: { calories: 1280, protein: 96, fat: 42, carbs: 120 },
+    total_nutrition: { calories: 1280, protein_g: 96, fat_g: 42, carbs_g: 120, fiber_g: 24 },
   },
 ]
 

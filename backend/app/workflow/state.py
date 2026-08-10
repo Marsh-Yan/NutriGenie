@@ -33,6 +33,23 @@ class WorkflowState:
     ranked_recipes: List[Dict[str, Any]] = field(default_factory=list)  # TOP15
     recommendation_error: Optional[str] = None
 
+    # ─── AI Native 生成结果 ───────────────────────
+    generated_plan: Optional[Any] = None  # GeneratedPlan, kept Any for graph serialization
+    generation_context: str = ""
+    generation_meta: Dict[str, Any] = field(default_factory=dict)
+    validation_result: Optional[Dict[str, Any]] = None
+    generated_result: Optional[Dict[str, Any]] = None
+    generation_error: Optional[str] = None
+    repair_attempts: int = 0
+
+    # ─── 对话编辑上下文 ───────────────────────────
+    is_edit: bool = False
+    skip_intent: bool = False
+    base_version_id: Optional[int] = None
+    base_plan: Optional[Dict[str, Any]] = None
+    edit_message: Optional[str] = None
+    edit_action: Optional[Dict[str, Any]] = None
+
     # ─── RAG 检索状态 ─────────────────────────────
     rag_enabled: bool = True
     rag_retrieval_error: Optional[str] = None
