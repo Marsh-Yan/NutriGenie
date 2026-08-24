@@ -24,7 +24,7 @@ NutriGenie 是一个面向个人作品集的端到端 AI 应用 Demo。用户可
 - 根据目标、饮食类型、预算、过敏原和库存生成 AI 原生个性化餐单
 - 程序依据标准食材目录重新计算营养和成本，不信任大模型估算
 - 过敏原、忌口、饮食类型、食材可解析性和结构完整性硬校验，最多两次定向修复
-- 确定性周计划优化器保证同菜最多两次、相邻不重复和最低唯一菜品比例
+- 确定性周计划优化器保证同菜最多两次、相邻不重复和最低唯一菜品比例，并按餐次目标校准可信食材份量
 - RAG 自动降级为可选参考上下文，不参与最终菜谱排名
 - 异步生成计划，前端轮询展示处理进度
 - 结果页支持自然语言修改和快捷操作
@@ -47,7 +47,7 @@ FastAPI + LangGraph 工作流
         ├─ LLM Candidate Generator（候选菜品创作）
         ├─ 食材标准化与确定性营养/成本核算
         ├─ 硬约束校验与最多两次 LLM Repair
-        ├─ 确定性整周优化与结果校验
+        ├─ 确定性整周优化、份量校准与结果校验
         ├─ 程序化营养、预算和采购聚合
         └─ 不可变版本、消息和运行记录
         │                         │
@@ -64,7 +64,7 @@ MySQL：用户、画像、版本     Chroma：可选知识上下文索引
   → LLM 创作候选菜品
   → 食材标准化并重新核算营养和成本
   → 候选硬校验 → 最多两次定向修复
-  → 确定性整周优化与最终校验
+  → 确定性整周优化、可信食材份量校准与最终校验
   → 程序聚合营养、预算和采购清单
   → 保存不可变版本
 ```
@@ -171,6 +171,7 @@ Copy-Item .env.example .env
 | `LLM_API_KEY` | DeepSeek Key；AI 原生餐单生成必须配置，意图解析可规则降级 |
 | `PLAN_GENERATION_MODEL` | AI 餐单生成模型；默认使用 `LLM_MODEL` |
 | `PLAN_GENERATION_TIMEOUT` | 餐单生成超时时间，默认 60 秒 |
+| `PLAN_GENERATION_MAX_TOKENS` | 结构化餐单最大输出长度，默认 16000；避免多菜品 JSON 被截断 |
 | `PLAN_REPAIR_MAX_ATTEMPTS` | 硬校验失败后的最大修复次数，默认 2 |
 | `PLAN_CANDIDATE_MIN` / `PLAN_CANDIDATE_MAX` | AI 候选菜品数量边界 |
 | `PLAN_MAX_RECIPE_REPEAT` | 同一道菜在整周方案中的最大出现次数，默认 2 |
@@ -184,8 +185,11 @@ Copy-Item .env.example .env
 初始化数据库和种子数据：
 
 ```powershell
+alembic upgrade heads
 python -m app.db.seed
 ```
+
+仓库当前存在两个并行迁移头，分别对应 AI 方案版本能力和画像活动水平，因此这里使用 `heads` 而不是单数 `head`。如果数据库最初由早期版本的 `create_all` 创建，迁移脚本也会先检查已有表和字段，再补齐缺失结构。
 
 生成菜谱知识文档并构建 Chroma 索引（已配置 `EMBEDDING_API_KEY` 时执行）：
 
@@ -229,6 +233,46 @@ python -m scripts.create_admin
 管理员可以访问食材、菜谱和知识库管理页面。
 
 ## 测试与评测
+
+### 真实 DeepSeek + MySQL 端到端验收
+
+下面的命令不会使用 mock，也不会从数据库菜谱池选菜。它会创建一份不绑定真实账号的合成画像，真实调用 DeepSeek，执行完整 LangGraph 工作流，写入 MySQL 方案、运行和版本表，读取并验证持久化结果，最后只删除本次创建的临时记录：
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+python scripts\smoke_ai_native_v2.py --synthetic --timeout 480
+```
+
+运行前需要完成以下准备：
+
+- `LLM_API_KEY` 已配置并可调用 `LLM_MODEL`；
+- MySQL 已启动，且已执行 `alembic upgrade heads` 与 `python -m app.db.seed`；
+- 当前 DeepSeek V4 默认为 thinking mode。项目会对结构化应用调用显式关闭 thinking，并使用服务商支持的 JSON Object 模式；
+- 测试请求只发送脚本内的合成画像和测试需求，不会读取或发送真实账号画像；
+- 测试日志只显示模型名、进度、用量指标和验收结果，不打印 API Key。
+
+脚本会对以下项目做硬断言：`ai_native_v2` schema、7 天完整性、每天三餐、最终校验通过、菜品来源为 `ai_generated`、所有食材来自 `ingredient_catalog_v1`、没有未解析食材、至少 14 道不同菜品、单菜最多重复 2 次。任何一项失败都会返回非零退出码。
+
+2026-08-24 的本地真实验收快照如下：
+
+| 项目 | 结果 |
+| --- | ---: |
+| DeepSeek 模型 | `deepseek-v4-flash` |
+| 总耗时 | 81.7 秒 |
+| AI 候选菜品 | 27 道 |
+| 最终不同菜品 | 18 道 |
+| 单菜最大重复 | 2 次 |
+| 完整餐次 | 7 天 / 21 餐 |
+| 日均热量 | 2016.1 kcal |
+| 采购估算 | 293.05 元 / 350 元预算 |
+| 自动修复 | 1 次（未知食材被硬校验拦截后重新生成） |
+| RAG | 未使用；证明无 RAG 时主链路仍可完成 |
+| 验收断言 | 9 / 9 通过 |
+
+这份快照用于证明主链路在真实服务下可运行，不承诺每次生成内容或耗时完全相同。模型输出具有随机性，硬约束不通过时工作流会自动修复，超过最大次数则明确失败，不会退回数据库菜谱伪装成 AI 结果。
+
+### 自动化测试
 
 运行不依赖真实 MySQL 的默认测试：
 

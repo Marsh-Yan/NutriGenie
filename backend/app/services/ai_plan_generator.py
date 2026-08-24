@@ -120,6 +120,19 @@ def _prompt_payload(
         2: ["lunch", "dinner"],
         3: ["breakfast", "lunch", "dinner"],
     }[meal_count]
+    calorie_min = float(constraints.get("calorie_min") or 0)
+    calorie_max = float(constraints.get("calorie_max") or 0)
+    calorie_target = (calorie_min + calorie_max) / 2 if calorie_min and calorie_max else max(calorie_min, calorie_max, 0)
+    slot_weights = {
+        1: {"dinner": 1.0},
+        2: {"lunch": 0.45, "dinner": 0.55},
+        3: {"breakfast": 0.25, "lunch": 0.40, "dinner": 0.35},
+    }[meal_count]
+    slot_calorie_targets = {
+        slot: round(calorie_target * weight)
+        for slot, weight in slot_weights.items()
+        if calorie_target
+    }
     payload = {
         "user_request": user_input,
         "intent": intent or {},
@@ -128,7 +141,12 @@ def _prompt_payload(
         "allowed_ingredients": ingredient_catalog or [],
         "candidate_target": candidate_target,
         "required_meal_slots": required_slots,
-        "output_instruction": "只生成候选 recipes；meals 留空，由后端优化器编排。",
+        "slot_calorie_targets": slot_calorie_targets,
+        "output_instruction": "只输出符合 output_schema 的 JSON 对象；只生成候选 recipes；meals 留空，由后端优化器编排。",
+        # DeepSeek exposes JSON Object mode rather than OpenAI's strict
+        # json_schema response format. LangChain therefore needs the schema in
+        # the prompt when method=json_mode is selected below.
+        "output_schema": GeneratedPlan.model_json_schema(),
     }
     if base_plan is not None:
         payload["current_plan"] = base_plan
@@ -142,34 +160,22 @@ def _prompt_payload(
 
 
 def _creative_plan_payload(plan: GeneratedPlan) -> dict:
-    """Remove backend-derived facts before sending a plan back for repair."""
+    """Return a compact creative summary for repair without trusted facts.
+
+    The validation feedback already identifies exact failures. Re-sending every
+    step and quantity made 7-day repair prompts unnecessarily large and could
+    push otherwise valid JSON beyond a provider's output limit.
+    """
     return {
+        "candidate_count": len(plan.recipes),
         "recipes": [
             {
                 "name": recipe.name,
                 "meal_slots": recipe.meal_slots,
-                "category": recipe.category,
-                "cuisine_type": recipe.cuisine_type,
-                "difficulty": recipe.difficulty,
-                "prep_time_min": recipe.prep_time_min,
-                "cook_time_min": recipe.cook_time_min,
-                "servings": recipe.servings,
-                "ingredients": [
-                    {
-                        "name": item.input_name or item.name,
-                        "quantity": item.quantity,
-                        "unit": item.unit,
-                        "optional": item.optional,
-                    }
-                    for item in recipe.ingredients
-                ],
-                "steps": recipe.steps,
-                "generation_note": recipe.generation_note,
+                "ingredient_names": [item.input_name or item.name for item in recipe.ingredients],
             }
             for recipe in plan.recipes
         ],
-        "meals": [],
-        "summary": plan.summary,
     }
 
 
@@ -182,11 +188,12 @@ async def _invoke_plan(prompt: str, *, temperature: float) -> GeneratedPlan:
             model=settings.PLAN_GENERATION_MODEL or settings.LLM_MODEL,
             temperature=temperature,
             timeout=settings.PLAN_GENERATION_TIMEOUT,
+            max_tokens=settings.PLAN_GENERATION_MAX_TOKENS,
         )
-        structured = llm.with_structured_output(
-            GeneratedPlan,
-            include_raw=True,
-        )
+        structured_options = {"include_raw": True}
+        if "deepseek" in (settings.LLM_API_BASE or "").lower():
+            structured_options["method"] = "json_mode"
+        structured = llm.with_structured_output(GeneratedPlan, **structured_options)
         response = await structured.ainvoke(
             [
                 SystemMessage(content=PLAN_SYSTEM_PROMPT),

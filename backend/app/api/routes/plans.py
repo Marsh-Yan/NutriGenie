@@ -75,7 +75,7 @@ def api_create_plan(
 
     return PlanCreateResponse(
         plan_id=plan.plan_id,
-        status=run_status if run_status in ("pending", "running") else plan.status,
+        status=run.status if run.status in ("pending", "running") else plan.status,
         created_at=plan.created_at,
         links={
             "status": f"/api/v1/plans/{plan.plan_id}/status",

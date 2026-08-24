@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     LLM_TIMEOUT: int = 30
     PLAN_GENERATION_MODEL: str = ""
     PLAN_GENERATION_TIMEOUT: int = 60
+    PLAN_GENERATION_MAX_TOKENS: int = 16000
     PLAN_REPAIR_MAX_ATTEMPTS: int = 2
     PLAN_PROMPT_VERSION: str = "ai_native_v2"
     PLAN_CANDIDATE_MIN: int = 12

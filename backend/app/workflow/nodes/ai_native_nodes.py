@@ -151,6 +151,15 @@ async def plan_repair_node(state: WorkflowState) -> WorkflowState:
         state.errors.append(state.generation_error)
         return state
     state.repair_attempts += 1
+    logger.warning(
+        "Repairing AI plan after %s validation: %s",
+        state.validation_stage,
+        [
+            {"code": item.get("code"), "message": item.get("message")}
+            for item in (state.validation_result or {}).get("issues", [])
+            if item.get("severity") == "error"
+        ][:5],
+    )
     try:
         state.generated_plan = await repair_plan(
             plan=state.generated_plan,

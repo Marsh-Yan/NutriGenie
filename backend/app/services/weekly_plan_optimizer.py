@@ -27,6 +27,7 @@ class PlanOptimizationResult(BaseModel):
     meal_count: int
     required_unique_count: int
     selected_recipe_indexes: list[int] = Field(default_factory=list)
+    portion_scale_by_recipe: dict[int, float] = Field(default_factory=dict)
 
 
 def meal_slots_for_intent(intent: dict | None) -> list[str]:
@@ -73,6 +74,68 @@ def _slot_weights(slots: list[str]) -> dict[str, float]:
     if slots == ["lunch", "dinner"]:
         return {"lunch": 0.45, "dinner": 0.55}
     return {slots[0]: 1.0}
+
+
+def _scaled_nutrition(value, factor: float):
+    return value.model_copy(
+        update={
+            "calories": round(value.calories * factor, 2),
+            "protein_g": round(value.protein_g * factor, 2),
+            "fat_g": round(value.fat_g * factor, 2),
+            "carbs_g": round(value.carbs_g * factor, 2),
+            "fiber_g": round(value.fiber_g * factor, 2),
+        }
+    )
+
+
+def _calibrate_selected_portions(
+    plan: GeneratedPlan,
+    meals: list[GeneratedMeal],
+    *,
+    daily_calorie_target: float,
+    slot_weights: dict[str, float],
+) -> dict[int, float]:
+    """Scale trusted ingredient facts to realistic per-slot portion targets.
+
+    The LLM creates the recipe and ingredient composition. The deterministic
+    layer calibrates only quantities after normalization, so every derived
+    nutrient and cost remains traceable to the ingredient catalog.
+    """
+    slots_by_recipe: dict[int, list[str]] = {}
+    for meal in meals:
+        slots_by_recipe.setdefault(meal.recipe_index, []).append(meal.slot)
+
+    scales: dict[int, float] = {}
+    for recipe_index, assigned_slots in slots_by_recipe.items():
+        recipe = plan.recipes[recipe_index]
+        nutrition = recipe.nutrition_estimate
+        if nutrition is None or nutrition.calories <= 0:
+            continue
+        target = sum(daily_calorie_target * slot_weights[slot] for slot in assigned_slots) / len(assigned_slots)
+        # Guard against pathological model quantities while still allowing a
+        # normal single serving to be calibrated into a full lunch or dinner.
+        factor = max(0.5, min(target / nutrition.calories, 2.5))
+        factor = round(factor, 4)
+        if abs(factor - 1) < 0.01:
+            scales[recipe_index] = 1.0
+            continue
+
+        for ingredient in recipe.ingredients:
+            ingredient.quantity = round(ingredient.quantity * factor, 2)
+            if ingredient.estimated_grams is not None:
+                ingredient.estimated_grams = round(ingredient.estimated_grams * factor, 2)
+            if ingredient.nutrition_estimate is not None:
+                ingredient.nutrition_estimate = _scaled_nutrition(ingredient.nutrition_estimate, factor)
+            if ingredient.line_cost_estimate is not None:
+                ingredient.line_cost_estimate = round(ingredient.line_cost_estimate * factor, 2)
+
+        recipe.nutrition_estimate = _scaled_nutrition(nutrition, factor)
+        recipe.cost_estimate = round(float(recipe.cost_estimate or 0) * factor, 2)
+        recipe.servings = 1
+        note = f"后端依据食材目录将该餐份量校准为原配方的 {factor:.2f} 倍。"
+        recipe.generation_note = f"{recipe.generation_note} {note}".strip()
+        scales[recipe_index] = factor
+    return scales
 
 
 def _candidate_score(
@@ -236,6 +299,12 @@ def optimize_weekly_plan(
 
     optimized = plan.model_copy(deep=True)
     optimized.meals = meals
+    portion_scales = _calibrate_selected_portions(
+        optimized,
+        meals,
+        daily_calorie_target=daily_calorie_target,
+        slot_weights=weights,
+    )
     adjacent_duplicates = sum(1 for left, right in zip(selected, selected[1:]) if left == right)
     return PlanOptimizationResult(
         plan=optimized,
@@ -247,4 +316,5 @@ def optimize_weekly_plan(
         meal_count=len(meals),
         required_unique_count=required_unique,
         selected_recipe_indexes=selected,
+        portion_scale_by_recipe=portion_scales,
     )

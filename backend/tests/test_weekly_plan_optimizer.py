@@ -6,6 +6,7 @@ from app.services.weekly_plan_optimizer import (
     optimize_weekly_plan,
     required_unique_count,
 )
+from app.services.plan_validator import validate_plan
 
 
 def _normalized_plan(candidate_count: int) -> GeneratedPlan:
@@ -75,6 +76,19 @@ def test_optimizer_enforces_weekly_diversity_and_repeat_limit():
     assert result.max_recipe_repeat <= 2
     assert result.adjacent_duplicate_count == 0
     assert len(result.plan.meals) == 21
+    validation = validate_plan(
+        result.plan,
+        _constraints(),
+        intent={"meal_count_per_day": 3},
+        duration_days=7,
+        require_meals=True,
+        require_resolved=True,
+        enforce_diversity=True,
+        enforce_quality_targets=True,
+    )
+    assert validation.passed
+    assert validation.derived["avg_daily_calories"] == pytest.approx(1650, abs=1)
+    assert result.portion_scale_by_recipe
 
 
 def test_optimizer_rejects_candidate_shortage_instead_of_over_repeating():
