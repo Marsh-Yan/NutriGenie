@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, useId } from 'vue'
+import { computed, ref, useId, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
-const mode = ref<'login' | 'register'>('login')
+const mode = ref<'login' | 'register'>(route.query.mode === 'register' ? 'register' : 'login')
 const email = ref('')
 const nickname = ref('')
 const password = ref('')
@@ -19,6 +19,10 @@ const passwordId = useId()
 const codeId = useId()
 
 const isRegister = computed(() => mode.value === 'register')
+
+watch(() => route.query.mode, value => {
+  if (value === 'register' || value === 'login') mode.value = value
+})
 
 function validate() {
   if (!/^\S+@\S+\.\S+$/.test(email.value.trim())) return '请输入有效的邮箱地址'
@@ -77,6 +81,7 @@ function switchMode() {
         <label :for="codeId">验证码</label>
         <el-input :id="codeId" v-model="code" inputmode="numeric" autocomplete="one-time-code" placeholder="开发环境验证码：123456" />
       </div>
+      <p v-if="isRegister" class="dev-note">本地演示模式：验证码固定为 <strong>123456</strong>。生产环境需接入真实邮件验证码。</p>
 
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <el-button native-type="submit" type="primary" size="large" :loading="loading">
@@ -100,6 +105,7 @@ function switchMode() {
 .auth-card :deep(.el-input__wrapper) { min-height: 44px; }
 .auth-card .el-button { width: 100%; min-height: 44px; }
 .error { padding: 10px 12px; border-radius: $radius-sm; background: rgba($color-danger,.1); color: $color-danger; font-size: 13px; }
+.dev-note { padding: 10px 12px; border-radius: $radius-sm; background: rgba($color-info,.16); color: $color-text-primary; font-size: 12px; }
 .switch { min-height: 40px; border: 0; background: transparent; color: $color-sage-dark; cursor: pointer; font: inherit; }
 @media (max-width: $breakpoint-md) { .auth-page { grid-template-columns: 1fr; gap: 28px; max-width: 520px; } .auth-intro { text-align: center; } }
 @media (max-width: $breakpoint-sm) { .auth-page { min-height: auto; padding-top: 32px; padding-bottom: 32px; } .auth-intro h1 { font-size: 30px; } .auth-card { padding: 24px; } }

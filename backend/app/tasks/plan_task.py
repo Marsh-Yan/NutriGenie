@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 STEPS = [
     {"name": "意图分析", "order": 1},
     {"name": "约束分析", "order": 2},
-    {"name": "推荐引擎分析", "order": 3},
-    {"name": "营养分析", "order": 4},
-    {"name": "预算分析", "order": 5},
+    {"name": "混合推荐", "order": 3},
+    {"name": "计划聚合", "order": 4},
+    {"name": "结果校验", "order": 5},
     {"name": "生成总结", "order": 6},
 ]
 
@@ -37,8 +37,10 @@ def _resolve_node_step(node_name: str) -> int:
         "recommendation_engine": 3,
         "recommendation": 3,
         "aggregator": 4,
-        "summary_generator": 5,
-        "summary": 5,
+        "plan_validation": 5,
+        "validation": 5,
+        "summary_generator": 6,
+        "summary": 6,
     }
     return mapping.get(node_name, 0)
 
@@ -49,14 +51,37 @@ def _node_to_step_name(node_name: str) -> str:
         "intent_analyzer": "意图分析",
         "constraint_analyzer": "约束分析",
         "constraint": "约束分析",
-        "recommendation_engine": "推荐引擎分析",
-        "recommendation": "推荐引擎分析",
-        "aggregator": "营养与预算分析",
+        "recommendation_engine": "混合推荐",
+        "recommendation": "混合推荐",
+        "aggregator": "计划聚合",
+        "plan_validation": "结果校验",
+        "validation": "结果校验",
         "summary_generator": "生成总结",
         "summary": "生成总结",
         "completed": "生成总结",
     }
     return mapping.get(node_name, node_name)
+
+
+def _state_value(state, key: str, default=None):
+    """Read a LangGraph state value from either dict or dataclass output."""
+    if isinstance(state, dict):
+        return state.get(key, default)
+    return getattr(state, key, default)
+
+
+async def _run_workflow_with_progress(state: WorkflowState, plan: MealPlan, db):
+    """Run the graph while persisting each user-visible node transition."""
+    final_state = None
+    last_node = None
+    async for snapshot in compiled_graph.astream(state, stream_mode="values"):
+        final_state = snapshot
+        current_node = _state_value(snapshot, "current_node")
+        if current_node and current_node not in (last_node, "completed"):
+            last_node = current_node
+            plan.current_node = current_node
+            db.commit()
+    return final_state or {}
 
 
 def _execute_plan(plan_id: int):
@@ -86,14 +111,14 @@ def _execute_plan(plan_id: int):
         db.commit()
 
         # ── 异步执行 Workflow ──
-        final_state = asyncio.run(compiled_graph.ainvoke(state))
+        final_state = asyncio.run(_run_workflow_with_progress(state, plan, db))
 
         # ── 检查结果 ──
-        final_result = final_state.get("final_result", {})
+        final_result = _state_value(final_state, "final_result", {}) or {}
         status = final_result.get("status", "failed")
 
         if status == "completed":
-            aggregated = final_state.get("aggregated_result", {})
+            aggregated = _state_value(final_state, "aggregated_result", {}) or {}
 
             # 提取前端需要的字段
             result_json = {
@@ -103,7 +128,7 @@ def _execute_plan(plan_id: int):
                 "shopping_list": aggregated.get("shopping_list", {}),
                 "recommendation_meta": aggregated.get("recommendation_meta", {}),
                 "plan_validation": aggregated.get("plan_validation", {}),
-                "summary": final_state.get("summary", "")
+                "summary": _state_value(final_state, "summary", "")
                             or aggregated.get("summary", "饮食规划已生成。"),
             }
 
@@ -113,7 +138,7 @@ def _execute_plan(plan_id: int):
             plan.completed_at = datetime.now(timezone.utc)
             logger.info(f"Plan {plan_id} completed via Workflow")
         else:
-            errors = final_state.get("errors", [])
+            errors = _state_value(final_state, "errors", [])
             error_msg = errors[-1] if errors else "规划生成失败"
             plan.status = "failed"
             plan.current_node = None

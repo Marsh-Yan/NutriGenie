@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'
 import RecipeCard from '@/components/recipe/RecipeCard.vue'
 import WeeklyTimeline from '@/components/plan/WeeklyTimeline.vue'
@@ -8,8 +8,10 @@ import NutritionReport from '@/components/plan/NutritionReport.vue'
 import ShoppingList from '@/components/plan/ShoppingList.vue'
 import { Refresh } from '@element-plus/icons-vue'
 import PremiumIcon from '@/components/common/PremiumIcon.vue'
+import ProgressStepper from '@/components/plan/ProgressStepper.vue'
 
 const route = useRoute()
+const router = useRouter()
 const store = usePlanStore()
 
 const overview = computed(() => {
@@ -25,10 +27,10 @@ const overview = computed(() => {
 
 onMounted(() => {
   const planId = Number(route.params.id)
-  if (planId) {
-    store.planId = planId
-    store.status = 'pending'
-    store.startPolling()
+  if (Number.isInteger(planId) && planId > 0) store.load(planId)
+  else {
+    store.status = 'failed'
+    store.error = '方案编号无效，请从“我的方案”重新进入'
   }
 })
 
@@ -39,22 +41,27 @@ watch(() => store.status, (status) => {
     store.stopPolling()
   }
 })
+
+function printPlan() {
+  window.print()
+}
 </script>
 
 <template>
   <div class="plan-result-page page-container">
 
     <!-- 加载/等待状态 -->
-    <div v-if="store.status === 'pending' || store.status === 'running'" class="loading-section">
+    <div v-if="store.status === 'pending' || store.status === 'running' || store.resultLoading" class="loading-section">
       <div class="loading-card card">
         <div class="loading-animation">
           <div class="loading-ring" />
           <PremiumIcon name="thinking" class="loading-icon" :size="34" :box-size="68" />
         </div>
-        <h2 class="loading-title">AI 正在为你规划...</h2>
+        <h1 class="loading-title">{{ store.resultLoading ? '方案已生成，正在整理结果…' : 'AI 正在为你规划…' }}</h1>
         <p class="loading-desc">
           {{ store.status === 'pending' ? '等待中，即将开始' : '正在分析你的需求、匹配菜谱...' }}
         </p>
+        <ProgressStepper :status="store.status" :progress="store.progress" />
       </div>
     </div>
 
@@ -85,6 +92,10 @@ watch(() => store.status, (status) => {
           <div><strong>{{ overview.calories.toFixed(0) }}</strong><span>日均 kcal</span></div>
           <div><strong>{{ overview.cost == null ? '—' : `¥${overview.cost.toFixed(0)}` }}</strong><span>预计采购</span></div>
           <div><strong>{{ overview.recipes }}</strong><span>精选菜谱</span></div>
+        </div>
+        <div class="result-actions">
+          <el-button round @click="printPlan">打印方案</el-button>
+          <el-button type="primary" round @click="router.push('/plan/new')">重新规划</el-button>
         </div>
       </section>
       <section v-if="store.result.recommendation_meta" class="recommendation-status card">
@@ -132,7 +143,10 @@ watch(() => store.status, (status) => {
 
       <!-- 营养报告 -->
       <section class="result-block">
-        <NutritionReport :report="store.result.nutrition_report" />
+        <NutritionReport
+          :report="store.result.nutrition_report"
+          :target-range="store.result.plan_validation?.target_calorie_range"
+        />
       </section>
 
       <!-- 采购清单 -->
@@ -211,6 +225,8 @@ watch(() => store.status, (status) => {
   color: $color-text-secondary;
 }
 
+.loading-card :deep(.progress-stepper) { margin: 32px auto 0; max-width: 640px; text-align: left; }
+
 // ── 错误状态 ─────────────────────────────
 
 .error-section {
@@ -254,6 +270,7 @@ watch(() => store.status, (status) => {
 .overview-grid div { display: flex; flex-direction: column; padding: 14px; border-radius: $radius-md; background: rgba(255,255,255,.72); }
 .overview-grid strong { color: $color-text-primary; font-size: 22px; }
 .overview-grid span { color: $color-text-secondary; font-size: 12px; }
+.result-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
 .result-block {
   margin-bottom: 40px;
@@ -324,5 +341,11 @@ watch(() => store.status, (status) => {
   .overview-grid { gap: 8px; }
   .overview-grid div { padding: 12px 8px; }
   .overview-grid strong { font-size: 18px; }
+}
+
+@media print {
+  .result-actions, :global(.app-header), :global(.mobile-nav), :global(.app-footer) { display: none !important; }
+  .plan-result-page { max-width: none; padding: 0; }
+  .card { break-inside: avoid; box-shadow: none; }
 }
 </style>

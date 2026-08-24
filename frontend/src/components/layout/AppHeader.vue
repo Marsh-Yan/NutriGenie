@@ -4,9 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import PremiumIcon from '@/components/common/PremiumIcon.vue'
 import type { PremiumIconName } from '@/components/common/PremiumIcon.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
+const auth = useAuthStore()
 const isHome = computed(() => route.name === 'home')
 const isAppRoute = computed(() => !String(route.name || '').startsWith('admin'))
 
@@ -15,11 +17,17 @@ function goBack() {
   else router.push('/')
 }
 
-const navItems: { to: string; label: string; icon: PremiumIconName }[] = [
+const navItems = computed<{ to: string; label: string; icon: PremiumIconName }[]>(() => [
   { to: '/', label: '首页', icon: 'home' },
   { to: '/profile', label: '我的画像', icon: 'profile' },
   { to: '/plan/new', label: '开始规划', icon: 'plan' },
-]
+  ...(auth.isLoggedIn ? [{ to: '/plans', label: '我的方案', icon: 'clipboard' as PremiumIconName }] : []),
+])
+
+async function logout() {
+  auth.logout()
+  await router.push('/')
+}
 </script>
 
 <template>
@@ -39,6 +47,11 @@ const navItems: { to: string; label: string; icon: PremiumIconName }[] = [
           <PremiumIcon :name="item.icon" class="nav-icon" :size="15" :box-size="28" />
           {{ item.label }}
         </router-link>
+        <div v-if="auth.isLoggedIn" class="account-menu">
+          <span>{{ auth.user?.nickname }}</span>
+          <button type="button" @click="logout">退出</button>
+        </div>
+        <router-link v-else :to="{ name: 'auth', query: { mode: 'login' } }" class="account-link">登录</router-link>
       </nav>
     </div>
   </header>
@@ -62,15 +75,18 @@ const navItems: { to: string; label: string; icon: PremiumIconName }[] = [
 .desktop-nav { display: flex; gap: 8px; }
 .nav-link { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 16px; border-radius: 20px; color: rgba(255,255,255,.88); font-size: 14px; }
 .nav-link:hover, .nav-link.router-link-active { background: rgba(255,255,255,.18); color: #fff; }
+.account-menu { display: flex; align-items: center; gap: 8px; margin-left: 4px; color: #fff; font-size: 13px; }
+.account-menu button, .account-link { min-height: 36px; padding: 7px 12px; border: 1px solid rgba(255,255,255,.48); border-radius: 999px; background: transparent; color: #fff; cursor: pointer; font: inherit; }
 .nav-icon { --icon-box-size: 28px; --icon-size: 15px; border: 0; border-radius: 9px; background: rgba(255,255,255,.16); box-shadow: none; color: currentColor; }
 .mobile-nav { display: none; }
 
 @media (max-width: $breakpoint-sm) {
   .header-inner { height: 60px; }
   .desktop-nav { display: none; }
+  .account-menu, .account-link { margin-left: auto; }
   .logo-icon { --icon-box-size: 36px; --icon-size: 22px; }
   .logo-text { font-size: 18px; }
-  .mobile-nav { position: fixed; inset: auto 0 0; z-index: 120; display: grid; grid-template-columns: repeat(3, 1fr); min-height: 64px; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid $color-border; background: rgba(255,255,255,.96); backdrop-filter: blur(14px); box-shadow: 0 -4px 18px rgba(74,74,74,.08); }
+  .mobile-nav { position: fixed; inset: auto 0 0; z-index: 120; display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); min-height: 64px; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid $color-border; background: rgba(255,255,255,.96); backdrop-filter: blur(14px); box-shadow: 0 -4px 18px rgba(74,74,74,.08); }
   .mobile-nav-link { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 64px; color: $color-text-secondary; font-size: 11px; }
   .mobile-nav-link.router-link-exact-active { color: $color-sage-dark; font-weight: 700; }
   .mobile-nav-icon { --icon-box-size: 32px; --icon-size: 18px; border-radius: 10px; box-shadow: none; }

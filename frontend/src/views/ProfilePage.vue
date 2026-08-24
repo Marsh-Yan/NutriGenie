@@ -12,15 +12,21 @@ const currentStep = ref(0)
 const form = ref({ ...store.defaultForm })
 const submitting = ref(false)
 const submitError = ref('')
+const initialError = ref('')
 
 onMounted(async () => {
-  const existing = await store.fetchMyProfile()
-  if (existing) {
-    form.value = {
-      age: existing.age, gender: existing.gender, height: existing.height, weight: existing.weight,
-      diet_type: existing.diet_type, health_goal: existing.health_goal,
-      allergies: existing.allergies || [], daily_budget: existing.daily_budget,
+  try {
+    const existing = await store.fetchMyProfile()
+    if (existing) {
+      form.value = {
+        age: existing.age, gender: existing.gender, height: existing.height, weight: existing.weight,
+        activity_level: existing.activity_level || 'moderate',
+        diet_type: existing.diet_type, health_goal: existing.health_goal,
+        allergies: existing.allergies || [], daily_budget: existing.daily_budget,
+      }
     }
+  } catch (e: unknown) {
+    initialError.value = e instanceof Error ? e.message : '健康画像加载失败，请刷新重试'
   }
 })
 
@@ -36,7 +42,8 @@ const computedTdee = computed(() => {
   const bmr = form.value.gender === 'male'
     ? 10 * form.value.weight + 6.25 * form.value.height - 5 * form.value.age + 5
     : 10 * form.value.weight + 6.25 * form.value.height - 5 * form.value.age - 161
-  return Math.round(bmr * 1.55)
+  const factors = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, extra: 1.9 }
+  return Math.round(bmr * factors[form.value.activity_level])
 })
 
 const steps = [
@@ -60,6 +67,10 @@ const dietTypeLabels: Record<string, string> = {
   gluten_free: '无麸质',
   vegan: '素食',
   healthy: '健康',
+}
+
+const activityLabels: Record<string, string> = {
+  sedentary: '久坐', light: '轻度活动', moderate: '中度活动', active: '高强度活动', extra: '极高强度活动',
 }
 
 function nextStep() {
@@ -96,6 +107,13 @@ async function submitForm() {
 
 <template>
   <div class="profile-page page-container">
+    <header class="profile-heading">
+      <span>用于估算热量与筛选约束</span>
+      <h1>{{ store.profile ? '更新健康画像' : '创建健康画像' }}</h1>
+      <p>信息只用于生成更贴合你的饮食方案，之后可以随时修改。</p>
+    </header>
+    <p v-if="store.loading && !submitting" class="status-message" aria-live="polite">正在加载已有画像…</p>
+    <p v-if="initialError" class="submit-error" role="alert">{{ initialError }}</p>
     <div class="mobile-progress" aria-live="polite">
       <div>
         <strong>步骤 {{ currentStep + 1 }}/{{ steps.length }}</strong>
@@ -152,9 +170,19 @@ async function submitForm() {
             </el-col>
           </el-row>
 
+          <el-form-item label="日常活动水平" required>
+            <el-select v-model="form.activity_level" style="width: 100%">
+              <el-option label="久坐（几乎不运动）" value="sedentary" />
+              <el-option label="轻度活动（每周 1–3 次）" value="light" />
+              <el-option label="中度活动（每周 3–5 次）" value="moderate" />
+              <el-option label="高强度活动（每周 6–7 次）" value="active" />
+              <el-option label="极高强度活动（高体力工作或双练）" value="extra" />
+            </el-select>
+          </el-form-item>
+
           <div v-if="computedBmi" class="calc-preview">
             <span class="calc-item">BMI: <strong>{{ computedBmi }}</strong></span>
-            <span class="calc-item">每日消耗: <strong>{{ computedTdee }} kcal</strong></span>
+            <span class="calc-item">估算每日消耗: <strong>{{ computedTdee }} kcal</strong></span>
           </div>
 
           <div class="step-actions">
@@ -214,7 +242,7 @@ async function submitForm() {
               <el-option label="健康饮食" value="healthy" />
             </el-select>
           </el-form-item>
-          <el-form-item label="过敏 / 忌口">
+          <el-form-item label="过敏原 / 必须排除">
             <el-select v-model="form.allergies" multiple filterable allow-create default-first-option
               style="width: 100%" placeholder="输入食物名称后回车添加">
               <el-option label="海鲜" value="海鲜" />
@@ -225,6 +253,7 @@ async function submitForm() {
               <el-option label="麸质" value="麸质" />
               <el-option label="坚果" value="坚果" />
             </el-select>
+            <p class="safety-hint">严重食物过敏请同时核对配料与交叉污染风险；本工具不能替代医生或营养师建议。</p>
           </el-form-item>
         </el-form>
         <div class="step-actions">
@@ -253,6 +282,7 @@ async function submitForm() {
             <div><span>性别</span><strong>{{ form.gender === 'male' ? '男性' : form.gender === 'female' ? '女性' : '-' }}</strong></div>
             <div><span>身高/体重</span><strong>{{ form.height || '-' }}cm / {{ form.weight || '-' }}kg</strong></div>
             <div><span>每日消耗</span><strong>{{ computedTdee || '-' }} kcal</strong></div>
+            <div><span>活动水平</span><strong>{{ activityLabels[form.activity_level] }}</strong></div>
             <div><span>健康目标</span><strong>{{ healthGoalLabels[form.health_goal] }}</strong></div>
             <div><span>饮食类型</span><strong>{{ dietTypeLabels[form.diet_type] }}</strong></div>
           </div>
@@ -275,6 +305,13 @@ async function submitForm() {
   padding: 40px 20px;
   max-width: 680px;
 }
+
+.profile-heading { margin-bottom: 28px; text-align: center; }
+.profile-heading span { color: $color-sage-dark; font-size: 13px; font-weight: 700; letter-spacing: .06em; }
+.profile-heading h1 { margin: 6px 0; color: $color-text-primary; font-size: 32px; }
+.profile-heading p, .status-message { color: $color-text-secondary; font-size: 14px; }
+.status-message { margin-bottom: 14px; text-align: center; }
+.safety-hint { margin-top: 8px; color: $color-text-secondary; font-size: 12px; line-height: 1.6; }
 
 .mobile-progress { display: none; }
 

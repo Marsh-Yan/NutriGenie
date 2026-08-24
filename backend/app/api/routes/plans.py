@@ -8,7 +8,7 @@ from app.models.meal_plan import MealPlan
 from app.api.schemas.plan import (
     PlanCreate, PlanCreateResponse,
     PlanStatusResponse, PlanResultResponse, PlanRunningResponse,
-    ProgressInfo, StepInfo,
+    PlanListItem, ProgressInfo, StepInfo,
 )
 from app.tasks.plan_task import start_plan_task, STEPS
 from app.models.profile import Profile
@@ -59,6 +59,27 @@ def api_create_plan(data: PlanCreate, db: Session = Depends(get_db), current_use
     )
 
 
+@router.get("/plans", response_model=list[PlanListItem])
+def api_list_plans(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """按时间倒序返回当前用户的历史方案。"""
+    query = db.query(MealPlan).join(Profile, Profile.profile_id == MealPlan.profile_id)
+    if current_user.role != "admin":
+        query = query.filter(Profile.user_id == current_user.user_id)
+    plans = query.order_by(MealPlan.created_at.desc(), MealPlan.plan_id.desc()).all()
+    return [
+        PlanListItem(
+            plan_id=plan.plan_id,
+            status=plan.status,
+            user_input=plan.user_input,
+            duration_days=plan.duration_days or 7,
+            total_budget=float(plan.total_budget or 0),
+            created_at=plan.created_at,
+            completed_at=plan.completed_at,
+        )
+        for plan in plans
+    ]
+
+
 @router.get("/plans/{plan_id}/status", response_model=PlanStatusResponse)
 def api_get_plan_status(plan_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """获取规划任务状态"""
@@ -77,14 +98,14 @@ def api_get_plan_status(plan_id: int, db: Session = Depends(get_db), current_use
     # 状态进度信息
     if plan.status in ("pending", "running"):
         completed = 0
-        current_step = 0
+        node_order = _find_step_order(plan.current_node or "")
+        current_step = node_order
         steps = []
-        for i, s in enumerate(STEPS):
+        for s in STEPS:
             step_status = "pending"
-            if s["name"] == plan.current_node:
+            if s["order"] == node_order:
                 step_status = "running"
-                current_step = i + 1
-            elif s["order"] < _find_step_order(plan.current_node or ""):
+            elif s["order"] < node_order:
                 step_status = "completed"
                 completed += 1
             steps.append(StepInfo(name=s["name"], status=step_status, order=s["order"]))
@@ -93,7 +114,7 @@ def api_get_plan_status(plan_id: int, db: Session = Depends(get_db), current_use
             total_steps=len(STEPS),
             completed_steps=completed,
             current_step=current_step,
-            step_name=plan.current_node or "",
+            step_name=(STEPS[node_order - 1]["name"] if node_order else "等待开始"),
             steps=steps,
         )
 
@@ -138,10 +159,11 @@ def api_get_plan(plan_id: int, db: Session = Depends(get_db), current_user: User
 # node_name → step order 映射
 NODE_STEP_MAP = {
     "intent_analyzer": 1, "意图分析": 1,
-    "constraint": 2, "约束分析": 2,
-    "recommendation": 3, "推荐引擎分析": 3,
-    "aggregator": 4, "营养分析": 4, "预算分析": 4,
-    "summary": 5, "summary_generator": 5, "生成总结": 5,
+    "constraint": 2, "constraint_analyzer": 2, "约束分析": 2,
+    "recommendation": 3, "recommendation_engine": 3, "混合推荐": 3,
+    "aggregator": 4, "计划聚合": 4,
+    "validation": 5, "plan_validation": 5, "结果校验": 5,
+    "summary": 6, "summary_generator": 6, "生成总结": 6,
 }
 
 

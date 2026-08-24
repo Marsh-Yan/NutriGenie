@@ -4,8 +4,10 @@ import { ref, onMounted } from 'vue'
 import { Right } from '@element-plus/icons-vue'
 import PremiumIcon from '@/components/common/PremiumIcon.vue'
 import type { PremiumIconName } from '@/components/common/PremiumIcon.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const auth = useAuthStore()
 const loaded = ref(false)
 
 onMounted(() => {
@@ -14,6 +16,11 @@ onMounted(() => {
 
 function viewExample() {
   router.push('/demo')
+}
+
+function startUsing() {
+  if (auth.isLoggedIn) router.push('/profile')
+  else router.push({ name: 'auth', query: { mode: 'register', redirect: '/profile' } })
 }
 
 const features: { icon: PremiumIconName; title: string; desc: string }[] = [
@@ -41,7 +48,7 @@ const features: { icon: PremiumIconName; title: string; desc: string }[] = [
             科学、个性、可执行的饮食方案
           </p>
           <div class="hero-actions">
-            <el-button type="primary" size="large" round @click="router.push('/profile')">
+            <el-button type="primary" size="large" round @click="startUsing">
               开始使用
               <el-icon class="btn-icon"><Right /></el-icon>
             </el-button>
@@ -96,7 +103,7 @@ const features: { icon: PremiumIconName; title: string; desc: string }[] = [
       <div class="cta-card">
         <h2 class="cta-title">准备好开始了吗？</h2>
         <p class="cta-desc">填写你的健康画像，3 分钟获得专属饮食规划</p>
-        <el-button type="primary" size="large" round @click="router.push('/profile')">
+        <el-button type="primary" size="large" round @click="startUsing">
           创建我的画像
         </el-button>
       </div>

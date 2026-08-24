@@ -14,6 +14,12 @@ class Profile(Base):
     gender = Column(Enum("male", "female"), nullable=False)
     height = Column(DECIMAL(5, 1), nullable=False, comment="cm")
     weight = Column(DECIMAL(5, 1), nullable=False, comment="kg")
+    activity_level = Column(
+        String(20),
+        nullable=False,
+        default="moderate",
+        comment="sedentary|light|moderate|active|extra",
+    )
     diet_type = Column(
         String(50),
         nullable=False,

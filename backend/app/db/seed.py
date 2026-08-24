@@ -38,6 +38,7 @@ def seed_profiles():
             gender="male",
             height=175.0,
             weight=72.0,
+            activity_level="moderate",
             diet_type="balanced",
             health_goal="fat_loss",
             allergies=["海鲜"],

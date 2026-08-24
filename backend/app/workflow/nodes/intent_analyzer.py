@@ -73,26 +73,31 @@ def _rule_based_parse(user_input: str) -> dict:
     elif any(kw in text for kw in ["健康饮食", "healthy"]):
         diet_type = "healthy"
 
-    # 天数
+    # 天数（系统单次规划上限 30 天）
     duration_days = 7
     day_match = re.search(r"(\d+)\s*天", text)
     if day_match:
-        duration_days = int(day_match.group(1))
+        duration_days = min(int(day_match.group(1)), 30)
+    elif week_match := re.search(r"(\d+)\s*周", text):
+        duration_days = min(int(week_match.group(1)) * 7, 30)
     else:
         # 中文数字匹配
         cn_num_map = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
                       "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
         for cn, num in cn_num_map.items():
-            if f"{cn}天" in text or f"{cn}周" in text:
-                duration_days = num if "周" not in text or cn not in ("一",) else num * 7
+            if f"{cn}天" in text:
+                duration_days = num
+                break
+            if f"{cn}周" in text:
+                duration_days = min(num * 7, 30)
                 break
             if f"{cn}个月" in text:
-                duration_days = num * 30
+                duration_days = min(num * 30, 30)
                 break
 
     # 预算
     total_budget = 0.0
-    budget_match = re.search(r"预算[约大概]?(\d+(?:\.\d+)?)\s*元", text)
+    budget_match = re.search(r"预算\s*[约大概]?\s*(\d+(?:\.\d+)?)\s*元", text)
     if budget_match:
         total_budget = float(budget_match.group(1))
 
@@ -130,6 +135,14 @@ def _rule_based_parse(user_input: str) -> dict:
                 allergies_or_concerns = after.strip()
                 break
 
+    # 每日餐数（当前计划支持 1-3 餐，未说明时为早/午/晚三餐）
+    meal_count_per_day = 3
+    meal_match = re.search(r"(?:每天|每日|只吃|一天)?\s*([123一二两三])\s*(?:餐|顿)", text)
+    if meal_match:
+        count_map = {"一": 1, "二": 2, "两": 2, "三": 3}
+        raw_count = meal_match.group(1)
+        meal_count_per_day = max(1, min(int(raw_count) if raw_count.isdigit() else count_map[raw_count], 3))
+
     return {
         "health_goal": health_goal,
         "diet_type": diet_type,
@@ -137,7 +150,7 @@ def _rule_based_parse(user_input: str) -> dict:
         "total_budget": total_budget,
         "owned_ingredients": owned_ingredients,
         "allergies_or_concerns": allergies_or_concerns,
-        "meal_count_per_day": 3,
+        "meal_count_per_day": meal_count_per_day,
         "additional_notes": None,
     }
 
@@ -155,7 +168,25 @@ def _apply_explicit_intent_overrides(user_input: str, llm_intent: dict) -> dict:
         merged["health_goal"] = rule_intent["health_goal"]
     if rule_intent["diet_type"] != "balanced":
         merged["diet_type"] = rule_intent["diet_type"]
+    if re.search(r"(?:\d+|[一二两三四五六七八九十])\s*(?:天|周|个月)", user_input):
+        merged["duration_days"] = rule_intent["duration_days"]
+    if re.search(r"预算\s*[约大概]?\s*\d", user_input):
+        merged["total_budget"] = rule_intent["total_budget"]
+    if rule_intent.get("allergies_or_concerns"):
+        merged["allergies_or_concerns"] = rule_intent["allergies_or_concerns"]
+    if re.search(r"(?:每天|每日|只吃|一天)?\s*[123一二两三]\s*(?:餐|顿)", user_input):
+        merged["meal_count_per_day"] = rule_intent["meal_count_per_day"]
     return merged
+
+
+def _sync_explicit_constraints_to_state(
+    state: WorkflowState, intent_data: dict
+) -> None:
+    """Make explicit natural-language constraints authoritative over defaults."""
+    if re.search(r"(?:\d+|[一二两三四五六七八九十])\s*(?:天|周|个月)", state.user_input):
+        state.duration_days = max(1, min(int(intent_data.get("duration_days", state.duration_days)), 30))
+    if re.search(r"预算\s*[约大概]?\s*\d", state.user_input):
+        state.total_budget = max(0.0, float(intent_data.get("total_budget", state.total_budget) or 0))
 
 
 async def analyze_intent(state: WorkflowState) -> WorkflowState:
@@ -202,7 +233,7 @@ async def analyze_intent(state: WorkflowState) -> WorkflowState:
                     state.user_input, intent_data
                 )
                 state.intent_analysis = intent_data
-                # 同步更新到 state 顶层字段
+                _sync_explicit_constraints_to_state(state, intent_data)
                 state.intent_explanation = _generate_intent_explanation(intent_data)
                 logger.info(f"Intent analyzed via LLM: {intent_data.get('health_goal')}")
                 return state
@@ -214,6 +245,7 @@ async def analyze_intent(state: WorkflowState) -> WorkflowState:
     # ── 降级：规则解析 ──
     intent_data = _rule_based_parse(state.user_input)
     state.intent_analysis = intent_data
+    _sync_explicit_constraints_to_state(state, intent_data)
     state.intent_explanation = _generate_intent_explanation(intent_data) + "（基于规则解析）"
     logger.info(f"Intent analyzed via rules: {intent_data.get('health_goal')}")
 

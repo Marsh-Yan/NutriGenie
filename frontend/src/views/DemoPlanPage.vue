@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import PremiumIcon from '@/components/common/PremiumIcon.vue'
 import RecipeCard from '@/components/recipe/RecipeCard.vue'
 import WeeklyTimeline from '@/components/plan/WeeklyTimeline.vue'
@@ -15,6 +17,7 @@ import type {
 } from '@/types'
 
 const router = useRouter()
+const auth = useAuthStore()
 
 const topRecipes: TopRecipe[] = [
   {
@@ -99,25 +102,70 @@ const weeklyPlan: WeeklyDay[] = [
     },
     total_nutrition: { calories: 1280, protein: 96, fat: 42, carbs: 120 },
   },
+  {
+    day: 4,
+    meals: {
+      breakfast: meal(2, '燕麦蓝莓酸奶碗', { calories: 380, protein: 22, fat: 10, carbs: 52 }),
+      lunch: meal(2, '番茄虾仁全麦意面', { calories: 560, protein: 35, fat: 14, carbs: 66 }),
+      dinner: meal(3, '香菇豆腐荞麦面', { calories: 430, protein: 24, fat: 12, carbs: 58 }),
+    },
+    total_nutrition: { calories: 1370, protein: 81, fat: 36, carbs: 176 },
+  },
+  {
+    day: 5,
+    meals: {
+      breakfast: meal(1, '鸡蛋菠菜全麦卷', { calories: 350, protein: 24, fat: 14, carbs: 34 }),
+      lunch: meal(1, '香煎鸡胸藜麦碗', { calories: 520, protein: 42, fat: 16, carbs: 48 }),
+      dinner: meal(2, '南瓜虾仁浓汤', { calories: 440, protein: 31, fat: 13, carbs: 48 }),
+    },
+    total_nutrition: { calories: 1310, protein: 97, fat: 43, carbs: 130 },
+  },
+  {
+    day: 6,
+    meals: {
+      breakfast: meal(3, '无糖酸奶坚果杯', { calories: 320, protein: 18, fat: 12, carbs: 32 }),
+      lunch: meal(3, '香菇豆腐荞麦面', { calories: 430, protein: 24, fat: 12, carbs: 58 }),
+      dinner: meal(1, '鸡胸肉时蔬饭', { calories: 540, protein: 44, fat: 15, carbs: 55 }),
+    },
+    total_nutrition: { calories: 1290, protein: 86, fat: 39, carbs: 145 },
+  },
+  {
+    day: 7,
+    meals: {
+      breakfast: meal(2, '番茄鸡蛋全麦吐司', { calories: 360, protein: 22, fat: 13, carbs: 42 }),
+      lunch: meal(1, '香煎鸡胸藜麦碗', { calories: 520, protein: 42, fat: 16, carbs: 48 }),
+      dinner: meal(2, '虾仁番茄沙拉', { calories: 410, protein: 30, fat: 12, carbs: 38 }),
+    },
+    total_nutrition: { calories: 1290, protein: 94, fat: 41, carbs: 128 },
+  },
 ]
 
-const nutritionReport: NutritionReportType = {
-  avg_daily_calories: 1650,
-  total_calories: 11550,
-  protein_g: 118,
-  fat_g: 52,
-  carbs_g: 190,
-  fiber_g: 28,
-  protein_pct: .34,
-  fat_pct: .28,
-  carbs_pct: .38,
-  recommendation: '整体蛋白质充足，建议每天补充足量饮水，并根据运动量微调主食份量。',
-}
+const nutritionReport = computed<NutritionReportType>(() => {
+  const totals = weeklyPlan.reduce((sum, day) => ({
+    calories: sum.calories + day.total_nutrition.calories,
+    protein: sum.protein + day.total_nutrition.protein,
+    fat: sum.fat + day.total_nutrition.fat,
+    carbs: sum.carbs + day.total_nutrition.carbs,
+  }), { calories: 0, protein: 0, fat: 0, carbs: 0 })
+  const protein = totals.protein / weeklyPlan.length
+  const fat = totals.fat / weeklyPlan.length
+  const carbs = totals.carbs / weeklyPlan.length
+  const macroEnergy = protein * 4 + fat * 9 + carbs * 4
+  return {
+    avg_daily_calories: totals.calories / weeklyPlan.length,
+    total_calories: totals.calories,
+    protein_g: protein,
+    fat_g: fat,
+    carbs_g: carbs,
+    fiber_g: 28,
+    protein_pct: protein * 4 / macroEnergy,
+    fat_pct: fat * 9 / macroEnergy,
+    carbs_pct: carbs * 4 / macroEnergy,
+    recommendation: '整体蛋白质充足，建议每天补充足量饮水，并根据运动量微调主食份量。',
+  }
+})
 
-const shoppingList: ShoppingListType = {
-  total_cost: 186,
-  items: [],
-  by_category: {
+const shoppingCategories: ShoppingListType['by_category'] = {
     '蛋白质': [
       { name: '鸡胸肉', quantity: 1000, unit: 'g', estimated_cost: 42 },
       { name: '虾仁', quantity: 500, unit: 'g', estimated_cost: 38 },
@@ -133,12 +181,26 @@ const shoppingList: ShoppingListType = {
       { name: '全麦意面', quantity: 500, unit: 'g', estimated_cost: 15 },
       { name: '低脂芝麻酱', quantity: 1, unit: '瓶', estimated_cost: 17 },
     ],
-  },
+}
+const shoppingList = computed<ShoppingListType>(() => ({
+  total_cost: Object.values(shoppingCategories).flat().reduce((sum, item) => sum + item.estimated_cost, 0),
+  items: [],
+  by_category: shoppingCategories,
+}))
+const overview = computed(() => ({
+  calories: nutritionReport.value.avg_daily_calories,
+  protein: nutritionReport.value.protein_g,
+  cost: shoppingList.value.total_cost,
+}))
+
+function createMyPlan() {
+  if (auth.isLoggedIn) router.push('/profile')
+  else router.push({ name: 'auth', query: { mode: 'register', redirect: '/profile' } })
 }
 </script>
 
 <template>
-  <main class="demo-page page-container">
+  <div class="demo-page page-container">
     <section class="demo-hero">
       <div>
         <div class="demo-kicker"><PremiumIcon name="plan" :size="15" :box-size="30" />只读方案示例</div>
@@ -149,16 +211,16 @@ const shoppingList: ShoppingListType = {
     </section>
 
     <section class="overview-card card">
-      <div><strong>1650</strong><span>日均 kcal</span></div>
-      <div><strong>118g</strong><span>日均蛋白质</span></div>
-      <div><strong>¥186</strong><span>预计采购</span></div>
+      <div><strong>{{ overview.calories.toFixed(0) }}</strong><span>日均 kcal</span></div>
+      <div><strong>{{ overview.protein.toFixed(0) }}g</strong><span>日均蛋白质</span></div>
+      <div><strong>¥{{ overview.cost.toFixed(0) }}</strong><span>预计采购</span></div>
       <div><strong>7 天</strong><span>规划周期</span></div>
     </section>
 
     <section class="demo-section">
       <h2 class="section-title"><PremiumIcon name="trophy" :size="17" :box-size="34" />精选菜谱 <small>按综合匹配度排序</small></h2>
       <div class="recipe-list">
-        <RecipeCard v-for="(recipe, index) in topRecipes" :key="recipe.recipe_id" :recipe="recipe" :rank="index + 1" />
+        <RecipeCard v-for="(recipe, index) in topRecipes" :key="recipe.recipe_id" :recipe="recipe" :rank="index + 1" :enable-detail="false" />
       </div>
     </section>
 
@@ -167,16 +229,16 @@ const shoppingList: ShoppingListType = {
     </section>
 
     <section class="detail-grid demo-section">
-      <div class="panel-card card"><NutritionReport :report="nutritionReport" /></div>
+      <div class="panel-card card"><NutritionReport :report="nutritionReport" :target-range="[1250, 1450]" /></div>
       <div class="panel-card card"><ShoppingList :shopping-list="shoppingList" /></div>
     </section>
 
     <section class="summary-card card">
       <div class="summary-heading"><PremiumIcon name="clipboard" :size="17" :box-size="32" /><h2>AI 方案总结</h2></div>
       <p>这套方案以高蛋白、适中碳水和可执行预算为核心，优先安排鸡胸肉、虾仁、鸡蛋等易获得食材，并用不同烹饪方式保持三餐的新鲜感。</p>
-      <el-button type="primary" round size="large" @click="router.push('/profile')">创建我的专属方案</el-button>
+      <el-button type="primary" round size="large" @click="createMyPlan">创建我的专属方案</el-button>
     </section>
-  </main>
+  </div>
 </template>
 
 <style scoped lang="scss">

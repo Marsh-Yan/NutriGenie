@@ -108,11 +108,19 @@ NutriGenie/
 
 - Python 3.11 或更高版本
 - Node.js 20 或更高版本
-- MySQL 8.0 或更高版本
+- MySQL 8.0 或更高版本（正式或完整数据环境；快速演示可使用 SQLite）
 - 可选：Redis，用于将知识库索引任务切换到 RQ 队列
 - 可选：DeepSeek API Key 和智谱 Embedding API Key
 
 ### 1. 创建数据库
+
+如果只是本地演示，可以先使用免安装的 SQLite。在 `backend/.env` 中设置：
+
+```dotenv
+DATABASE_URL_OVERRIDE=sqlite:///./data/nutrigenie.db
+```
+
+然后直接继续第 2 步，种子脚本会自动创建数据库文件。需要正式或多人环境时，再创建 MySQL 数据库：
 
 先创建一个空的 MySQL 数据库，名称需要与 `backend/.env` 中的 `DB_NAME` 保持一致。示例：
 
@@ -142,6 +150,7 @@ Copy-Item .env.example .env
 | `DB_HOST` / `DB_PORT` | MySQL 地址和端口 |
 | `DB_USER` / `DB_PASSWORD` | MySQL 登录信息 |
 | `DB_NAME` | 数据库名称，默认 `nutrigenie` |
+| `DATABASE_URL_OVERRIDE` | 可选；快速演示可设为 `sqlite:///./data/nutrigenie.db` |
 | `LLM_API_KEY` | DeepSeek Key；为空时使用规则/模板回退路径 |
 | `EMBEDDING_API_KEY` | 智谱 Embedding Key；启用 RAG 建索引时需要 |
 | `JWT_SECRET_KEY` | JWT 签名密钥，部署时必须替换为随机高强度字符串 |
@@ -190,7 +199,7 @@ Vite 开发服务器会将 `/api` 请求代理到 `http://localhost:8000`。前�
 ```powershell
 cd backend
 .\.venv\Scripts\Activate.ps1
-python scripts\create_admin.py
+python -m scripts.create_admin
 ```
 
 管理员可以访问食材、菜谱和知识库管理页面。

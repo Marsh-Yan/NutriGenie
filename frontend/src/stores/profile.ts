@@ -14,6 +14,7 @@ export const useProfileStore = defineStore('profile', () => {
     gender: null,
     height: null,
     weight: null,
+    activity_level: 'moderate',
     diet_type: 'balanced',
     health_goal: 'healthy',
     allergies: [],

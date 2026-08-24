@@ -217,6 +217,18 @@ class TestGreedyWeeklyPlan:
             for slot in ["breakfast", "lunch", "dinner"]:
                 assert day_entry["meals"][slot] is not None
 
+    def test_two_meal_plan_omits_breakfast(self, seed_data, fat_loss_constraints):
+        ranked = rank_candidates(seed_data, fat_loss_constraints, top_n=10)
+        pool = build_candidate_pool(seed_data)
+        plan, _ = _greedy_weekly_plan(
+            seed_data, pool, ranked, fat_loss_constraints, "夏季", [], DEFAULT_WEIGHTS,
+            duration_days=2, meal_count_per_day=2,
+        )
+        for day_entry in plan:
+            assert day_entry["meals"]["breakfast"] is None
+            assert day_entry["meals"]["lunch"] is not None
+            assert day_entry["meals"]["dinner"] is not None
+
     def test_breakfast_has_staple_or_light(self, seed_data, fat_loss_constraints):
         ranked = rank_candidates(seed_data, fat_loss_constraints, top_n=10)
         pool = build_candidate_pool(seed_data)

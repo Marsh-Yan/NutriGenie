@@ -3,13 +3,13 @@
    ═══════════════════════════════════════════ */
 
 // ── 莫兰迪主色调 ──────────────────────────
-$color-sage: #8FAA9B;         // 鼠尾草绿（主色）
+$color-sage: #557565;         // 鼠尾草绿（主色）
 $color-sage-light: #C5D5CB;   // 浅鼠尾草
-$color-sage-dark: #6B8A7A;    // 深鼠尾草
+$color-sage-dark: #3F6250;    // 深鼠尾草
 
 $color-rose: #C9A9A6;         // 干枯玫瑰（副色）
 $color-rose-light: #E8C5B8;   // 蜜桃粉
-$color-rose-dark: #B58F8C;    // 深玫瑰
+$color-rose-dark: #8A5F5B;    // 深玫瑰
 
 // ── 背景/卡片 ────────────────────────────
 $color-bg: #F7F4F0;           // 燕麦白（页底）
@@ -19,15 +19,15 @@ $color-divider: #F0EBE5;      // 浅灰分
 
 // ── 文字 ────────────────────────────────
 $color-text-primary: #4A4A4A; // 深灰（正文）
-$color-text-secondary: #8C8C8C; // 中灰（辅助）
-$color-text-placeholder: #B8B8B8;
-$color-text-inverse: #F7F4F0; // 浅色背景上的文字
+$color-text-secondary: #6F6F6F; // 中灰（辅助）
+$color-text-placeholder: #707070;
+$color-text-inverse: #FFFFFF; // 深色背景上的文字
 
 // ── 功能色 ──────────────────────────────
-$color-success: #A3C4A8;      // 莫兰迪绿（成功）
-$color-warning: #D4B97A;      // 暗金（警告）
-$color-danger: #D4897B;       // 豆沙红（危险）
-$color-info: #B8C5D0;         // 灰蓝（信息）
+$color-success: #3F7250;      // 莫兰迪绿（成功）
+$color-warning: #8C5E14;      // 暗金（警告）
+$color-danger: #A94C40;       // 豆沙红（危险）
+$color-info: #4B6C80;         // 灰蓝（信息）
 
 // ── 评分色（六维雷达用）──────────────────
 $score-health: #8FAA9B;

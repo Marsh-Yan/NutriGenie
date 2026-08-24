@@ -7,11 +7,11 @@ const props = defineProps<{
   progress: ProgressInfo | null
 }>()
 
-const stepLabels = ['意图分析', '约束分析', '推荐引擎', '营养分析', '预算分析', '生成总结']
+const stepLabels = ['意图分析', '约束分析', '混合推荐', '计划聚合', '结果校验', '生成总结']
 </script>
 
 <template>
-  <div class="progress-stepper">
+  <div class="progress-stepper" aria-live="polite" aria-label="规划生成进度">
     <div class="status-header">
       <div v-if="status === 'pending'" class="status-badge pending">等待中</div>
       <div v-else-if="status === 'running'" class="status-badge running">

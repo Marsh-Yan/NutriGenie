@@ -131,8 +131,9 @@ def build_constraints(
     profile: Profile,
     duration_days: int,
     total_budget: float,
-    activity_factor: float = 1.55,
+    activity_factor: Optional[float] = None,
     custom_weight_kg: Optional[float] = None,
+    additional_allergens: Optional[List[str]] = None,
 ) -> ConstraintSet:
     """根据用户画像构建约束集
 
@@ -140,14 +141,18 @@ def build_constraints(
         profile: 用户画像对象
         duration_days: 规划天数
         total_budget: 总预算
-        activity_factor: 活动系数（默认 1.55 中度活动）
+        activity_factor: 活动系数；未指定时读取画像活动水平
         custom_weight_kg: 可选的自定义体重（热计算用）
+        additional_allergens: 本次自然语言需求中临时增加的硬性排除项
 
     Returns:
         ConstraintSet 实例
     """
     weight = custom_weight_kg if custom_weight_kg else float(profile.weight)
     height = float(profile.height)
+    resolved_activity_factor = activity_factor or ACTIVITY_FACTOR_DESCRIPTIONS.get(
+        getattr(profile, "activity_level", "moderate"), 1.55
+    )
 
     # 1. 计算 TDEE 和 BMR
     tdee = calculate_tdee(
@@ -155,7 +160,7 @@ def build_constraints(
         weight_kg=weight,
         height_cm=height,
         age=profile.age,
-        activity_factor=activity_factor,
+        activity_factor=resolved_activity_factor,
     )
     bmr = calculate_bmr(
         gender=profile.gender,
@@ -177,10 +182,21 @@ def build_constraints(
     target_protein = round(weight * protein_factor, 1)
 
     # 4. 预算分解
-    daily_budget = round(total_budget / duration_days, 2) if duration_days > 0 else total_budget
+    profile_daily_budget = float(getattr(profile, "daily_budget", 0) or 0)
+    effective_total_budget = float(total_budget or 0)
+    if effective_total_budget <= 0 and profile_daily_budget > 0:
+        effective_total_budget = round(profile_daily_budget * duration_days, 2)
+    daily_budget = (
+        round(effective_total_budget / duration_days, 2)
+        if duration_days > 0 else effective_total_budget
+    )
 
     # 5. 过敏原 → 排除的食材 ID（后续由推荐引擎查询数据库填充）
-    allergen_names = profile.allergies or []
+    allergen_names = list(profile.allergies or [])
+    for name in additional_allergens or []:
+        normalized = name.strip()
+        if normalized and normalized not in allergen_names:
+            allergen_names.append(normalized)
     excluded_ingredient_ids = []  # 将在推荐引擎中基于名称解析
 
     # 6. 饮食类型宏量营养素配比
@@ -192,7 +208,7 @@ def build_constraints(
         calorie_max=calorie_max,
         target_protein=target_protein,
         daily_budget=daily_budget,
-        total_budget=total_budget,
+        total_budget=effective_total_budget,
         excluded_ingredient_ids=excluded_ingredient_ids,
         allergen_names=allergen_names,
         diet_type=profile.diet_type,

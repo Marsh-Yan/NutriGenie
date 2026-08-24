@@ -13,6 +13,14 @@ from app.services.security import get_current_user
 
 router = APIRouter(tags=["profiles"])
 
+ACTIVITY_FACTORS = {
+    "sedentary": 1.2,
+    "light": 1.375,
+    "moderate": 1.55,
+    "active": 1.725,
+    "extra": 1.9,
+}
+
 
 def _enrich_profile(profile, db: Session) -> dict:
     """在 profile 响应中附加 TDEE/BMI 计算值"""
@@ -22,6 +30,7 @@ def _enrich_profile(profile, db: Session) -> dict:
         "gender": profile.gender,
         "height": float(profile.height),
         "weight": float(profile.weight),
+        "activity_level": getattr(profile, "activity_level", "moderate"),
         "diet_type": profile.diet_type,
         "health_goal": profile.health_goal,
         "allergies": profile.allergies,
@@ -33,6 +42,9 @@ def _enrich_profile(profile, db: Session) -> dict:
             weight_kg=float(profile.weight),
             height_cm=float(profile.height),
             age=profile.age,
+            activity_factor=ACTIVITY_FACTORS.get(
+                getattr(profile, "activity_level", "moderate"), 1.55
+            ),
         ),
         "bmi": calculate_bmi(
             weight_kg=float(profile.weight),

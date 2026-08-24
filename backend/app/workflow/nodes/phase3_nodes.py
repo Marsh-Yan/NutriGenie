@@ -5,6 +5,7 @@
 """
 
 import logging
+import re
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -55,6 +56,14 @@ def _resolve_owned_ids(db: Session, state: WorkflowState) -> list:
     return state.owned_ingredient_ids
 
 
+def _intent_allergens(intent: dict) -> list[str]:
+    """Normalize temporary exclusions extracted from the current request."""
+    raw = str(intent.get("allergies_or_concerns") or "").strip()
+    if not raw:
+        return []
+    return [item.strip() for item in re.split(r"[、,，/]|(?:和)|(?:以及)", raw) if item.strip()]
+
+
 def constraint_node(state: WorkflowState) -> WorkflowState:
     """约束分析节点
 
@@ -86,6 +95,7 @@ def constraint_node(state: WorkflowState) -> WorkflowState:
                 profile=profile,
                 duration_days=state.duration_days,
                 total_budget=state.total_budget,
+                additional_allergens=_intent_allergens(intent),
             )
         finally:
             profile.diet_type = original_diet
@@ -248,6 +258,7 @@ def aggregate_node(state: WorkflowState) -> WorkflowState:
             current_season="夏季",
             owned_ingredient_ids=state.owned_ingredient_ids,
             duration_days=state.duration_days,
+            meal_count_per_day=max(1, min(int((state.intent_analysis or {}).get("meal_count_per_day", 3)), 3)),
             weights=HYBRID_WEIGHTS,
             ranked_recipes=_deserialize_ranked_recipes(state.ranked_recipes),
         )

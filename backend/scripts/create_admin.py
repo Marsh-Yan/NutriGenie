@@ -3,18 +3,18 @@
 Run from the backend directory after setting ADMIN_EMAIL and ADMIN_PASSWORD.
 """
 
-import os
 import sys
 
+from app.config import settings
 from app.db.database import SessionLocal, init_db
 from app.models.user import User
 from app.services.security import hash_password
 
 
 def main() -> int:
-    email = os.getenv("ADMIN_EMAIL", "").strip().lower()
-    password = os.getenv("ADMIN_PASSWORD", "")
-    nickname = os.getenv("ADMIN_NICKNAME", "管理员").strip() or "管理员"
+    email = settings.ADMIN_EMAIL.strip().lower()
+    password = settings.ADMIN_PASSWORD
+    nickname = settings.ADMIN_NICKNAME.strip() or "管理员"
     if not email or not password:
         print("Please set ADMIN_EMAIL and ADMIN_PASSWORD before running this script.")
         return 1

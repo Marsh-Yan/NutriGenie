@@ -23,6 +23,17 @@ class PlanCreateResponse(BaseModel):
     links: dict
 
 
+class PlanListItem(BaseModel):
+    """当前用户可访问的历史规划摘要"""
+    plan_id: int
+    status: str
+    user_input: str
+    duration_days: int
+    total_budget: float
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+
 # ─── 规划状态 ─────────────────────────────────────
 
 class StepInfo(BaseModel):
@@ -38,7 +49,7 @@ class ProgressInfo(BaseModel):
     completed_steps: int = 0
     current_step: int = 1
     step_name: str = ""
-    steps: List[StepInfo] = []
+    steps: List[StepInfo] = Field(default_factory=list)
 
 
 class PlanStatusResponse(BaseModel):
