@@ -14,6 +14,25 @@ const route = useRoute()
 const router = useRouter()
 const store = usePlanStore()
 
+const loadingCopy = computed(() => {
+  if (store.resultLoading) {
+    return { eyebrow: 'FINALIZING', title: '方案已经就绪', desc: '正在整理营养数据与采购清单，马上为你呈现。' }
+  }
+  if (store.status === 'pending') {
+    return { eyebrow: 'GETTING READY', title: '正在准备规划引擎', desc: '我们正在读取你的健康画像与本次饮食需求。' }
+  }
+  const step = store.progress?.step_name
+  const copies: Record<string, { title: string; desc: string }> = {
+    意图分析: { title: '正在理解你的需求', desc: '识别目标、预算、忌口与每日餐数。' },
+    约束分析: { title: '正在计算合理边界', desc: '结合身体数据、活动水平与营养目标。' },
+    混合推荐: { title: '正在筛选合适菜谱', desc: '从营养、预算和偏好等维度综合匹配。' },
+    计划聚合: { title: '正在编排每日三餐', desc: '兼顾多样性、食材复用与执行成本。' },
+    结果校验: { title: '正在进行最后校验', desc: '核对热量、营养、预算与计划完整性。' },
+    生成总结: { title: '正在整理专属建议', desc: '把复杂数据转化为清晰可执行的方案。' },
+  }
+  return { eyebrow: 'AI PLANNING', ...(copies[step || ''] || { title: '正在生成专属方案', desc: 'AI 正在分析需求并匹配适合你的菜谱。' }) }
+})
+
 const overview = computed(() => {
   const result = store.result
   if (!result) return null
@@ -53,15 +72,30 @@ function printPlan() {
     <!-- 加载/等待状态 -->
     <div v-if="store.status === 'pending' || store.status === 'running' || store.resultLoading" class="loading-section">
       <div class="loading-card card">
-        <div class="loading-animation">
-          <div class="loading-ring" />
-          <PremiumIcon name="thinking" class="loading-icon" :size="34" :box-size="68" />
+        <div class="loading-glow glow-one" />
+        <div class="loading-glow glow-two" />
+        <div class="loading-hero">
+          <div class="loading-animation" aria-hidden="true">
+            <div class="orbit orbit-one"><span /></div>
+            <div class="orbit orbit-two"><span /></div>
+            <PremiumIcon name="thinking" class="loading-icon" :size="38" :box-size="74" />
+          </div>
+          <div class="loading-copy">
+            <span class="loading-eyebrow"><i />{{ loadingCopy.eyebrow }}</span>
+            <h1 class="loading-title">{{ loadingCopy.title }}</h1>
+            <p class="loading-desc">{{ loadingCopy.desc }}</p>
+            <div class="loading-tags" aria-label="规划特点">
+              <span>营养约束</span><span>预算匹配</span><span>菜谱组合</span>
+            </div>
+          </div>
         </div>
-        <h1 class="loading-title">{{ store.resultLoading ? '方案已生成，正在整理结果…' : 'AI 正在为你规划…' }}</h1>
-        <p class="loading-desc">
-          {{ store.status === 'pending' ? '等待中，即将开始' : '正在分析你的需求、匹配菜谱...' }}
-        </p>
-        <ProgressStepper :status="store.status" :progress="store.progress" />
+        <div class="progress-panel">
+          <ProgressStepper :status="store.status" :progress="store.progress" />
+        </div>
+        <div class="loading-footer">
+          <span><i />无需刷新，完成后将自动展示</span>
+          <span>通常需要 10–30 秒</span>
+        </div>
       </div>
     </div>
 
@@ -177,55 +211,108 @@ function printPlan() {
 // ── 加载状态 ─────────────────────────────
 
 .loading-section {
-  padding-top: 40px;
+  padding-top: 22px;
 }
 
 .loading-card {
-  text-align: center;
-  padding: 60px 40px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 34px;
+  border-color: rgba($color-sage, .18);
+  background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(248,250,247,.92));
+  box-shadow: 0 20px 54px rgba(63, 74, 67, .09);
+}
+
+.loading-glow {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+.glow-one { top: -110px; right: -70px; width: 300px; height: 300px; background: radial-gradient(circle, rgba($color-sage-light,.34), transparent 68%); }
+.glow-two { bottom: -130px; left: -80px; width: 260px; height: 260px; background: radial-gradient(circle, rgba($color-rose-light,.22), transparent 68%); }
+
+.loading-hero {
+  display: grid;
+  grid-template-columns: 124px minmax(0, 1fr);
+  align-items: center;
+  gap: 28px;
+  max-width: 660px;
+  margin: 0 auto 30px;
 }
 
 .loading-animation {
   position: relative;
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 24px;
+  width: 118px;
+  height: 118px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.loading-ring {
+.orbit {
   position: absolute;
-  inset: 0;
-  border: 3px solid $color-divider;
-  border-top-color: $color-sage;
+  border: 1px solid rgba($color-sage, .2);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+
+  span {
+    position: absolute;
+    top: 50%;
+    left: -3px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: $color-sage;
+    box-shadow: 0 0 0 5px rgba($color-sage,.1), 0 0 14px rgba($color-sage,.35);
+  }
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+.orbit-one { inset: 2px; animation: spin 5.5s linear infinite; }
+.orbit-two { inset: 14px; border-style: dashed; animation: spin-reverse 8s linear infinite; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin-reverse { to { transform: rotate(-360deg); } }
 
 .loading-icon {
   position: relative;
   z-index: 1;
+  border-radius: 24px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 14px 32px rgba(63,98,80,.14);
+  animation: breathe 2.8s ease-in-out infinite;
 }
 
+.loading-icon:hover { transform: none; }
+@keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+
+.loading-copy { text-align: left; }
+.loading-eyebrow { display: inline-flex; align-items: center; gap: 8px; color: $color-sage-dark; font-size: 11px; font-weight: 800; letter-spacing: .14em; }
+.loading-eyebrow i { width: 7px; height: 7px; border-radius: 50%; background: $color-sage; box-shadow: 0 0 0 5px rgba($color-sage,.1); animation: blink 1.5s ease-in-out infinite; }
+
 .loading-title {
-  font-size: 20px;
-  font-weight: 600;
+  margin: 8px 0 6px;
+  font-size: 28px;
+  font-weight: 750;
   color: $color-text-primary;
-  margin-bottom: 8px;
+  letter-spacing: -.035em;
 }
 
 .loading-desc {
   font-size: 14px;
   color: $color-text-secondary;
+  line-height: 1.7;
 }
 
-.loading-card :deep(.progress-stepper) { margin: 32px auto 0; max-width: 640px; text-align: left; }
+.loading-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+.loading-tags span { padding: 4px 9px; border: 1px solid rgba($color-sage,.16); border-radius: 999px; background: rgba(255,255,255,.56); color: $color-text-secondary; font-size: 10px; }
+
+.progress-panel { padding: 22px; border: 1px solid rgba($color-sage,.13); border-radius: 18px; background: rgba(255,255,255,.64); backdrop-filter: blur(8px); }
+
+.loading-footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; color: $color-text-placeholder; font-size: 11px; }
+.loading-footer span:first-child { display: inline-flex; align-items: center; gap: 7px; }
+.loading-footer i { width: 6px; height: 6px; border-radius: 50%; background: $color-success; }
 
 // ── 错误状态 ─────────────────────────────
 
@@ -336,6 +423,15 @@ function printPlan() {
 
 @media (max-width: $breakpoint-sm) {
   .plan-result-page { padding-top: 24px; }
+  .loading-section { padding-top: 4px; }
+  .loading-card { padding: 24px 18px; }
+  .loading-hero { grid-template-columns: 1fr; gap: 14px; margin-bottom: 24px; text-align: center; }
+  .loading-animation { width: 100px; height: 100px; margin: 0 auto; }
+  .loading-copy { text-align: center; }
+  .loading-title { font-size: 24px; }
+  .loading-tags { justify-content: center; }
+  .progress-panel { padding: 17px 14px; }
+  .loading-footer { align-items: center; flex-direction: column; }
   .overview-card { padding: 20px; }
   .overview-heading { flex-direction: column; }
   .overview-grid { gap: 8px; }

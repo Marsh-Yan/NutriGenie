@@ -56,7 +56,7 @@ export const usePlanStore = defineStore('plan', () => {
     }
   }
 
-  function schedulePoll(delay = 2000) {
+  function schedulePoll(delay = 1000) {
     if (!polling.value) return
     if (pollTimer !== null) window.clearTimeout(pollTimer)
     pollTimer = window.setTimeout(() => {
@@ -117,7 +117,7 @@ export const usePlanStore = defineStore('plan', () => {
       retryCount.value += 1
       error.value = e.message || '暂时无法获取生成进度'
       if (retryCount.value <= 3 && polling.value) {
-        schedulePoll(Math.min(2000 * retryCount.value, 6000))
+        schedulePoll(Math.min(1500 * retryCount.value, 6000))
       } else {
         polling.value = false
         status.value = 'failed'
