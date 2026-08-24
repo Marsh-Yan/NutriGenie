@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'
 import RecipeCard from '@/components/recipe/RecipeCard.vue'
@@ -68,12 +68,6 @@ onMounted(async () => {
 
 onUnmounted(() => store.stopPolling())
 
-watch(() => store.status, (status) => {
-  if (status === 'completed' || status === 'failed') {
-    store.stopPolling()
-  }
-})
-
 function printPlan() {
   window.print()
 }
@@ -114,7 +108,7 @@ async function restoreVersion(versionId: number) {
   <div class="plan-result-page page-container">
 
     <!-- 首次生成等待状态 -->
-    <div v-if="!store.result && (store.status === 'pending' || store.status === 'running' || store.resultLoading)" class="loading-section">
+    <div v-if="!store.result && store.status !== 'failed'" class="loading-section">
       <div class="loading-card card">
         <div class="loading-glow glow-one" />
         <div class="loading-glow glow-two" />
@@ -137,8 +131,16 @@ async function restoreVersion(versionId: number) {
           <ProgressStepper :status="store.status" :progress="store.progress" />
         </div>
         <div class="loading-footer">
-          <span><i />无需刷新，完成后将自动展示</span>
-          <span>通常需要 30–60 秒</span>
+          <span><i />{{ store.error || '无需刷新，完成后将自动展示' }}</span>
+          <el-button
+            v-if="store.status === 'completed' && !store.polling && !store.resultLoading"
+            size="small"
+            round
+            @click="store.refreshResult()"
+          >
+            继续获取结果
+          </el-button>
+          <span v-else>通常需要 30–90 秒</span>
         </div>
       </div>
     </div>
@@ -205,7 +207,7 @@ async function restoreVersion(versionId: number) {
         <div class="top5-list">
           <RecipeCard
             v-for="(recipe, i) in store.result.recipes"
-            :key="recipe.recipe_key"
+            :key="'recipe_key' in recipe ? recipe.recipe_key : `legacy-${recipe.recipe_id}`"
             :recipe="recipe"
             :rank="i + 1"
           />

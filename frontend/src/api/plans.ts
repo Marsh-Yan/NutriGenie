@@ -1,4 +1,5 @@
 import api from './index'
+import { normalizePlanResult } from './planResultAdapter'
 import type {
   PlanCreateRequest,
   PlanCreateResponse,
@@ -23,7 +24,7 @@ export async function getPlanStatus(planId: number): Promise<PlanStatusResponse>
 
 export async function getPlanResult(planId: number): Promise<PlanResultResponse> {
   const { data } = await api.get(`/plans/${planId}`)
-  return data
+  return { ...data, result: normalizePlanResult(data.result) }
 }
 
 export async function sendPlanMessage(planId: number, input: PlanMessageRequest): Promise<PlanRun> {

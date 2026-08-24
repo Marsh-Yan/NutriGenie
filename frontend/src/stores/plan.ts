@@ -22,7 +22,9 @@ export const usePlanStore = defineStore('plan', () => {
   const lastRunError = ref<string | null>(null)
   let pollTimer: number | null = null
   let pollStartedAt = 0
+  let resultFetchAttempts = 0
   const MAX_POLL_MS = 5 * 60 * 1000
+  const MAX_RESULT_FETCH_ATTEMPTS = 10
 
   async function create(userInput: string, durationDays: number, totalBudget: number, profileId: number = 1) {
     stopPolling()
@@ -41,6 +43,7 @@ export const usePlanStore = defineStore('plan', () => {
     editing.value = false
     retryCount.value = 0
     resultLoading.value = false
+    resultFetchAttempts = 0
     pollStartedAt = Date.now()
     startPolling()
     return res
@@ -92,28 +95,36 @@ export const usePlanStore = defineStore('plan', () => {
       retryCount.value = 0
 
       if (status.value === 'completed') {
-        polling.value = false
         editing.value = false
         resultLoading.value = true
         try {
-          for (let attempt = 1; attempt <= 3; attempt++) {
-            const resultRes = await planApi.getPlanResult(requestedPlanId)
-            if (planId.value !== requestedPlanId) return
-            if (resultRes.result) {
-              result.value = resultRes.result
-              error.value = null
-              try {
-                await loadConversation()
-              } catch {
-                // Conversation history is supplementary to the generated plan.
-              }
-              return
+          const resultRes = await planApi.getPlanResult(requestedPlanId)
+          if (planId.value !== requestedPlanId) return
+          if (resultRes.result) {
+            result.value = resultRes.result
+            error.value = null
+            resultFetchAttempts = 0
+            stopPolling()
+            try {
+              await loadConversation()
+            } catch {
+              // Conversation history is supplementary to the generated plan.
             }
-            if (attempt < 3) await new Promise(resolve => window.setTimeout(resolve, 500 * attempt))
+            return
           }
-          throw new Error('结果暂时未就绪，请继续获取')
+          resultFetchAttempts += 1
+          error.value = '方案已完成，结果正在同步，请稍候'
+        } catch (e: any) {
+          resultFetchAttempts += 1
+          error.value = e.message || '结果加载失败，正在自动重试'
         } finally {
           resultLoading.value = false
+        }
+        if (resultFetchAttempts >= MAX_RESULT_FETCH_ATTEMPTS) {
+          stopPolling()
+          error.value = '方案已经生成，但结果加载失败，请点击“继续获取结果”'
+        } else {
+          schedulePoll(Math.min(600 * resultFetchAttempts, 3000))
         }
         return
       }
@@ -143,9 +154,19 @@ export const usePlanStore = defineStore('plan', () => {
     if (!planId.value) return
     await planApi.retryPlan(planId.value)
     retryCount.value = 0
+    resultFetchAttempts = 0
     status.value = 'pending'
     error.value = null
     lastRunError.value = null
+    pollStartedAt = Date.now()
+    startPolling()
+  }
+
+  function refreshResult() {
+    if (!planId.value) return
+    retryCount.value = 0
+    resultFetchAttempts = 0
+    error.value = null
     pollStartedAt = Date.now()
     startPolling()
   }
@@ -159,6 +180,7 @@ export const usePlanStore = defineStore('plan', () => {
     error.value = null
     lastRunError.value = null
     resultLoading.value = false
+    resultFetchAttempts = 0
     editing.value = false
     retryCount.value = 0
     pollStartedAt = Date.now()
@@ -183,6 +205,7 @@ export const usePlanStore = defineStore('plan', () => {
     status.value = 'pending'
     error.value = null
     lastRunError.value = null
+    resultFetchAttempts = 0
     pollStartedAt = Date.now()
     startPolling()
   }
@@ -218,6 +241,7 @@ export const usePlanStore = defineStore('plan', () => {
     stopPolling()
     retryCount.value = 0
     resultLoading.value = false
+    resultFetchAttempts = 0
     pollStartedAt = 0
   }
 
@@ -226,6 +250,6 @@ export const usePlanStore = defineStore('plan', () => {
     draftInput, draftDurationDays, draftTotalBudget, draftExampleIndex,
     editing, messages, versions, lastRunError,
     create, load, startPolling, stopPolling, sendMessage, loadConversation,
-    restoreVersion, retry, reset, clearDraft,
+    restoreVersion, retry, refreshResult, reset, clearDraft,
   }
 })
