@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { PlanResult, PlanStatus, ProgressInfo } from '@/types'
+import type { PlanMessage, PlanResult, PlanStatus, ProgressInfo, PlanVersionSummary } from '@/types'
 import * as planApi from '@/api/plans'
 
 export const usePlanStore = defineStore('plan', () => {
@@ -16,6 +16,10 @@ export const usePlanStore = defineStore('plan', () => {
   const draftDurationDays = ref(7)
   const draftTotalBudget = ref<number | null>(300)
   const draftExampleIndex = ref(-1)
+  const editing = ref(false)
+  const messages = ref<PlanMessage[]>([])
+  const versions = ref<PlanVersionSummary[]>([])
+  const lastRunError = ref<string | null>(null)
   let pollTimer: number | null = null
   let pollStartedAt = 0
   const MAX_POLL_MS = 5 * 60 * 1000
@@ -33,6 +37,8 @@ export const usePlanStore = defineStore('plan', () => {
     result.value = null
     progress.value = null
     error.value = null
+    lastRunError.value = null
+    editing.value = false
     retryCount.value = 0
     resultLoading.value = false
     pollStartedAt = Date.now()
@@ -81,11 +87,13 @@ export const usePlanStore = defineStore('plan', () => {
       if (planId.value !== requestedPlanId) return
       status.value = statusRes.status
       progress.value = statusRes.progress
-      error.value = statusRes.error
+      error.value = statusRes.error || statusRes.last_error
+      lastRunError.value = statusRes.last_error
       retryCount.value = 0
 
       if (status.value === 'completed') {
         polling.value = false
+        editing.value = false
         resultLoading.value = true
         try {
           for (let attempt = 1; attempt <= 3; attempt++) {
@@ -94,6 +102,11 @@ export const usePlanStore = defineStore('plan', () => {
             if (resultRes.result) {
               result.value = resultRes.result
               error.value = null
+              try {
+                await loadConversation()
+              } catch {
+                // Conversation history is supplementary to the generated plan.
+              }
               return
             }
             if (attempt < 3) await new Promise(resolve => window.setTimeout(resolve, 500 * attempt))
@@ -107,6 +120,7 @@ export const usePlanStore = defineStore('plan', () => {
 
       if (status.value === 'failed') {
         polling.value = false
+        editing.value = false
         error.value = statusRes.error || '规划生成失败'
         return
       }
@@ -125,9 +139,13 @@ export const usePlanStore = defineStore('plan', () => {
     }
   }
 
-  function retry() {
+  async function retry() {
+    if (!planId.value) return
+    await planApi.retryPlan(planId.value)
     retryCount.value = 0
     status.value = 'pending'
+    error.value = null
+    lastRunError.value = null
     pollStartedAt = Date.now()
     startPolling()
   }
@@ -139,7 +157,9 @@ export const usePlanStore = defineStore('plan', () => {
     progress.value = null
     result.value = null
     error.value = null
+    lastRunError.value = null
     resultLoading.value = false
+    editing.value = false
     retryCount.value = 0
     pollStartedAt = Date.now()
     startPolling()
@@ -152,12 +172,49 @@ export const usePlanStore = defineStore('plan', () => {
     draftExampleIndex.value = -1
   }
 
+  async function sendMessage(message: string, action?: Record<string, any>) {
+    if (!planId.value) throw new Error('方案不存在')
+    await planApi.sendPlanMessage(planId.value, {
+      message,
+      action,
+      client_request_id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    })
+    editing.value = true
+    status.value = 'pending'
+    error.value = null
+    lastRunError.value = null
+    pollStartedAt = Date.now()
+    startPolling()
+  }
+
+  async function loadConversation() {
+    if (!planId.value) return
+    const [messageItems, versionResponse] = await Promise.all([
+      planApi.getPlanMessages(planId.value),
+      planApi.getPlanVersions(planId.value),
+    ])
+    messages.value = messageItems
+    versions.value = versionResponse.items
+  }
+
+  async function restoreVersion(versionId: number) {
+    if (!planId.value) return
+    await planApi.restorePlanVersion(planId.value, versionId)
+    const resultRes = await planApi.getPlanResult(planId.value)
+    result.value = resultRes.result
+    await loadConversation()
+  }
+
   function reset() {
     planId.value = null
     status.value = 'pending'
     progress.value = null
     result.value = null
     error.value = null
+    editing.value = false
+    messages.value = []
+    versions.value = []
+    lastRunError.value = null
     stopPolling()
     retryCount.value = 0
     resultLoading.value = false
@@ -167,6 +224,8 @@ export const usePlanStore = defineStore('plan', () => {
   return {
     planId, status, progress, result, error, polling, retryCount, resultLoading,
     draftInput, draftDurationDays, draftTotalBudget, draftExampleIndex,
-    create, load, startPolling, stopPolling, retry, reset, clearDraft,
+    editing, messages, versions, lastRunError,
+    create, load, startPolling, stopPolling, sendMessage, loadConversation,
+    restoreVersion, retry, reset, clearDraft,
   }
 })

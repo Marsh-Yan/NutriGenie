@@ -71,6 +71,13 @@ def constraint_node(state: WorkflowState) -> WorkflowState:
     """
     state.current_node = "constraint_analyzer"
 
+    # Conversational edits reuse the exact hard-constraint snapshot from the
+    # current immutable version.  This prevents a request such as "重做午餐"
+    # from silently losing an earlier allergy, diet, or budget restriction.
+    if state.skip_intent and state.constraints:
+        logger.info("Reusing constraints for conversational edit")
+        return state
+
     db = _get_db()
     try:
         profile = db.query(Profile).filter(Profile.profile_id == state.profile_id).first()

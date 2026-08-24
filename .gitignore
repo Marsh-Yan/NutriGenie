@@ -46,8 +46,3 @@ Thumbs.db
 
 # Images placeholder
 backend/app/db/seed_data/*.csv
-
-# Personal notes and internal project documents
-面试准备.md
-需求文档.md
-docs/

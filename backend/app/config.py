@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     LLM_API_BASE: str = "https://api.deepseek.com"
     LLM_MODEL: str = "deepseek-v4-flash"
     LLM_TIMEOUT: int = 30
+    PLAN_GENERATION_MODEL: str = ""
+    PLAN_GENERATION_TIMEOUT: int = 60
+    PLAN_REPAIR_MAX_ATTEMPTS: int = 1
+    PLAN_PROMPT_VERSION: str = "ai_native_v1"
+    MAX_PLAN_MESSAGE_LENGTH: int = 1000
 
     # Authentication. Override JWT_SECRET_KEY in backend/.env outside local demos.
     JWT_SECRET_KEY: str = "nutrigenie-local-development-only-change-me"
@@ -49,6 +54,8 @@ class Settings(BaseSettings):
     # RAG / Chroma
     CHROMA_PERSIST_DIR: str = "data/chroma"
     RAG_RETRIEVAL_TOP_K: int = 30
+    RAG_CONTEXT_TOP_K: int = 5
+    RAG_MODE: str = "auto"
     RAG_VECTOR_WEIGHT: float = 0.7
     RAG_KEYWORD_WEIGHT: float = 0.3
     RAG_MIN_SIMILARITY: float = 0.15

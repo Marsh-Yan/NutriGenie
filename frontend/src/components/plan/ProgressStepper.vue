@@ -8,11 +8,22 @@ const props = defineProps<{
   progress: ProgressInfo | null
 }>()
 
-const stepLabels = ['意图分析', '约束分析', '混合推荐', '计划聚合', '结果校验', '生成总结']
-const stepDescriptions = ['理解目标', '计算边界', '筛选菜谱', '组合三餐', '核对营养', '整理方案']
+const fallbackLabels = ['意图分析', '约束分析', '参考上下文', 'AI 生成方案', '方案校验', '营养与预算汇总', '保存方案版本']
+const descriptionByLabel: Record<string, string> = {
+  意图分析: '理解目标',
+  约束分析: '计算边界',
+  参考上下文: '准备依据',
+  'AI 生成方案': '创作菜谱',
+  方案校验: '检查约束',
+  营养与预算汇总: '核算整周',
+  保存方案版本: '整理结果',
+}
+const stepLabels = computed(() => props.progress?.steps?.length
+  ? props.progress.steps.map(step => step.name)
+  : fallbackLabels)
 
 const activeStep = computed(() => {
-  if (props.status === 'completed') return stepLabels.length
+  if (props.status === 'completed') return stepLabels.value.length
   return props.progress?.current_step || (props.status === 'pending' ? 0 : 1)
 })
 
@@ -20,7 +31,7 @@ const progressPercent = computed(() => {
   if (props.status === 'completed') return 100
   if (props.status === 'pending') return 4
   const completed = props.progress?.completed_steps ?? Math.max(activeStep.value - 1, 0)
-  return Math.min(96, Math.max(8, Math.round(((completed + 0.42) / stepLabels.length) * 100)))
+  return Math.min(96, Math.max(8, Math.round(((completed + 0.42) / stepLabels.value.length) * 100)))
 })
 </script>
 
@@ -68,7 +79,7 @@ const progressPercent = computed(() => {
         </div>
         <div class="step-text">
           <strong>{{ label }}</strong>
-          <span>{{ stepDescriptions[i] }}</span>
+          <span>{{ descriptionByLabel[label] || '处理中' }}</span>
         </div>
         <span v-if="activeStep === i + 1 && progressPercent < 100" class="active-wave" />
       </div>
@@ -181,7 +192,7 @@ const progressPercent = computed(() => {
 
 .steps-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
   margin-top: 18px;
 

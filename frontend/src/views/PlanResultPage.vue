@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'
 import RecipeCard from '@/components/recipe/RecipeCard.vue'
@@ -13,6 +13,10 @@ import ProgressStepper from '@/components/plan/ProgressStepper.vue'
 const route = useRoute()
 const router = useRouter()
 const store = usePlanStore()
+const messageInput = ref('')
+const ingredientInput = ref('')
+const sendingMessage = ref(false)
+const showVersions = ref(false)
 
 const loadingCopy = computed(() => {
   if (store.resultLoading) {
@@ -25,10 +29,11 @@ const loadingCopy = computed(() => {
   const copies: Record<string, { title: string; desc: string }> = {
     意图分析: { title: '正在理解你的需求', desc: '识别目标、预算、忌口与每日餐数。' },
     约束分析: { title: '正在计算合理边界', desc: '结合身体数据、活动水平与营养目标。' },
-    混合推荐: { title: '正在筛选合适菜谱', desc: '从营养、预算和偏好等维度综合匹配。' },
-    计划聚合: { title: '正在编排每日三餐', desc: '兼顾多样性、食材复用与执行成本。' },
-    结果校验: { title: '正在进行最后校验', desc: '核对热量、营养、预算与计划完整性。' },
-    生成总结: { title: '正在整理专属建议', desc: '把复杂数据转化为清晰可执行的方案。' },
+    参考上下文: { title: '正在准备生成依据', desc: '读取可用的营养知识与个性化上下文。' },
+    'AI 生成方案': { title: '正在创作专属菜谱', desc: 'AI 根据你的约束即时设计每日餐食。' },
+    方案校验: { title: '正在检查硬性约束', desc: '核对忌口、过敏原、结构完整性与执行难度。' },
+    营养与预算汇总: { title: '正在核算整周方案', desc: '汇总热量、营养、采购用量与预计成本。' },
+    保存方案版本: { title: '正在保存专属方案', desc: '整理结果与生成记录，马上为你呈现。' },
   }
   return { eyebrow: 'AI PLANNING', ...(copies[step || ''] || { title: '正在生成专属方案', desc: 'AI 正在分析需求并匹配适合你的菜谱。' }) }
 })
@@ -38,15 +43,19 @@ const overview = computed(() => {
   if (!result) return null
   return {
     calories: result.nutrition_report.avg_daily_calories,
-    cost: result.plan_validation?.estimated_procurement_cost,
-    recipes: result.top5.length,
-    warnings: result.plan_validation?.warnings.length || 0,
+    cost: result.shopping_list.total_cost,
+    recipes: result.recipes.length,
+    warnings: result.validation?.warnings.length || 0,
   }
 })
 
-onMounted(() => {
+const currentError = computed(() => store.lastRunError || store.error)
+
+onMounted(async () => {
   const planId = Number(route.params.id)
-  if (Number.isInteger(planId) && planId > 0) store.load(planId)
+  if (Number.isInteger(planId) && planId > 0) {
+    store.load(planId)
+  }
   else {
     store.status = 'failed'
     store.error = '方案编号无效，请从“我的方案”重新进入'
@@ -64,13 +73,44 @@ watch(() => store.status, (status) => {
 function printPlan() {
   window.print()
 }
+
+async function submitMessage(action?: Record<string, any>) {
+  const message = messageInput.value.trim()
+  if (!message && !action) return
+  sendingMessage.value = true
+  try {
+    await store.sendMessage(message, action)
+    messageInput.value = ''
+    await store.loadConversation()
+  } catch (error: any) {
+    store.error = error?.message || '修改方案失败'
+  } finally {
+    sendingMessage.value = false
+  }
+}
+
+async function removeIngredient() {
+  const ingredient = ingredientInput.value.trim()
+  if (!ingredient) return
+  await submitMessage({ type: 'remove_ingredient', ingredient })
+  ingredientInput.value = ''
+}
+
+async function restoreVersion(versionId: number) {
+  try {
+    await store.restoreVersion(versionId)
+    showVersions.value = false
+  } catch (error: any) {
+    store.error = error?.message || '恢复版本失败'
+  }
+}
 </script>
 
 <template>
   <div class="plan-result-page page-container">
 
-    <!-- 加载/等待状态 -->
-    <div v-if="store.status === 'pending' || store.status === 'running' || store.resultLoading" class="loading-section">
+    <!-- 首次生成等待状态 -->
+    <div v-if="!store.result && (store.status === 'pending' || store.status === 'running' || store.resultLoading)" class="loading-section">
       <div class="loading-card card">
         <div class="loading-glow glow-one" />
         <div class="loading-glow glow-two" />
@@ -85,7 +125,7 @@ function printPlan() {
             <h1 class="loading-title">{{ loadingCopy.title }}</h1>
             <p class="loading-desc">{{ loadingCopy.desc }}</p>
             <div class="loading-tags" aria-label="规划特点">
-              <span>营养约束</span><span>预算匹配</span><span>菜谱组合</span>
+              <span>AI 原生生成</span><span>营养约束</span><span>预算校验</span>
             </div>
           </div>
         </div>
@@ -94,17 +134,23 @@ function printPlan() {
         </div>
         <div class="loading-footer">
           <span><i />无需刷新，完成后将自动展示</span>
-          <span>通常需要 10–30 秒</span>
+          <span>通常需要 30–60 秒</span>
         </div>
       </div>
     </div>
 
-    <!-- 失败状态 -->
-    <div v-else-if="store.status === 'failed'" class="error-section">
+    <!-- 编辑已有方案时保留旧版本 -->
+    <div v-if="store.status === 'running' && store.result" class="generation-banner card">
+      <PremiumIcon name="thinking" :size="18" :box-size="34" />
+      <span>正在基于当前方案生成新版本，旧版本仍然可用。</span>
+    </div>
+
+    <!-- 无历史版本时的失败状态 -->
+    <div v-if="store.status === 'failed' && !store.result" class="error-section">
       <div class="error-card card">
         <PremiumIcon name="alert" class="error-icon" :size="36" :box-size="72" />
         <h2 class="error-title">规划生成失败</h2>
-        <p class="error-desc">{{ store.error || '请重试' }}</p>
+        <p class="error-desc">{{ currentError || '请重试' }}</p>
         <el-button type="primary" round @click="$router.push('/plan/new')">
           <el-icon><Refresh /></el-icon>
           重新尝试
@@ -113,8 +159,8 @@ function printPlan() {
       </div>
     </div>
 
-    <!-- 结果页面 -->
-    <div v-else-if="store.result" class="result-section">
+    <!-- 结果页面：成功、带警告或编辑失败时继续展示当前版本 -->
+    <div v-if="store.result" class="result-section">
       <section v-if="overview" class="overview-card card" aria-labelledby="overview-title">
         <div class="overview-heading">
           <div><span class="eyebrow">你的专属方案</span><h1 id="overview-title">本周饮食概览</h1></div>
@@ -125,33 +171,34 @@ function printPlan() {
         <div class="overview-grid">
           <div><strong>{{ overview.calories.toFixed(0) }}</strong><span>日均 kcal</span></div>
           <div><strong>{{ overview.cost == null ? '—' : `¥${overview.cost.toFixed(0)}` }}</strong><span>预计采购</span></div>
-          <div><strong>{{ overview.recipes }}</strong><span>精选菜谱</span></div>
+          <div><strong>{{ overview.recipes }}</strong><span>AI 生成菜谱</span></div>
         </div>
         <div class="result-actions">
           <el-button round @click="printPlan">打印方案</el-button>
           <el-button type="primary" round @click="router.push('/plan/new')">重新规划</el-button>
         </div>
       </section>
-      <section v-if="store.result.recommendation_meta" class="recommendation-status card">
+      <section class="recommendation-status card">
         <details>
-          <summary>查看推荐依据</summary>
-          <p>方案由饮食约束、营养目标与语义检索共同生成。</p>
-          <el-tag :type="store.result.recommendation_meta.fallback_used ? 'warning' : 'success'" effect="light">
-            {{ store.result.recommendation_meta.fallback_used ? '当前使用基础推荐模式' : '已结合知识库匹配' }}
+          <summary>查看 AI 生成依据</summary>
+          <p>菜谱由大模型生成，程序对硬性限制、营养汇总和预算进行校验。</p>
+          <el-tag :type="store.result.generation_meta.rag_used ? 'success' : 'info'" effect="light">
+            {{ store.result.generation_meta.rag_used ? '已参考知识库' : '纯 AI 生成' }}
           </el-tag>
+          <el-tag type="warning" effect="light">营养与预算为 AI 估算</el-tag>
         </details>
       </section>
-      <!-- TOP5 -->
+      <!-- AI 生成菜谱 -->
       <section class="result-block">
         <h2 class="block-title">
           <PremiumIcon name="trophy" class="heading-icon" :size="18" :box-size="34" />
-          TOP5 推荐菜谱
-          <span class="block-subtitle">按综合评分排序</span>
+          AI 生成菜谱
+          <span class="block-subtitle">根据你的约束即时生成</span>
         </h2>
         <div class="top5-list">
           <RecipeCard
-            v-for="(recipe, i) in store.result.top5"
-            :key="recipe.recipe_id"
+            v-for="(recipe, i) in store.result.recipes"
+            :key="recipe.recipe_key"
             :recipe="recipe"
             :rank="i + 1"
           />
@@ -163,15 +210,15 @@ function printPlan() {
         <WeeklyTimeline :weekly-plan="store.result.weekly_plan" />
       </section>
 
-      <section v-if="store.result.plan_validation" class="result-block">
-        <div class="validation-card card" :class="{ warning: store.result.plan_validation.warnings.length }">
+      <section v-if="store.result.validation" class="result-block">
+        <div class="validation-card card" :class="{ warning: store.result.validation.warnings.length }">
           <h3 class="validation-heading"><PremiumIcon name="check" :size="13" :box-size="26" />计划校验</h3>
-          <p>日均 {{ store.result.plan_validation.avg_daily_calories.toFixed(0) }} kcal，目标 {{ store.result.plan_validation.target_calorie_range.join(' - ') }} kcal</p>
-          <p v-if="store.result.plan_validation.budget_target_range">采购 ¥{{ (store.result.plan_validation.estimated_procurement_cost || 0).toFixed(1) }}，目标 ¥{{ store.result.plan_validation.budget_target_range.join(' - ') }}</p>
-          <p v-for="warning in store.result.plan_validation.warnings" :key="warning" class="validation-warning">
+          <p>日均 {{ (store.result.validation.derived.avg_daily_calories || store.result.nutrition_report.avg_daily_calories).toFixed(0) }} kcal</p>
+          <p>预计采购 ¥{{ store.result.shopping_list.total_cost.toFixed(1) }}</p>
+          <p v-for="warning in store.result.validation.warnings" :key="warning" class="validation-warning">
             <PremiumIcon name="alert" :size="12" :box-size="24" />{{ warning }}
           </p>
-          <p v-if="!store.result.plan_validation.warnings.length" class="validation-ok">计划完整，未发现需要提示的偏差。</p>
+          <p v-if="!store.result.validation.warnings.length" class="validation-ok">计划完整，未发现需要提示的偏差。</p>
         </div>
       </section>
 
@@ -179,7 +226,7 @@ function printPlan() {
       <section class="result-block">
         <NutritionReport
           :report="store.result.nutrition_report"
-          :target-range="store.result.plan_validation?.target_calorie_range"
+          :target-range="store.result.validation?.derived?.target_calorie_range"
         />
       </section>
 
@@ -196,6 +243,52 @@ function printPlan() {
             AI 总结
           </h3>
           <div class="summary-content">{{ store.result.summary }}</div>
+        </div>
+      </section>
+
+      <section v-if="currentError && store.result" class="edit-error card">
+        <PremiumIcon name="alert" :size="16" :box-size="30" />
+        <span>本次修改没有生成新版本，当前仍显示上一个成功版本：{{ currentError }}</span>
+      </section>
+
+      <section class="conversation-card card">
+        <div class="conversation-heading">
+          <div>
+            <span class="eyebrow">继续调整</span>
+            <h2>和 AI 一起修改方案</h2>
+          </div>
+          <el-button link @click="showVersions = !showVersions">版本历史（{{ store.versions.length }}）</el-button>
+        </div>
+        <div class="quick-actions">
+          <el-button size="small" round :disabled="store.editing" @click="submitMessage({ type: 'reduce_budget' })">降低预算</el-button>
+          <el-button size="small" round :disabled="store.editing" @click="submitMessage({ type: 'increase_protein' })">增加蛋白质</el-button>
+          <el-button size="small" round :disabled="store.editing" @click="submitMessage({ type: 'shorter_cooking' })">缩短烹饪时间</el-button>
+          <el-button size="small" round :disabled="store.editing" @click="submitMessage({ type: 'replace_meal', day: 1, slot: 'lunch' })">重做第 1 天午餐</el-button>
+          <el-button size="small" round :disabled="store.editing" @click="submitMessage({ type: 'replace_day', day: 1 })">重做第 1 天</el-button>
+        </div>
+        <div class="remove-ingredient-row">
+          <el-input v-model="ingredientInput" size="small" placeholder="输入要去除的食材，例如：花生" :disabled="store.editing" @keydown.enter="removeIngredient" />
+          <el-button size="small" round :disabled="!ingredientInput.trim() || store.editing" @click="removeIngredient">去除食材</el-button>
+        </div>
+        <div class="conversation-input">
+          <el-input
+            v-model="messageInput"
+            type="textarea"
+            :rows="3"
+            maxlength="1000"
+            show-word-limit
+            :disabled="store.editing"
+            placeholder="例如：把第三天晚餐换成不含海鲜、20 分钟内完成的菜"
+            @keydown.ctrl.enter="submitMessage()"
+          />
+          <el-button type="primary" round :loading="sendingMessage || store.editing" :disabled="!messageInput.trim() || store.editing" @click="submitMessage()">生成新版本</el-button>
+        </div>
+        <div v-if="showVersions" class="version-list">
+          <div v-for="version in store.versions" :key="version.version_id" class="version-row">
+            <span>版本 {{ version.version_no }} · {{ new Date(version.created_at).toLocaleString() }}</span>
+            <el-tag v-if="version.is_current" size="small" type="success">当前</el-tag>
+            <el-button v-else size="small" link @click="restoreVersion(version.version_id)">恢复</el-button>
+          </div>
         </div>
       </section>
     </div>
@@ -421,6 +514,79 @@ function printPlan() {
   white-space: pre-wrap;
 }
 
+.generation-banner,
+.edit-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  color: $color-text-secondary;
+  font-size: 13px;
+}
+
+.edit-error {
+  border-color: $color-rose;
+}
+
+.conversation-card {
+  padding: 24px;
+  margin-bottom: 36px;
+}
+
+.conversation-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.conversation-heading h2 {
+  margin-top: 4px;
+  font-size: 20px;
+  color: $color-text-primary;
+}
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.remove-ingredient-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.remove-ingredient-row .el-input { flex: 1; }
+
+.conversation-input {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.conversation-input .el-input { flex: 1; }
+
+.version-list {
+  margin-top: 18px;
+  border-top: 1px solid $color-border;
+  padding-top: 12px;
+}
+
+.version-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  color: $color-text-secondary;
+  font-size: 13px;
+}
+
 @media (max-width: $breakpoint-sm) {
   .plan-result-page { padding-top: 24px; }
   .loading-section { padding-top: 4px; }
@@ -437,6 +603,8 @@ function printPlan() {
   .overview-grid { gap: 8px; }
   .overview-grid div { padding: 12px 8px; }
   .overview-grid strong { font-size: 18px; }
+  .conversation-input { flex-direction: column; align-items: stretch; }
+  .remove-ingredient-row { flex-direction: column; }
 }
 
 @media print {
