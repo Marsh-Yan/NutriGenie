@@ -15,11 +15,17 @@ from langgraph.graph import END, StateGraph
 from app.workflow.nodes.ai_native_nodes import (
     ai_aggregation_node,
     ai_validation_node,
+    candidate_validation_node,
     generation_context_node,
     plan_generation_node,
     plan_repair_node,
     route_after_ai_validation,
+    route_after_candidate_validation,
+    route_after_optimization,
+    route_after_repair,
+    recipe_normalization_node,
     summary_passthrough_node,
+    weekly_optimization_node,
 )
 from app.workflow.nodes.phase3_nodes import constraint_node
 from app.workflow.nodes.intent_analyzer import analyze_intent
@@ -78,6 +84,9 @@ def build_workflow() -> StateGraph:
     workflow.add_node("generation_context", generation_context_node)
     # Keep the public node name used by progress APIs while changing its role.
     workflow.add_node("recommendation", plan_generation_node)
+    workflow.add_node("normalization", recipe_normalization_node)
+    workflow.add_node("candidate_validation", candidate_validation_node)
+    workflow.add_node("optimizer", weekly_optimization_node)
     workflow.add_node("validation", ai_validation_node)
     workflow.add_node("repair", plan_repair_node)
     workflow.add_node("aggregator", ai_aggregation_node)
@@ -100,14 +109,29 @@ def build_workflow() -> StateGraph:
     workflow.add_conditional_edges(
         "recommendation",
         route_after_generation,
-        {"validation": "validation", "error_end": "error_end"},
+        {"validation": "normalization", "error_end": "error_end"},
+    )
+    workflow.add_edge("normalization", "candidate_validation")
+    workflow.add_conditional_edges(
+        "candidate_validation",
+        route_after_candidate_validation,
+        {"repair": "repair", "optimizer": "optimizer", "error_end": "error_end"},
+    )
+    workflow.add_conditional_edges(
+        "optimizer",
+        route_after_optimization,
+        {"repair": "repair", "plan_validation": "validation", "error_end": "error_end"},
     )
     workflow.add_conditional_edges(
         "validation",
         route_after_ai_validation,
         {"repair": "repair", "aggregator": "aggregator", "error_end": "error_end"},
     )
-    workflow.add_edge("repair", "validation")
+    workflow.add_conditional_edges(
+        "repair",
+        route_after_repair,
+        {"normalization": "normalization", "error_end": "error_end"},
+    )
     workflow.add_conditional_edges(
         "aggregator",
         route_after_ai_aggregation,

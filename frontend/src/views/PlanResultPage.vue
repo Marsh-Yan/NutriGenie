@@ -28,11 +28,13 @@ const loadingCopy = computed(() => {
   const step = store.progress?.step_name
   const copies: Record<string, { title: string; desc: string }> = {
     意图分析: { title: '正在理解你的需求', desc: '识别目标、预算、忌口与每日餐数。' },
-    约束分析: { title: '正在计算合理边界', desc: '结合身体数据、活动水平与营养目标。' },
-    参考上下文: { title: '正在准备生成依据', desc: '读取可用的营养知识与个性化上下文。' },
-    'AI 生成方案': { title: '正在创作专属菜谱', desc: 'AI 根据你的约束即时设计每日餐食。' },
-    方案校验: { title: '正在检查硬性约束', desc: '核对忌口、过敏原、结构完整性与执行难度。' },
-    营养与预算汇总: { title: '正在核算整周方案', desc: '汇总热量、营养、采购用量与预计成本。' },
+    约束构建: { title: '正在计算合理边界', desc: '结合身体数据、活动水平与营养目标。' },
+    食材知识: { title: '正在准备食材事实', desc: '读取标准食材、营养、价格与单位信息。' },
+    'AI 创作候选': { title: '正在创作候选菜品', desc: 'AI 根据你的约束即时设计多样化菜品。' },
+    食材标准化: { title: '正在重新核算菜品', desc: '解析食材与单位，并重新计算营养和成本。' },
+    硬约束校验: { title: '正在检查硬性约束', desc: '核对忌口、过敏原、食材覆盖与饮食类型。' },
+    整周优化: { title: '正在编排整周餐单', desc: '控制重复，平衡热量、预算与菜品多样性。' },
+    结果校验与汇总: { title: '正在进行最终校验', desc: '汇总营养、采购清单与方案质量指标。' },
     保存方案版本: { title: '正在保存专属方案', desc: '整理结果与生成记录，马上为你呈现。' },
   }
   return { eyebrow: 'AI PLANNING', ...(copies[step || ''] || { title: '正在生成专属方案', desc: 'AI 正在分析需求并匹配适合你的菜谱。' }) }
@@ -44,12 +46,14 @@ const overview = computed(() => {
   return {
     calories: result.nutrition_report.avg_daily_calories,
     cost: result.shopping_list.total_cost,
-    recipes: result.recipes.length,
+    recipes: result.generation_meta?.unique_recipe_count || result.recipes.length,
+    maxRepeat: result.generation_meta?.max_recipe_repeat || 0,
     warnings: result.validation?.warnings.length || 0,
   }
 })
 
 const currentError = computed(() => store.lastRunError || store.error)
+const isV2Result = computed(() => store.result?.schema_version === 'ai_native_v2')
 
 onMounted(async () => {
   const planId = Number(route.params.id)
@@ -171,7 +175,8 @@ async function restoreVersion(versionId: number) {
         <div class="overview-grid">
           <div><strong>{{ overview.calories.toFixed(0) }}</strong><span>日均 kcal</span></div>
           <div><strong>{{ overview.cost == null ? '—' : `¥${overview.cost.toFixed(0)}` }}</strong><span>预计采购</span></div>
-          <div><strong>{{ overview.recipes }}</strong><span>AI 生成菜谱</span></div>
+          <div><strong>{{ overview.recipes }}</strong><span>本周不同菜品</span></div>
+          <div><strong>{{ overview.maxRepeat || '—' }}</strong><span>单菜最多重复</span></div>
         </div>
         <div class="result-actions">
           <el-button round @click="printPlan">打印方案</el-button>
@@ -185,7 +190,9 @@ async function restoreVersion(versionId: number) {
           <el-tag :type="store.result.generation_meta.rag_used ? 'success' : 'info'" effect="light">
             {{ store.result.generation_meta.rag_used ? '已参考知识库' : '纯 AI 生成' }}
           </el-tag>
-          <el-tag type="warning" effect="light">营养与预算为 AI 估算</el-tag>
+          <el-tag :type="isV2Result ? 'success' : 'warning'" effect="light">
+            {{ isV2Result ? '营养与预算由食材目录核算' : '历史版本使用 AI 估算数据' }}
+          </el-tag>
         </details>
       </section>
       <!-- AI 生成菜谱 -->
@@ -446,7 +453,7 @@ async function restoreVersion(versionId: number) {
 .overview-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .overview-heading h1 { margin-top: 4px; color: $color-text-primary; font-size: 26px; }
 .eyebrow { color: $color-sage-dark; font-size: 13px; font-weight: 700; letter-spacing: .08em; }
-.overview-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 22px; }
+.overview-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-top: 22px; }
 .overview-grid div { display: flex; flex-direction: column; padding: 14px; border-radius: $radius-md; background: rgba(255,255,255,.72); }
 .overview-grid strong { color: $color-text-primary; font-size: 22px; }
 .overview-grid span { color: $color-text-secondary; font-size: 12px; }
@@ -601,6 +608,7 @@ async function restoreVersion(versionId: number) {
   .overview-card { padding: 20px; }
   .overview-heading { flex-direction: column; }
   .overview-grid { gap: 8px; }
+  .overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .overview-grid div { padding: 12px 8px; }
   .overview-grid strong { font-size: 18px; }
   .conversation-input { flex-direction: column; align-items: stretch; }

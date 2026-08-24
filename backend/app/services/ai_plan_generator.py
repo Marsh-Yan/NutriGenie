@@ -21,20 +21,21 @@ class PlanGenerationError(RuntimeError):
     """Raised when the model cannot produce a valid structured plan."""
 
 
-PLAN_SYSTEM_PROMPT = """你是 NutriGenie 的 AI 原生饮食规划器。
+PLAN_SYSTEM_PROMPT = """你是 NutriGenie 的 AI 原生候选菜品设计器。
 
-你的任务是根据用户画像、硬性约束和可选参考资料，生成完整的多日餐单。
+你的任务是根据用户画像、硬性约束、标准食材白名单和可选参考资料，创作足量候选菜品。
 必须严格返回符合结构化 schema 的 JSON，不要输出 Markdown 或额外解释。
 
 规则：
-1. recipes 是菜谱定义数组；meals 使用 recipe_index 引用 recipes，索引从 0 开始。
-2. 每个食材的 nutrition_estimate 和 line_cost_estimate 必须对应当前 quantity 的估算值。
-3. 每道菜必须有至少一个食材、一个步骤和可解释的营养与成本估算。
-4. 每天必须生成 breakfast、lunch、dinner 三个 slot；可以额外生成 snack。
-5. 绝不能使用用户明确过敏、忌口或饮食类型禁止的食材。
-6. 预算、热量和蛋白质是目标，不要为了凑数字生成不真实的食材用量。
-7. 不要做疾病诊断、治疗承诺或保证性健康结论。
-8. 参考资料只用于常识和灵感；如果参考资料与用户硬约束冲突，以用户硬约束为准。
+1. recipes 是候选菜品数组；meals 可以留空，最终整周餐次由后端优化器生成。
+2. 食材 name 必须逐字使用 allowed_ingredients 中的标准名称，不得创造目录外食材。
+3. 每道菜必须声明 meal_slots，并包含 2-10 个主要食材、清晰数量、可换算单位和完整步骤。
+4. 不要输出 nutrition_estimate、line_cost_estimate 或 cost_estimate；营养和成本由后端事实层计算。
+5. 候选必须覆盖早餐、午餐和晚餐，菜名、菜系、主蛋白和烹饪方式应有明显差异。
+6. 绝不能使用用户明确过敏、忌口或饮食类型禁止的食材。
+7. 预算、热量和蛋白质是目标，不要为了凑数字生成不真实的食材用量。
+8. 不要做疾病诊断、治疗承诺或保证性健康结论。
+9. 参考资料只用于常识和灵感；如果参考资料与用户硬约束冲突，以用户硬约束为准。
 """
 
 
@@ -110,12 +111,42 @@ def _prompt_payload(
     edit_message: str | None = None,
     action: dict | None = None,
     validation_feedback: dict | None = None,
+    ingredient_catalog: list[dict] | None = None,
+    candidate_target: int | None = None,
 ) -> str:
+    meal_count = max(1, min(int((intent or {}).get("meal_count_per_day") or 3), 3))
+    required_slots = {
+        1: ["dinner"],
+        2: ["lunch", "dinner"],
+        3: ["breakfast", "lunch", "dinner"],
+    }[meal_count]
+    calorie_min = float(constraints.get("calorie_min") or 0)
+    calorie_max = float(constraints.get("calorie_max") or 0)
+    calorie_target = (calorie_min + calorie_max) / 2 if calorie_min and calorie_max else max(calorie_min, calorie_max, 0)
+    slot_weights = {
+        1: {"dinner": 1.0},
+        2: {"lunch": 0.45, "dinner": 0.55},
+        3: {"breakfast": 0.25, "lunch": 0.40, "dinner": 0.35},
+    }[meal_count]
+    slot_calorie_targets = {
+        slot: round(calorie_target * weight)
+        for slot, weight in slot_weights.items()
+        if calorie_target
+    }
     payload = {
         "user_request": user_input,
         "intent": intent or {},
         "constraints": constraints,
         "reference_context": context or "无可用参考资料",
+        "allowed_ingredients": ingredient_catalog or [],
+        "candidate_target": candidate_target,
+        "required_meal_slots": required_slots,
+        "slot_calorie_targets": slot_calorie_targets,
+        "output_instruction": "只输出符合 output_schema 的 JSON 对象；只生成候选 recipes；meals 留空，由后端优化器编排。",
+        # DeepSeek exposes JSON Object mode rather than OpenAI's strict
+        # json_schema response format. LangChain therefore needs the schema in
+        # the prompt when method=json_mode is selected below.
+        "output_schema": GeneratedPlan.model_json_schema(),
     }
     if base_plan is not None:
         payload["current_plan"] = base_plan
@@ -128,6 +159,26 @@ def _prompt_payload(
     return json.dumps(payload, ensure_ascii=False, default=str)
 
 
+def _creative_plan_payload(plan: GeneratedPlan) -> dict:
+    """Return a compact creative summary for repair without trusted facts.
+
+    The validation feedback already identifies exact failures. Re-sending every
+    step and quantity made 7-day repair prompts unnecessarily large and could
+    push otherwise valid JSON beyond a provider's output limit.
+    """
+    return {
+        "candidate_count": len(plan.recipes),
+        "recipes": [
+            {
+                "name": recipe.name,
+                "meal_slots": recipe.meal_slots,
+                "ingredient_names": [item.input_name or item.name for item in recipe.ingredients],
+            }
+            for recipe in plan.recipes
+        ],
+    }
+
+
 async def _invoke_plan(prompt: str, *, temperature: float) -> GeneratedPlan:
     if not settings.LLM_API_KEY:
         raise PlanGenerationError("未配置 LLM_API_KEY，无法生成 AI 原生餐单")
@@ -137,11 +188,12 @@ async def _invoke_plan(prompt: str, *, temperature: float) -> GeneratedPlan:
             model=settings.PLAN_GENERATION_MODEL or settings.LLM_MODEL,
             temperature=temperature,
             timeout=settings.PLAN_GENERATION_TIMEOUT,
+            max_tokens=settings.PLAN_GENERATION_MAX_TOKENS,
         )
-        structured = llm.with_structured_output(
-            GeneratedPlan,
-            include_raw=True,
-        )
+        structured_options = {"include_raw": True}
+        if "deepseek" in (settings.LLM_API_BASE or "").lower():
+            structured_options["method"] = "json_mode"
+        structured = llm.with_structured_output(GeneratedPlan, **structured_options)
         response = await structured.ainvoke(
             [
                 SystemMessage(content=PLAN_SYSTEM_PROMPT),
@@ -165,6 +217,8 @@ async def generate_plan(
     base_plan: dict | None = None,
     edit_message: str | None = None,
     action: dict | None = None,
+    ingredient_catalog: list[dict] | None = None,
+    candidate_target: int | None = None,
 ) -> GeneratedPlan:
     prompt = _prompt_payload(
         user_input=user_input,
@@ -174,6 +228,8 @@ async def generate_plan(
         base_plan=base_plan,
         edit_message=edit_message,
         action=action,
+        ingredient_catalog=ingredient_catalog,
+        candidate_target=candidate_target,
     )
     return await _invoke_plan(prompt, temperature=0.7)
 
@@ -189,6 +245,8 @@ async def repair_plan(
     edit_message: str | None = None,
     action: dict | None = None,
     validation_feedback: dict,
+    ingredient_catalog: list[dict] | None = None,
+    candidate_target: int | None = None,
 ) -> GeneratedPlan:
     prompt = _prompt_payload(
         user_input=user_input,
@@ -200,7 +258,9 @@ async def repair_plan(
         action=action,
         validation_feedback={
             **validation_feedback,
-            "invalid_plan": plan.model_dump(mode="json"),
+            "invalid_plan": _creative_plan_payload(plan),
         },
+        ingredient_catalog=ingredient_catalog,
+        candidate_target=candidate_target,
     )
     return await _invoke_plan(prompt, temperature=0.2)

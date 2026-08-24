@@ -108,9 +108,10 @@ def test_aggregator_creates_generated_keys_and_shopping_list():
         constraints=constraints(),
         rag_meta={"enabled": False, "used": False},
     )
-    assert result["schema_version"] == "ai_native_v1"
+    assert result["schema_version"] == "ai_native_v2"
     assert result["recipes"][0]["recipe_key"].startswith("generated-")
     assert result["weekly_plan"][0]["meals"]["lunch"]["recipe_key"] == result["recipes"][0]["recipe_key"]
     assert [item["name"] for item in result["shopping_list"]["items"]] == ["鸡胸肉"]
     assert result["nutrition_report"]["avg_daily_calories"] == 603
     assert result["generation_meta"]["constraints_snapshot"]["diet_type"] == "balanced"
+    assert result["generation_meta"]["nutrition_source"] == "ingredient_catalog_v1"

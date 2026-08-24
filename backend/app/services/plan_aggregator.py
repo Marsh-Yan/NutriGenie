@@ -57,20 +57,29 @@ def aggregate_generated_plan(
     constraints: dict | None = None,
     rag_meta: dict | None = None,
     repair_attempts: int = 0,
+    normalization_meta: dict | None = None,
+    optimization_meta: dict | None = None,
+    ingredient_catalog_version: str = "",
 ) -> dict:
     draft_id = uuid4().hex[:8]
     recipes: list[dict] = []
     recipe_keys: dict[int, str] = {}
+    used_recipe_indexes = sorted({meal.recipe_index for meal in plan.meals})
 
-    for index, recipe in enumerate(plan.recipes):
+    for index in used_recipe_indexes:
+        if index < 0 or index >= len(plan.recipes):
+            continue
+        recipe = plan.recipes[index]
         recipe_key = f"generated-{draft_id}-{index + 1}"
         recipe_keys[index] = recipe_key
         canonical_nutrition = canonical_recipe_nutrition(recipe)
         canonical_cost = canonical_recipe_cost(recipe)
+        declared_nutrition = recipe.declared_nutrition_estimate or recipe.nutrition_estimate or canonical_nutrition
+        declared_cost = recipe.declared_cost_estimate
         recipes.append(
             {
                 "recipe_key": recipe_key,
-                "source": "llm_generated",
+                "source": "ai_generated",
                 "name": recipe.name,
                 "category": recipe.category,
                 "cuisine_type": recipe.cuisine_type,
@@ -78,25 +87,32 @@ def aggregate_generated_plan(
                 "prep_time_min": recipe.prep_time_min,
                 "cook_time_min": recipe.cook_time_min,
                 "servings": recipe.servings,
+                "meal_slots": recipe.meal_slots,
                 "ingredients": [
                     {
+                        "ingredient_id": item.ingredient_id or 0,
                         "name": item.name,
+                        "input_name": item.input_name or item.name,
+                        "catalog_name": item.catalog_name or item.name,
                         "quantity": item.quantity,
                         "unit": item.unit,
+                        "estimated_grams": item.estimated_grams,
                         "optional": item.optional,
-                        "nutrition_estimate": _round_nutrition(item.nutrition_estimate),
-                        "line_cost_estimate": round(item.line_cost_estimate, 2),
+                        "nutrition_estimate": _round_nutrition(item.nutrition_estimate or NutritionEstimate(calories=0, protein_g=0, fat_g=0, carbs_g=0, fiber_g=0)),
+                        "line_cost_estimate": round(item.line_cost_estimate or 0, 2),
+                        "resolution_source": item.resolution_source,
+                        "data_source": item.data_source or "llm_estimate",
                     }
                     for item in recipe.ingredients
                 ],
                 "steps": recipe.steps,
                 "nutrition": _round_nutrition(canonical_nutrition),
                 "nutrition_estimate": _round_nutrition(canonical_nutrition),
-                "declared_nutrition": _round_nutrition(recipe.nutrition_estimate),
+                "declared_nutrition": _round_nutrition(declared_nutrition),
                 "estimated_cost": round(canonical_cost, 2),
                 "cost_estimate": round(canonical_cost, 2),
-                "declared_cost": round(recipe.cost_estimate, 2),
-                "estimate_source": "llm_estimate",
+                "declared_cost": round(declared_cost, 2) if declared_cost is not None else None,
+                "estimate_source": "ingredient_catalog_v1",
                 "generation_note": recipe.generation_note,
             }
         )
@@ -145,7 +161,7 @@ def aggregate_generated_plan(
                 item = shopping.setdefault(
                     key,
                     {
-                        "ingredient_id": 0,
+                        "ingredient_id": ingredient.get("ingredient_id", 0),
                         "name": ingredient["name"],
                         "quantity": 0.0,
                         "unit": ingredient["unit"],
@@ -182,7 +198,6 @@ def aggregate_generated_plan(
     total_nutrition = NutritionEstimate(calories=0, protein_g=0, fat_g=0, carbs_g=0, fiber_g=0)
     for day in daily_totals.values():
         total_nutrition = _add_nutrition(total_nutrition, day)
-    total_calories = total_nutrition.calories
     macro_total = total_nutrition.protein_g * 4 + total_nutrition.fat_g * 9 + total_nutrition.carbs_g * 4
     nutrition_report = {
         "avg_daily_calories": round(total_nutrition.calories / max(1, duration_days), 1),
@@ -194,12 +209,26 @@ def aggregate_generated_plan(
         "protein_pct": round(total_nutrition.protein_g * 4 / max(1, macro_total), 3),
         "fat_pct": round(total_nutrition.fat_g * 9 / max(1, macro_total), 3),
         "carbs_pct": round(total_nutrition.carbs_g * 4 / max(1, macro_total), 3),
-        "recommendation": "营养和预算数据为 AI 估算，建议根据实际食材包装信息调整。",
+        "recommendation": "营养和预算由标准食材目录重新核算，实际采购价格可能因地区和时令波动。",
     }
 
     warnings = list(validation.warnings)
+    unique_count = int((optimization_meta or {}).get("unique_recipe_count", 0))
+    repeat_count = int((optimization_meta or {}).get("max_recipe_repeat", 0))
+    quality_suffix = (
+        f"本方案共使用 {unique_count} 道不同菜品，单道菜最多出现 {repeat_count} 次。"
+        if unique_count
+        else ""
+    )
+    summary = " ".join(
+        part for part in [
+            plan.summary or "AI 已生成完整饮食方案。",
+            quality_suffix,
+            "营养和预算已由标准食材目录重新核算。",
+        ] if part
+    )
     result = {
-        "schema_version": "ai_native_v1",
+        "schema_version": "ai_native_v2",
         "recipes": recipes,
         "weekly_plan": weekly_plan,
         "nutrition_report": nutrition_report,
@@ -213,18 +242,27 @@ def aggregate_generated_plan(
             "warnings": warnings,
         },
         "generation_meta": {
-            "strategy": "ai_native_v1",
+            "strategy": "ai_native_v2",
             "rag_enabled": bool((rag_meta or {}).get("enabled")),
             "rag_used": bool((rag_meta or {}).get("used")),
             "rag_sources": (rag_meta or {}).get("sources", []),
             "rag_error": (rag_meta or {}).get("error"),
             "repair_attempts": repair_attempts,
-            "estimate_source": "llm_estimate",
+            "estimate_source": "ingredient_catalog_v1",
+            "nutrition_source": "ingredient_catalog_v1",
+            "cost_source": "ingredient_catalog_v1",
+            "ingredient_catalog_version": ingredient_catalog_version,
+            "candidate_count": len(plan.recipes),
+            "unique_recipe_count": (optimization_meta or {}).get("unique_recipe_count", 0),
+            "max_recipe_repeat": (optimization_meta or {}).get("max_recipe_repeat", 0),
+            "unresolved_ingredients": (normalization_meta or {}).get("unresolved_ingredients", []),
+            "normalization": normalization_meta or {},
+            "optimization": optimization_meta or {},
             # Keep the hard-constraint snapshot with the immutable version so
             # later edits can preserve it without re-running intent analysis.
             "intent_snapshot": intent or {},
             "constraints_snapshot": constraints or {},
         },
-        "summary": plan.summary or "AI 已生成完整饮食方案，营养和预算均为估算值。",
+        "summary": summary,
     }
     return result

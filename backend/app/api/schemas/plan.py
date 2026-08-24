@@ -40,7 +40,7 @@ class StepInfo(BaseModel):
 
 
 class ProgressInfo(BaseModel):
-    total_steps: int = 7
+    total_steps: int = 9
     completed_steps: int = 0
     current_step: int = 1
     step_name: str = ""
@@ -80,17 +80,23 @@ class GeneratedNutrition(BaseModel):
 
 
 class GeneratedIngredientItem(BaseModel):
+    ingredient_id: int = 0
     name: str
+    input_name: Optional[str] = None
+    catalog_name: Optional[str] = None
     quantity: float
     unit: str
+    estimated_grams: Optional[float] = None
     optional: bool = False
     nutrition_estimate: GeneratedNutrition
     line_cost_estimate: float = 0
+    resolution_source: Optional[str] = None
+    data_source: str = "ingredient_catalog_v1"
 
 
 class GeneratedRecipeItem(BaseModel):
     recipe_key: str
-    source: str = "llm_generated"
+    source: str = "ai_generated"
     name: str
     category: str
     cuisine_type: str = "家常"
@@ -98,6 +104,7 @@ class GeneratedRecipeItem(BaseModel):
     prep_time_min: int = 0
     cook_time_min: int = 0
     servings: int = 1
+    meal_slots: List[str] = Field(default_factory=list)
     ingredients: List[GeneratedIngredientItem] = Field(default_factory=list)
     steps: List[str] = Field(default_factory=list)
     nutrition: GeneratedNutrition
@@ -106,7 +113,7 @@ class GeneratedRecipeItem(BaseModel):
     estimated_cost: float = 0
     cost_estimate: Optional[float] = None
     declared_cost: Optional[float] = None
-    estimate_source: str = "llm_estimate"
+    estimate_source: str = "ingredient_catalog_v1"
     generation_note: str = ""
 
 
@@ -167,13 +174,22 @@ class PlanValidation(BaseModel):
 
 
 class GenerationMeta(BaseModel):
-    strategy: str = "ai_native_v1"
+    strategy: str = "ai_native_v2"
     rag_enabled: bool = False
     rag_used: bool = False
     rag_sources: List[dict] = Field(default_factory=list)
     rag_error: Optional[str] = None
     repair_attempts: int = 0
-    estimate_source: str = "llm_estimate"
+    estimate_source: str = "ingredient_catalog_v1"
+    nutrition_source: str = "ingredient_catalog_v1"
+    cost_source: str = "ingredient_catalog_v1"
+    ingredient_catalog_version: str = ""
+    candidate_count: int = 0
+    unique_recipe_count: int = 0
+    max_recipe_repeat: int = 0
+    unresolved_ingredients: List[str] = Field(default_factory=list)
+    normalization: dict = Field(default_factory=dict)
+    optimization: dict = Field(default_factory=dict)
     intent_snapshot: dict = Field(default_factory=dict)
     constraints_snapshot: dict = Field(default_factory=dict)
 
@@ -181,7 +197,7 @@ class GenerationMeta(BaseModel):
 class PlanResult(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    schema_version: str = "ai_native_v1"
+    schema_version: str = "ai_native_v2"
     version_id: Optional[int] = None
     version_no: Optional[int] = None
     recipes: List[GeneratedRecipeItem] = Field(default_factory=list)

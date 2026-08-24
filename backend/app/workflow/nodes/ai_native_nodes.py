@@ -7,8 +7,14 @@ import logging
 from app.config import settings
 from app.services.ai_plan_generator import PlanGenerationError, generate_plan, repair_plan
 from app.services.generation_context import retrieve_generation_context
+from app.services.ingredient_catalog import catalog_from_state, normalize_generated_plan
 from app.services.plan_aggregator import aggregate_generated_plan
 from app.services.plan_validator import validate_plan
+from app.services.weekly_plan_optimizer import (
+    PlanOptimizationError,
+    candidate_target,
+    optimize_weekly_plan,
+)
 from app.workflow.state import WorkflowState
 
 logger = logging.getLogger(__name__)
@@ -28,6 +34,9 @@ async def generation_context_node(state: WorkflowState) -> WorkflowState:
     )
     state.generation_context = result.get("text", "")
     state.generation_meta = result.get("meta", {})
+    catalog = catalog_from_state(state.ingredient_catalog)
+    state.ingredient_catalog = catalog.model_dump(mode="json")
+    state.ingredient_catalog_version = catalog.version
     return state
 
 
@@ -46,11 +55,92 @@ async def plan_generation_node(state: WorkflowState) -> WorkflowState:
             base_plan=state.base_plan,
             edit_message=state.edit_message,
             action=state.edit_action,
+            ingredient_catalog=catalog_from_state(state.ingredient_catalog).prompt_entries(),
+            candidate_target=candidate_target(state.duration_days, state.intent_analysis),
         )
     except PlanGenerationError as exc:
         state.generation_error = str(exc)
         state.errors.append(state.generation_error)
         logger.warning("AI plan generation failed: %s", exc)
+    return state
+
+
+def recipe_normalization_node(state: WorkflowState) -> WorkflowState:
+    state.current_node = "recipe_normalization"
+    if not state.generated_plan:
+        state.generation_error = "缺少待标准化的 AI 候选菜品"
+        state.errors.append(state.generation_error)
+        return state
+    catalog = catalog_from_state(state.ingredient_catalog)
+    result = normalize_generated_plan(state.generated_plan, catalog)
+    state.generated_plan = result.plan
+    state.ingredient_catalog_version = result.catalog_version
+    state.normalization_result = {
+        "catalog_version": result.catalog_version,
+        "issues": [item.model_dump(mode="json") for item in result.issues],
+        "resolved_count": result.resolved_count,
+        "total_count": result.total_count,
+        "price_covered_count": result.price_covered_count,
+        "unresolved_ingredients": result.unresolved_ingredients,
+    }
+    return state
+
+
+def candidate_validation_node(state: WorkflowState) -> WorkflowState:
+    state.current_node = "candidate_validation"
+    if not state.generated_plan:
+        state.generation_error = state.generation_error or "AI 未生成候选菜品"
+        if state.generation_error not in state.errors:
+            state.errors.append(state.generation_error)
+        return state
+    result = validate_plan(
+        state.generated_plan,
+        state.constraints or {},
+        intent=state.intent_analysis,
+        duration_days=state.duration_days,
+        require_meals=False,
+        require_resolved=True,
+        normalization_issues=(state.normalization_result or {}).get("issues", []),
+    )
+    state.validation_stage = "candidates"
+    state.validation_result = result.model_dump(mode="json")
+    state.plan_validation = state.validation_result
+    return state
+
+
+def weekly_optimization_node(state: WorkflowState) -> WorkflowState:
+    state.current_node = "weekly_optimizer"
+    if not state.generated_plan:
+        state.generation_error = "缺少已校验候选，无法生成整周计划"
+        state.errors.append(state.generation_error)
+        return state
+    try:
+        result = optimize_weekly_plan(
+            state.generated_plan,
+            state.constraints or {},
+            intent=state.intent_analysis,
+            duration_days=state.duration_days,
+        )
+        state.generated_plan = result.plan
+        state.optimization_result = result.model_dump(mode="json", exclude={"plan"})
+        state.validation_result = None
+    except PlanOptimizationError as exc:
+        state.optimization_result = {"error": str(exc), **exc.feedback}
+        state.validation_stage = "optimization"
+        state.validation_result = {
+            "status": "failed",
+            "passed": False,
+            "issues": [
+                {
+                    "code": exc.feedback.get("code", "optimization_failed"),
+                    "message": str(exc),
+                    "severity": "error",
+                    "path": "weekly_plan",
+                }
+            ],
+            "warnings": [],
+            "derived": exc.feedback,
+        }
     return state
 
 
@@ -61,6 +151,15 @@ async def plan_repair_node(state: WorkflowState) -> WorkflowState:
         state.errors.append(state.generation_error)
         return state
     state.repair_attempts += 1
+    logger.warning(
+        "Repairing AI plan after %s validation: %s",
+        state.validation_stage,
+        [
+            {"code": item.get("code"), "message": item.get("message")}
+            for item in (state.validation_result or {}).get("issues", [])
+            if item.get("severity") == "error"
+        ][:5],
+    )
     try:
         state.generated_plan = await repair_plan(
             plan=state.generated_plan,
@@ -72,7 +171,12 @@ async def plan_repair_node(state: WorkflowState) -> WorkflowState:
             edit_message=state.edit_message,
             action=state.edit_action,
             validation_feedback=state.validation_result,
+            ingredient_catalog=catalog_from_state(state.ingredient_catalog).prompt_entries(),
+            candidate_target=candidate_target(state.duration_days, state.intent_analysis),
         )
+        state.generation_error = None
+        state.normalization_result = None
+        state.optimization_result = None
     except PlanGenerationError as exc:
         state.generation_error = str(exc)
         state.errors.append(state.generation_error)
@@ -81,6 +185,7 @@ async def plan_repair_node(state: WorkflowState) -> WorkflowState:
 
 
 def ai_validation_node(state: WorkflowState) -> WorkflowState:
+    """Final whole-plan validation after deterministic optimization."""
     state.current_node = "plan_validation"
     if not state.generated_plan:
         state.generation_error = state.generation_error or "LLM 未生成餐单"
@@ -92,7 +197,13 @@ def ai_validation_node(state: WorkflowState) -> WorkflowState:
         state.constraints or {},
         intent=state.intent_analysis,
         duration_days=state.duration_days,
+        require_meals=True,
+        require_resolved=True,
+        enforce_diversity=True,
+        enforce_quality_targets=True,
+        normalization_issues=(state.normalization_result or {}).get("issues", []),
     )
+    state.validation_stage = "plan"
     state.validation_result = result.model_dump(mode="json")
     state.plan_validation = state.validation_result
     return state
@@ -119,6 +230,42 @@ def route_after_ai_validation(state: WorkflowState) -> str:
     return "aggregator"
 
 
+def route_after_candidate_validation(state: WorkflowState) -> str:
+    validation = state.validation_result or {}
+    if validation.get("status") == "failed":
+        if state.repair_attempts < settings.PLAN_REPAIR_MAX_ATTEMPTS:
+            return "repair"
+        _record_validation_failure(state, "候选菜品校验失败")
+        return "error_end"
+    return "optimizer"
+
+
+def route_after_optimization(state: WorkflowState) -> str:
+    validation = state.validation_result or {}
+    if validation.get("status") == "failed":
+        if state.repair_attempts < settings.PLAN_REPAIR_MAX_ATTEMPTS:
+            return "repair"
+        _record_validation_failure(state, "整周优化失败")
+        return "error_end"
+    return "plan_validation"
+
+
+def route_after_repair(state: WorkflowState) -> str:
+    return "error_end" if state.generation_error else "normalization"
+
+
+def _record_validation_failure(state: WorkflowState, fallback: str) -> None:
+    messages = [
+        item.get("message", fallback)
+        for item in (state.validation_result or {}).get("issues", [])
+        if item.get("severity") == "error"
+    ]
+    message = "；".join(messages[:3]) or fallback
+    state.generation_error = message
+    if message not in state.errors:
+        state.errors.append(message)
+
+
 def ai_aggregation_node(state: WorkflowState) -> WorkflowState:
     state.current_node = "plan_aggregation"
     if not state.generated_plan or not state.validation_result:
@@ -136,6 +283,9 @@ def ai_aggregation_node(state: WorkflowState) -> WorkflowState:
         constraints=state.constraints,
         rag_meta=state.generation_meta,
         repair_attempts=state.repair_attempts,
+        normalization_meta=state.normalization_result,
+        optimization_meta=state.optimization_result,
+        ingredient_catalog_version=state.ingredient_catalog_version,
     )
     state.aggregated_result = state.generated_result
     return state

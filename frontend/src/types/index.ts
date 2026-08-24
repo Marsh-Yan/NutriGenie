@@ -229,17 +229,32 @@ export interface GenerationMeta {
   rag_error?: string | null
   repair_attempts: number
   estimate_source: string
+  nutrition_source?: string
+  cost_source?: string
+  ingredient_catalog_version?: string
+  candidate_count?: number
+  unique_recipe_count?: number
+  max_recipe_repeat?: number
+  unresolved_ingredients?: string[]
+  normalization?: Record<string, any>
+  optimization?: Record<string, any>
   intent_snapshot?: Record<string, any>
   constraints_snapshot?: Record<string, any>
 }
 
 export interface GeneratedIngredient {
+  ingredient_id?: number
   name: string
+  input_name?: string
+  catalog_name?: string
   quantity: number
   unit: string
+  estimated_grams?: number | null
   optional: boolean
   nutrition_estimate: GeneratedNutrition
   line_cost_estimate: number
+  resolution_source?: 'exact' | 'alias' | 'normalized' | null
+  data_source?: string | null
 }
 
 export interface GeneratedRecipe {
@@ -252,6 +267,7 @@ export interface GeneratedRecipe {
   prep_time_min: number
   cook_time_min: number
   servings: number
+  meal_slots?: string[]
   ingredients: GeneratedIngredient[]
   steps: string[]
   nutrition: GeneratedNutrition

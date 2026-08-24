@@ -1,9 +1,8 @@
 """Structured models for AI-native meal plan generation.
 
-The LLM owns the creative recipe output, while the application owns IDs and
-derived totals.  Ingredient nutrition and cost values are estimates for the
-exact line item quantity so that the backend can recompute recipe and plan
-totals without requiring a recipe database row.
+The LLM owns creative recipe output. Ingredient nutrition and price fields are
+optional provider declarations retained only for audit; V2 replaces them with
+facts calculated from the trusted ingredient catalog before validation.
 """
 
 from __future__ import annotations
@@ -25,9 +24,19 @@ class GeneratedIngredient(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     quantity: float = Field(gt=0)
     unit: str = Field(min_length=1, max_length=20)
-    nutrition_estimate: NutritionEstimate
-    line_cost_estimate: float = Field(ge=0)
     optional: bool = False
+    # V1 providers may still return declared estimates. V2 never trusts them:
+    # the normalizer overwrites these values from the ingredient catalog.
+    nutrition_estimate: Optional[NutritionEstimate] = None
+    line_cost_estimate: Optional[float] = Field(default=None, ge=0)
+    declared_nutrition_estimate: Optional[NutritionEstimate] = None
+    declared_line_cost_estimate: Optional[float] = Field(default=None, ge=0)
+    input_name: Optional[str] = None
+    ingredient_id: Optional[int] = None
+    catalog_name: Optional[str] = None
+    estimated_grams: Optional[float] = Field(default=None, ge=0)
+    resolution_source: Optional[Literal["exact", "alias", "normalized"]] = None
+    data_source: Optional[str] = None
 
 
 class GeneratedRecipe(BaseModel):
@@ -38,10 +47,13 @@ class GeneratedRecipe(BaseModel):
     prep_time_min: int = Field(default=0, ge=0, le=240)
     cook_time_min: int = Field(default=0, ge=0, le=360)
     servings: int = Field(default=1, ge=1, le=20)
+    meal_slots: List[Literal["breakfast", "lunch", "dinner", "snack"]] = Field(default_factory=list)
     ingredients: List[GeneratedIngredient] = Field(min_length=1, max_length=40)
     steps: List[str] = Field(min_length=1, max_length=20)
-    nutrition_estimate: NutritionEstimate
-    cost_estimate: float = Field(ge=0)
+    nutrition_estimate: Optional[NutritionEstimate] = None
+    cost_estimate: Optional[float] = Field(default=None, ge=0)
+    declared_nutrition_estimate: Optional[NutritionEstimate] = None
+    declared_cost_estimate: Optional[float] = Field(default=None, ge=0)
     generation_note: str = Field(default="", max_length=500)
 
     @field_validator("steps")
@@ -51,6 +63,11 @@ class GeneratedRecipe(BaseModel):
         if not steps:
             raise ValueError("菜谱步骤不能为空")
         return steps
+
+    @field_validator("meal_slots")
+    @classmethod
+    def unique_meal_slots(cls, value: List[str]) -> List[str]:
+        return list(dict.fromkeys(value))
 
 
 class GeneratedMeal(BaseModel):
@@ -66,7 +83,7 @@ class GeneratedPlan(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     recipes: List[GeneratedRecipe] = Field(min_length=1, max_length=60)
-    meals: List[GeneratedMeal] = Field(min_length=1, max_length=80)
+    meals: List[GeneratedMeal] = Field(default_factory=list, max_length=80)
     summary: str = Field(default="", max_length=2000)
 
 
