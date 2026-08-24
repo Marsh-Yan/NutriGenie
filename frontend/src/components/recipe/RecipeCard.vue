@@ -74,7 +74,7 @@ const displayNote = computed(() => isGenerated.value ? generatedRecipe.value.gen
 
       <div class="card-cost">
         <span class="cost-value">¥{{ recipe.estimated_cost.toFixed(1) }}</span>
-        <span class="cost-label">AI 估算成本</span>
+        <span class="cost-label">{{ isGenerated && generatedRecipe.estimate_source === 'ingredient_catalog_v1' ? '目录核算成本' : '预估成本' }}</span>
       </div>
 
       <div class="card-expand">

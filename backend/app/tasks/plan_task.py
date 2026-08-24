@@ -15,6 +15,7 @@ from app.models.meal_plan import MealPlan
 from app.models.meal_plan_message import MealPlanMessage
 from app.models.meal_plan_run import MealPlanRun
 from app.models.meal_plan_version import MealPlanVersion
+from app.services.ingredient_catalog import load_ingredient_catalog
 from app.workflow.graph import compiled_graph
 from app.workflow.state import WorkflowState
 
@@ -22,12 +23,14 @@ logger = logging.getLogger(__name__)
 
 STEPS = [
     {"name": "意图分析", "order": 1},
-    {"name": "约束分析", "order": 2},
-    {"name": "参考上下文", "order": 3},
-    {"name": "AI 生成方案", "order": 4},
-    {"name": "方案校验", "order": 5},
-    {"name": "营养与预算汇总", "order": 6},
-    {"name": "保存方案版本", "order": 7},
+    {"name": "约束构建", "order": 2},
+    {"name": "食材知识", "order": 3},
+    {"name": "AI 创作候选", "order": 4},
+    {"name": "食材标准化", "order": 5},
+    {"name": "硬约束校验", "order": 6},
+    {"name": "整周优化", "order": 7},
+    {"name": "结果校验与汇总", "order": 8},
+    {"name": "保存方案版本", "order": 9},
 ]
 
 HARD_CONSTRAINT_MARKERS = (
@@ -68,13 +71,16 @@ def _resolve_node_step(node_name: str) -> int:
         "plan_generation": 4,
         "recommendation_engine": 4,
         "recommendation": 4,
-        "plan_validation": 5,
-        "plan_repair": 5,
-        "validation": 5,
-        "plan_aggregation": 6,
-        "aggregator": 6,
-        "summary": 7,
-        "completed": 7,
+        "recipe_normalization": 5,
+        "candidate_validation": 6,
+        "plan_repair": 6,
+        "weekly_optimizer": 7,
+        "plan_validation": 8,
+        "validation": 8,
+        "plan_aggregation": 8,
+        "aggregator": 8,
+        "summary": 9,
+        "completed": 9,
     }
     return mapping.get(node_name, 0)
 
@@ -83,15 +89,18 @@ def _node_to_step_name(node_name: str) -> str:
     mapping = {item["name"]: item["name"] for item in STEPS}
     mapping.update({
         "intent_analyzer": "意图分析",
-        "constraint_analyzer": "约束分析",
-        "constraint": "约束分析",
-        "generation_context": "参考上下文",
-        "plan_generation": "AI 生成方案",
-        "recommendation": "AI 生成方案",
-        "plan_validation": "方案校验",
-        "plan_repair": "方案校验",
-        "plan_aggregation": "营养与预算汇总",
-        "aggregator": "营养与预算汇总",
+        "constraint_analyzer": "约束构建",
+        "constraint": "约束构建",
+        "generation_context": "食材知识",
+        "plan_generation": "AI 创作候选",
+        "recommendation": "AI 创作候选",
+        "recipe_normalization": "食材标准化",
+        "candidate_validation": "硬约束校验",
+        "plan_repair": "硬约束校验",
+        "weekly_optimizer": "整周优化",
+        "plan_validation": "结果校验与汇总",
+        "plan_aggregation": "结果校验与汇总",
+        "aggregator": "结果校验与汇总",
         "summary": "保存方案版本",
         "completed": "保存方案版本",
     })
@@ -254,6 +263,7 @@ def _build_state(db: Session, run: MealPlanRun, plan: MealPlan) -> WorkflowState
     user_input = plan.user_input or ""
     if base_version and edit_message and not reuse_constraints:
         user_input = f"{user_input}\n本次明确修改要求：{edit_message}"
+    ingredient_catalog = load_ingredient_catalog(db)
     return WorkflowState(
         profile_id=plan.profile_id,
         user_input=user_input,
@@ -267,6 +277,8 @@ def _build_state(db: Session, run: MealPlanRun, plan: MealPlan) -> WorkflowState
         base_plan=base_version.result_json if base_version else None,
         edit_message=edit_message,
         edit_action=message.action_json if base_version and message else None,
+        ingredient_catalog=ingredient_catalog.model_dump(mode="json"),
+        ingredient_catalog_version=ingredient_catalog.version,
     )
 
 

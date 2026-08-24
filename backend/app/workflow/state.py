@@ -37,6 +37,11 @@ class WorkflowState:
     generated_plan: Optional[Any] = None  # GeneratedPlan, kept Any for graph serialization
     generation_context: str = ""
     generation_meta: Dict[str, Any] = field(default_factory=dict)
+    ingredient_catalog: Dict[str, Any] = field(default_factory=dict)
+    ingredient_catalog_version: str = ""
+    normalization_result: Optional[Dict[str, Any]] = None
+    optimization_result: Optional[Dict[str, Any]] = None
+    validation_stage: str = ""
     validation_result: Optional[Dict[str, Any]] = None
     generated_result: Optional[Dict[str, Any]] = None
     generation_error: Optional[str] = None

@@ -8,14 +8,16 @@ const props = defineProps<{
   progress: ProgressInfo | null
 }>()
 
-const fallbackLabels = ['意图分析', '约束分析', '参考上下文', 'AI 生成方案', '方案校验', '营养与预算汇总', '保存方案版本']
+const fallbackLabels = ['意图分析', '约束构建', '食材知识', 'AI 创作候选', '食材标准化', '硬约束校验', '整周优化', '结果校验与汇总', '保存方案版本']
 const descriptionByLabel: Record<string, string> = {
   意图分析: '理解目标',
-  约束分析: '计算边界',
-  参考上下文: '准备依据',
-  'AI 生成方案': '创作菜谱',
-  方案校验: '检查约束',
-  营养与预算汇总: '核算整周',
+  约束构建: '计算边界',
+  食材知识: '准备事实',
+  'AI 创作候选': '创作菜品',
+  食材标准化: '重新核算',
+  硬约束校验: '检查安全',
+  整周优化: '控制重复',
+  结果校验与汇总: '汇总结果',
   保存方案版本: '整理结果',
 }
 const stepLabels = computed(() => props.progress?.steps?.length
@@ -192,7 +194,7 @@ const progressPercent = computed(() => {
 
 .steps-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-top: 18px;
 

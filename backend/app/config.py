@@ -30,8 +30,14 @@ class Settings(BaseSettings):
     LLM_TIMEOUT: int = 30
     PLAN_GENERATION_MODEL: str = ""
     PLAN_GENERATION_TIMEOUT: int = 60
-    PLAN_REPAIR_MAX_ATTEMPTS: int = 1
-    PLAN_PROMPT_VERSION: str = "ai_native_v1"
+    PLAN_REPAIR_MAX_ATTEMPTS: int = 2
+    PLAN_PROMPT_VERSION: str = "ai_native_v2"
+    PLAN_CANDIDATE_MIN: int = 12
+    PLAN_CANDIDATE_MAX: int = 32
+    PLAN_MAX_RECIPE_REPEAT: int = 2
+    PLAN_MIN_UNIQUE_RATIO: float = 0.67
+    PLAN_CALORIE_TOLERANCE: float = 0.15
+    PLAN_BUDGET_TOLERANCE: float = 0.10
     MAX_PLAN_MESSAGE_LENGTH: int = 1000
 
     # Authentication. Override JWT_SECRET_KEY in backend/.env outside local demos.
