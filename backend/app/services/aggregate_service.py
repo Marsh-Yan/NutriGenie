@@ -129,6 +129,7 @@ def _greedy_weekly_plan(
     owned_ids: List[int],
     weights: Dict[str, float],
     duration_days: int = 7,
+    meal_count_per_day: int = 3,
     owned_recipes_map: Dict[int, RecipeCandidate] = None,
 ) -> Tuple[List[dict], int]:
     """贪心算法生成周计划
@@ -159,7 +160,12 @@ def _greedy_weekly_plan(
         day_meals = {}
         day_nutrition = {"calories": 0.0, "protein": 0.0, "fat": 0.0, "carbs": 0.0}
 
-        for meal_slot in ["breakfast", "lunch", "dinner"]:
+        meal_slots = {
+            1: ["dinner"],
+            2: ["lunch", "dinner"],
+            3: ["breakfast", "lunch", "dinner"],
+        }[max(1, min(meal_count_per_day, 3))]
+        for meal_slot in meal_slots:
             preferred_cats = MEAL_SLOT_CATEGORIES[meal_slot]
             best_recipe = None
             best_score = -1.0
@@ -563,6 +569,7 @@ def aggregate_and_rank(
     current_season: str = "夏季",
     owned_ingredient_ids: Optional[List[int]] = None,
     duration_days: int = 7,
+    meal_count_per_day: int = 3,
     weights: Optional[Dict[str, float]] = None,
     ranked_recipes: Optional[List[ScoredRecipe]] = None,
 ) -> dict:
@@ -574,6 +581,7 @@ def aggregate_and_rank(
         current_season: 当前季节
         owned_ingredient_ids: 用户已有食材 ID 列表
         duration_days: 规划天数
+        meal_count_per_day: 每日餐数（1-3）
         weights: 评分权重
 
     Returns:
@@ -598,6 +606,7 @@ def aggregate_and_rank(
     weekly_plan, _ = _greedy_weekly_plan(
         db, pool, ranked, constraints, current_season, owned_ids, w,
         duration_days=duration_days,
+        meal_count_per_day=meal_count_per_day,
         owned_recipes_map=candidate_map,
     )
 

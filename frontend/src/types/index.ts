@@ -10,6 +10,7 @@ export interface Profile {
   gender: 'male' | 'female'
   height: number
   weight: number
+  activity_level: ActivityLevel
   diet_type: DietType
   health_goal: HealthGoal
   allergies: string[] | null
@@ -26,12 +27,14 @@ export interface AuthResponse { access_token: string; token_type: 'bearer'; expi
 
 export type DietType = 'balanced' | 'keto' | 'high_protein' | 'gluten_free' | 'vegan' | 'healthy'
 export type HealthGoal = 'fat_loss' | 'muscle_gain' | 'blood_sugar' | 'healthy'
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'extra'
 
 export interface ProfileFormData {
   age: number | null
   gender: 'male' | 'female' | null
   height: number | null
   weight: number | null
+  activity_level: ActivityLevel
   diet_type: DietType
   health_goal: HealthGoal
   allergies: string[]
@@ -100,6 +103,16 @@ export interface PlanCreateResponse {
     status: string
     result: string
   }
+}
+
+export interface PlanListItem {
+  plan_id: number
+  status: PlanStatus
+  user_input: string
+  duration_days: number
+  total_budget: number
+  created_at: string
+  completed_at: string | null
 }
 
 export type PlanStatus = 'pending' | 'running' | 'completed' | 'failed'

@@ -32,7 +32,7 @@ input,
 textarea,
 select {
   &:focus-visible {
-    outline: 3px solid rgba($color-sage-dark, 0.35);
+    outline: 3px solid $color-sage-dark;
     outline-offset: 2px;
   }
 }

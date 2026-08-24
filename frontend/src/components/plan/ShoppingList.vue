@@ -9,6 +9,8 @@ const props = defineProps<{
 }>()
 
 const expandedCats = ref<Set<string>>(new Set(Object.keys(props.shoppingList.by_category || {})))
+const checkedItems = ref<Set<string>>(new Set())
+const copyFeedback = ref('复制清单')
 
 function toggleCat(cat: string) {
   if (expandedCats.value.has(cat)) {
@@ -17,13 +19,33 @@ function toggleCat(cat: string) {
     expandedCats.value.add(cat)
   }
 }
+
+function toggleItem(key: string) {
+  const next = new Set(checkedItems.value)
+  next.has(key) ? next.delete(key) : next.add(key)
+  checkedItems.value = next
+}
+
+async function copyList() {
+  const lines = Object.entries(props.shoppingList.by_category || {}).flatMap(([cat, items]) => [
+    `【${cat}】`,
+    ...items.map(item => `- ${item.name} ${item.quantity}${item.unit}（约 ¥${item.estimated_cost.toFixed(1)}）`),
+  ])
+  try {
+    await navigator.clipboard.writeText(`NutriGenie 采购清单\n${lines.join('\n')}\n预计 ¥${props.shoppingList.total_cost.toFixed(1)}`)
+    copyFeedback.value = '已复制'
+    window.setTimeout(() => { copyFeedback.value = '复制清单' }, 1600)
+  } catch {
+    copyFeedback.value = '复制失败'
+  }
+}
 </script>
 
 <template>
   <div class="shopping-list">
     <h3 class="section-title">
       <span class="title-main"><PremiumIcon name="shopping" class="section-icon" :size="16" :box-size="32" />采购清单</span>
-      <span class="total-cost">预计 ¥{{ shoppingList.total_cost.toFixed(1) }}</span>
+      <span class="title-actions"><button type="button" class="copy-button" @click="copyList">{{ copyFeedback }}</button><span class="total-cost">预计 ¥{{ shoppingList.total_cost.toFixed(1) }}</span></span>
     </h3>
 
     <div v-if="Object.keys(shoppingList.by_category || {}).length === 0" class="empty-state">
@@ -31,7 +53,7 @@ function toggleCat(cat: string) {
     </div>
 
     <div v-for="(items, cat) in shoppingList.by_category" :key="cat" class="category-group">
-      <button class="category-header" @click="toggleCat(cat)">
+      <button class="category-header" type="button" :aria-expanded="expandedCats.has(cat)" @click="toggleCat(cat)">
         <span class="category-name">{{ cat }}</span>
         <span class="category-count">{{ items.length }} 项</span>
         <el-icon class="cat-arrow" :class="{ rotated: expandedCats.has(cat) }">
@@ -41,8 +63,8 @@ function toggleCat(cat: string) {
 
       <transition name="collapse">
         <div v-if="expandedCats.has(cat)" class="category-items">
-          <div v-for="item in items" :key="item.name" class="item-row">
-            <span class="item-name">{{ item.name }}</span>
+          <div v-for="item in items" :key="item.name" class="item-row" :class="{ checked: checkedItems.has(`${cat}-${item.name}`) }">
+            <label class="item-name"><input type="checkbox" :checked="checkedItems.has(`${cat}-${item.name}`)" @change="toggleItem(`${cat}-${item.name}`)" />{{ item.name }}</label>
             <span class="item-quantity">{{ item.quantity }} {{ item.unit }}</span>
             <span class="item-cost">¥{{ item.estimated_cost.toFixed(1) }}</span>
           </div>
@@ -83,6 +105,8 @@ function toggleCat(cat: string) {
   font-weight: 700;
   color: $color-rose-dark;
 }
+.title-actions { display: inline-flex; align-items: center; gap: 10px; }
+.copy-button { padding: 5px 9px; border: 1px solid $color-border; border-radius: 999px; background: $color-card; color: $color-sage-dark; cursor: pointer; font: inherit; font-size: 12px; }
 
 .empty-state {
   text-align: center;
@@ -167,9 +191,14 @@ function toggleCat(cat: string) {
 
 .item-name {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
   color: $color-text-primary;
 }
+.item-row.checked { opacity: .58; }
+.item-row.checked .item-name { text-decoration: line-through; }
 
 .item-quantity {
   font-size: 13px;

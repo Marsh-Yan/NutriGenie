@@ -270,6 +270,26 @@ def _build_state(db: Session, run: MealPlanRun, plan: MealPlan) -> WorkflowState
     )
 
 
+async def _run_workflow_with_progress(
+    state: WorkflowState,
+    run: MealPlanRun,
+    plan: MealPlan,
+    db: Session,
+) -> dict:
+    """Persist each LangGraph transition so status polling reflects real work."""
+    final_state: dict = {}
+    last_node = run.current_node
+    async for snapshot in compiled_graph.astream(state, stream_mode="values"):
+        final_state = snapshot
+        current_node = snapshot.get("current_node")
+        if current_node and current_node != last_node:
+            last_node = current_node
+            run.current_node = current_node
+            plan.current_node = current_node
+            db.commit()
+    return final_state
+
+
 def _save_success(
     db: Session,
     run: MealPlanRun,
@@ -369,7 +389,7 @@ def _execute_run(run_id: int) -> None:
         db.commit()
 
         state = _build_state(db, run, plan)
-        final_state = asyncio.run(compiled_graph.ainvoke(state))
+        final_state = asyncio.run(_run_workflow_with_progress(state, run, plan, db))
         final_result = final_state.get("final_result", {})
         if final_result.get("status") == "completed":
             _save_success(db, run, plan, final_state)

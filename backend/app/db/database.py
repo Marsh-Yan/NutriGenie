@@ -5,13 +5,16 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 from app.config import settings
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
-    echo=False,
-)
+engine_options = {
+    "pool_pre_ping": True,
+    "echo": False,
+}
+if settings.DATABASE_URL.startswith("sqlite"):
+    engine_options["connect_args"] = {"check_same_thread": False}
+else:
+    engine_options.update({"pool_size": 10, "max_overflow": 20})
+
+engine = create_engine(settings.DATABASE_URL, **engine_options)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -49,3 +52,9 @@ def init_db():
         if "user_id" not in columns:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE profiles ADD COLUMN user_id INTEGER NULL"))
+        if "activity_level" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text(
+                    "ALTER TABLE profiles ADD COLUMN activity_level VARCHAR(20) "
+                    "NOT NULL DEFAULT 'moderate'"
+                ))

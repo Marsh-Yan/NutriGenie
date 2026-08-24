@@ -3,6 +3,7 @@
 from app.workflow.nodes.intent_analyzer import (
     _apply_explicit_intent_overrides,
     _rule_based_parse,
+    _sync_explicit_constraints_to_state,
 )
 from app.workflow.state import WorkflowState
 
@@ -22,10 +23,10 @@ class TestRuleBasedParse:
         assert result["duration_days"] == 3
 
     def test_muscle_gain_month_becomes_30(self):
-        """三个月 = 90天"""
+        """单次规划最多 30 天"""
         result = _rule_based_parse("增肌三个月")
         assert result["health_goal"] == "muscle_gain"
-        assert result["duration_days"] == 90
+        assert result["duration_days"] == 30
 
     def test_blood_sugar(self):
         result = _rule_based_parse("控糖饮食，预算500")
@@ -83,6 +84,10 @@ class TestRuleBasedParse:
         result = _rule_based_parse("减脂一周")
         assert result["meal_count_per_day"] == 3
 
+    def test_explicit_meal_count(self):
+        result = _rule_based_parse("每天两餐，减脂一周")
+        assert result["meal_count_per_day"] == 2
+
     def test_full_parse(self):
         """完整输入解析"""
         result = _rule_based_parse(
@@ -110,6 +115,25 @@ class TestExplicitIntentOverrides:
             {"health_goal": "healthy", "diet_type": "balanced"},
         )
         assert merged["diet_type"] == "keto"
+
+    def test_text_constraints_sync_to_workflow_state(self):
+        state = WorkflowState(
+            user_input="减脂五天，预算500元",
+            duration_days=7,
+            total_budget=300,
+        )
+        _sync_explicit_constraints_to_state(
+            state, {"duration_days": 5, "total_budget": 500}
+        )
+        assert state.duration_days == 5
+        assert state.total_budget == 500
+
+    def test_budget_with_spaces_is_authoritative(self):
+        state = WorkflowState(user_input="减脂三天，预算 180 元", total_budget=300)
+        parsed = _rule_based_parse(state.user_input)
+        _sync_explicit_constraints_to_state(state, parsed)
+        assert state.duration_days == 3
+        assert state.total_budget == 180
 
 
 class TestStateCreation:

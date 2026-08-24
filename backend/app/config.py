@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     DB_USER: str = "root"
     DB_PASSWORD: str = ""
     DB_NAME: str = "nutrigenie"
+    DATABASE_URL_OVERRIDE: str = ""
 
     # DeepSeek LLM
     LLM_API_KEY: str = ""
@@ -39,6 +40,9 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     # Local-development registration verification. Do not use this in production.
     DEV_EMAIL_VERIFICATION_CODE: str = "123456"
+    ADMIN_EMAIL: str = ""
+    ADMIN_PASSWORD: str = ""
+    ADMIN_NICKNAME: str = "管理员"
 
     # Zhipu Embedding
     EMBEDDING_PROVIDER: str = "zhipu"
@@ -66,6 +70,8 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
+        if self.DATABASE_URL_OVERRIDE:
+            return self.DATABASE_URL_OVERRIDE
         return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?charset=utf8mb4"
 
 settings = Settings()

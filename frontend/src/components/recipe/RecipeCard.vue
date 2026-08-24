@@ -1,15 +1,34 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { GeneratedRecipe, TopRecipe } from '@/types'
+import type { GeneratedRecipe, RecipeDetail, TopRecipe } from '@/types'
 import { ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import PremiumIcon from '@/components/common/PremiumIcon.vue'
+import { getRecipeDetail } from '@/api/recipes'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   recipe: GeneratedRecipe | TopRecipe
   rank: number
-}>()
+  enableDetail?: boolean
+}>(), { enableDetail: true })
 
 const expanded = ref(false)
+const detail = ref<RecipeDetail | null>(null)
+const detailLoading = ref(false)
+const detailError = ref('')
+
+async function toggleExpanded() {
+  expanded.value = !expanded.value
+  if (!expanded.value || !props.enableDetail || isGenerated.value || detail.value || detailLoading.value) return
+  detailLoading.value = true
+  detailError.value = ''
+  try {
+    detail.value = await getRecipeDetail(legacyRecipe.value.recipe_id)
+  } catch (e: unknown) {
+    detailError.value = e instanceof Error ? e.message : '做法加载失败'
+  } finally {
+    detailLoading.value = false
+  }
+}
 
 const categoryLabels: Record<string, string> = {
   main_dish: '主菜',
@@ -41,7 +60,7 @@ const displayNote = computed(() => isGenerated.value ? generatedRecipe.value.gen
 
 <template>
   <div class="recipe-card" :class="{ expanded }">
-    <button class="card-main" type="button" :aria-expanded="expanded" @click="expanded = !expanded">
+    <button class="card-main" type="button" :aria-expanded="expanded" @click="toggleExpanded">
       <div class="rank-badge">{{ rank }}</div>
 
       <div class="card-info">
@@ -105,6 +124,22 @@ const displayNote = computed(() => isGenerated.value ? generatedRecipe.value.gen
         <div class="detail-section" v-if="displayNote">
           <h4 class="detail-title"><PremiumIcon name="plan" class="detail-icon" :size="14" :box-size="28" />AI 生成理由</h4>
           <p class="explanation-text">{{ displayNote }}</p>
+        </div>
+
+        <div v-if="enableDetail && !isGenerated" class="detail-section recipe-method">
+          <h4 class="detail-title"><PremiumIcon name="clipboard" class="detail-icon" :size="14" :box-size="28" />食材与做法</h4>
+          <p v-if="detailLoading" class="detail-message" aria-live="polite">正在加载完整做法…</p>
+          <p v-else-if="detailError" class="detail-message error" role="alert">{{ detailError }}</p>
+          <template v-else-if="detail">
+            <ul class="ingredient-list">
+              <li v-for="item in detail.ingredients" :key="item.ingredient_id">
+                <span>{{ item.name }}</span><span>{{ item.quantity }} {{ item.unit }}</span>
+              </li>
+            </ul>
+            <ol class="step-list">
+              <li v-for="item in detail.steps" :key="item.step">{{ item.content }}</li>
+            </ol>
+          </template>
         </div>
       </div>
     </transition>
@@ -379,4 +414,10 @@ const displayNote = computed(() => isGenerated.value ? generatedRecipe.value.gen
 .evidence-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .evidence-text { font-size: 13px; color: $color-text-secondary; }
 .evidence-warning { margin-top: 6px; font-size: 13px; color: $color-rose-dark; }
+.detail-message { color: $color-text-secondary; font-size: 13px; }
+.detail-message.error { color: $color-danger; }
+.ingredient-list, .step-list { display: grid; gap: 6px; color: $color-text-primary; font-size: 13px; line-height: 1.6; }
+.ingredient-list { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 14px; list-style: none; }
+.ingredient-list li { display: flex; justify-content: space-between; gap: 8px; padding: 7px 9px; border-radius: $radius-sm; background: rgba($color-sage,.06); }
+.step-list { padding-left: 20px; }
 </style>

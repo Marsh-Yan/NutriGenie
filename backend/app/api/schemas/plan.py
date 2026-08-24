@@ -22,6 +22,17 @@ class PlanCreateResponse(BaseModel):
     links: dict
 
 
+class PlanListItem(BaseModel):
+    """当前用户可访问的历史规划摘要"""
+    plan_id: int
+    status: str
+    user_input: str
+    duration_days: int
+    total_budget: float
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+
 class StepInfo(BaseModel):
     name: str
     status: str

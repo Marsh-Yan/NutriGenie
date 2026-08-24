@@ -2,6 +2,7 @@ import api from './index'
 import type {
   PlanCreateRequest,
   PlanCreateResponse,
+  PlanListItem,
   PlanStatusResponse,
   PlanResultResponse,
   PlanMessage,
@@ -47,4 +48,9 @@ export async function getPlanVersions(planId: number): Promise<{ current_version
 
 export async function restorePlanVersion(planId: number, versionId: number): Promise<void> {
   await api.post(`/plans/${planId}/versions/${versionId}/restore`)
+}
+
+export async function getPlans(): Promise<PlanListItem[]> {
+  const { data } = await api.get('/plans')
+  return data
 }

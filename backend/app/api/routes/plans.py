@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.schemas.plan import (
     PlanCreate,
     PlanCreateResponse,
+    PlanListItem,
     PlanMessageCreate,
     PlanMessageResponse,
     PlanResultResponse,
@@ -74,7 +75,7 @@ def api_create_plan(
 
     return PlanCreateResponse(
         plan_id=plan.plan_id,
-        status=plan.status,
+        status=run_status if run_status in ("pending", "running") else plan.status,
         created_at=plan.created_at,
         links={
             "status": f"/api/v1/plans/{plan.plan_id}/status",
@@ -82,6 +83,27 @@ def api_create_plan(
             "run": f"/api/v1/plans/{plan.plan_id}/runs/{run.run_id}",
         },
     )
+
+
+@router.get("/plans", response_model=list[PlanListItem])
+def api_list_plans(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """按时间倒序返回当前用户的历史方案。"""
+    query = db.query(MealPlan).join(Profile, Profile.profile_id == MealPlan.profile_id)
+    if current_user.role != "admin":
+        query = query.filter(Profile.user_id == current_user.user_id)
+    plans = query.order_by(MealPlan.created_at.desc(), MealPlan.plan_id.desc()).all()
+    return [
+        PlanListItem(
+            plan_id=plan.plan_id,
+            status=plan.status,
+            user_input=plan.user_input,
+            duration_days=plan.duration_days or 7,
+            total_budget=float(plan.total_budget or 0),
+            created_at=plan.created_at,
+            completed_at=plan.completed_at,
+        )
+        for plan in plans
+    ]
 
 
 @router.get("/plans/{plan_id}/status", response_model=PlanStatusResponse)

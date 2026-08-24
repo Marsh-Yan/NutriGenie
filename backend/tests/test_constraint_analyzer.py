@@ -108,6 +108,11 @@ class TestBuildConstraints:
         c = build_constraints(healthy_profile, duration_days=1, total_budget=50)
         assert c.daily_budget == 50.0
 
+    def test_profile_daily_budget_used_when_request_has_no_budget(self, healthy_profile):
+        c = build_constraints(healthy_profile, duration_days=5, total_budget=0)
+        assert c.daily_budget == 60.0
+        assert c.total_budget == 300.0
+
     def test_allergen_names(self, fat_loss_profile):
         """应提取过敏原名"""
         c = build_constraints(fat_loss_profile, duration_days=7, total_budget=300)
@@ -123,6 +128,15 @@ class TestBuildConstraints:
         c = build_constraints(muscle_gain_profile, duration_days=7, total_budget=300)
         assert "花生" in c.allergen_names
         assert "牛奶" in c.allergen_names
+
+    def test_request_allergens_merge_without_duplicates(self, fat_loss_profile):
+        c = build_constraints(
+            fat_loss_profile,
+            duration_days=7,
+            total_budget=300,
+            additional_allergens=["海鲜", "花生"],
+        )
+        assert c.allergen_names == ["海鲜", "花生"]
 
     def test_diet_type_macro_split(self, fat_loss_profile):
         """balanced 的配比 = 20%蛋白 / 30%脂肪 / 50%碳水"""
@@ -149,6 +163,13 @@ class TestBuildConstraints:
         c_active = build_constraints(healthy_profile, duration_days=7, total_budget=300,
                                       activity_factor=1.725)
         assert c_sedentary.tdee < c_active.tdee
+
+    def test_profile_activity_level_is_used(self, healthy_profile):
+        healthy_profile.activity_level = "sedentary"
+        sedentary = build_constraints(healthy_profile, duration_days=7, total_budget=300)
+        healthy_profile.activity_level = "active"
+        active = build_constraints(healthy_profile, duration_days=7, total_budget=300)
+        assert sedentary.tdee < active.tdee
 
     def test_excluded_ingredient_ids_empty(self, fat_loss_profile):
         """初始状态下排除食材 ID 列表应为空（由推荐引擎按名称解析）"""

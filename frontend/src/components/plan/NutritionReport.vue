@@ -1,10 +1,20 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { NutritionReport as NutritionReportType } from '@/types'
 import PremiumIcon from '@/components/common/PremiumIcon.vue'
 
 const props = defineProps<{
   report: NutritionReportType
+  targetRange?: number[]
 }>()
+
+const calorieTarget = computed(() => {
+  if (!props.targetRange || props.targetRange.length < 2) return null
+  return (props.targetRange[0] + props.targetRange[1]) / 2
+})
+const calorieTargetLabel = computed(() => props.targetRange?.length === 2
+  ? `${props.targetRange[0].toFixed(0)}–${props.targetRange[1].toFixed(0)} kcal`
+  : '未设置')
 
 const macroItems = [
   { key: 'protein', label: '蛋白质', color: '#8FAA9B', pct: 'protein_pct' },
@@ -40,12 +50,12 @@ const macroItems = [
     <div class="calorie-bar-wrap">
       <div class="calorie-bar-header">
         <span>热量摄入</span>
-        <span>{{ report.avg_daily_calories.toFixed(0) }} / 目标</span>
+        <span>{{ report.avg_daily_calories.toFixed(0) }} / {{ calorieTargetLabel }}</span>
       </div>
       <div class="calorie-bar-track">
         <div
           class="calorie-bar-fill"
-          :style="{ width: `${Math.min(report.avg_daily_calories / 2000 * 100, 100)}%` }"
+          :style="{ width: `${calorieTarget ? Math.min(report.avg_daily_calories / calorieTarget * 100, 100) : 0}%` }"
         />
       </div>
     </div>

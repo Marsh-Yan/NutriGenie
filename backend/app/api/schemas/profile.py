@@ -11,6 +11,10 @@ class ProfileCreate(BaseModel):
     gender: str = Field(..., pattern="^(male|female)$")
     height: float = Field(..., ge=50, le=250)
     weight: float = Field(..., ge=10, le=300)
+    activity_level: str = Field(
+        default="moderate",
+        pattern="^(sedentary|light|moderate|active|extra)$",
+    )
     diet_type: str = Field(
         default="balanced",
         pattern="^(balanced|keto|high_protein|gluten_free|vegan|healthy)$",
@@ -29,6 +33,9 @@ class ProfileUpdate(BaseModel):
     gender: Optional[str] = Field(None, pattern="^(male|female)$")
     height: Optional[float] = Field(None, ge=50, le=250)
     weight: Optional[float] = Field(None, ge=10, le=300)
+    activity_level: Optional[str] = Field(
+        None, pattern="^(sedentary|light|moderate|active|extra)$"
+    )
     diet_type: Optional[str] = Field(
         None, pattern="^(balanced|keto|high_protein|gluten_free|vegan|healthy)$"
     )
@@ -46,6 +53,7 @@ class ProfileResponse(BaseModel):
     gender: str
     height: float
     weight: float
+    activity_level: str
     diet_type: str
     health_goal: str
     allergies: Optional[List[str]] = None
