@@ -1,9 +1,6 @@
 @use 'variables' as *;
 
-/* ═══════════════════════════════════════════
-   NutriGenie — Global Styles
-   ═══════════════════════════════════════════ */
-
+/* Reset and document foundation */
 *,
 *::before,
 *::after {
@@ -13,17 +10,29 @@
 }
 
 html {
+  min-width: 320px;
+  scroll-behavior: smooth;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  font-family: $font-family;
-  color: $color-text-primary;
-  background-color: $color-bg;
-  line-height: 1.6;
+  min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
+  color: $color-text-primary;
+  background:
+    radial-gradient(circle at 4% 2%, rgba($color-sage-light, .72), transparent 25rem),
+    radial-gradient(circle at 96% 18%, rgba($color-rose-light, .56), transparent 26rem),
+    $color-bg;
+  font-family: $font-family;
+  line-height: 1.6;
+}
+
+body::selection {
+  background: rgba($color-rose-light, .86);
+  color: $color-sage-dark;
 }
 
 button,
@@ -32,97 +41,195 @@ input,
 textarea,
 select {
   &:focus-visible {
-    outline: 3px solid $color-sage-dark;
-    outline-offset: 2px;
+    outline: 3px solid rgba($color-sage, .42);
+    outline-offset: 3px;
   }
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
 }
 
 a {
   color: $color-sage-dark;
   text-decoration: none;
-  transition: color 0.2s;
+  transition: color .2s ease;
 
-  &:hover {
-    color: $color-sage;
-  }
+  &:hover { color: $color-sage; }
 }
 
 img {
+  display: block;
   max-width: 100%;
   height: auto;
 }
 
-/* ── 滚动条 ─────────────────────────────── */
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+h1,
+h2,
+h3,
+h4 {
+  color: $color-text-primary;
+  font-family: $font-display;
+  text-wrap: balance;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+p { text-wrap: pretty; }
 
+/* Scrollbars */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: $color-border;
-  border-radius: 3px;
-
-  &:hover {
-    background: $color-text-placeholder;
-  }
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba($color-sage-dark, .22);
+  background-clip: padding-box;
 }
+::-webkit-scrollbar-thumb:hover { background-color: rgba($color-sage-dark, .38); }
 
-/* ── 工具类 ─────────────────────────────── */
-
+/* Shared layout and surfaces */
 .page-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
+  width: min(100%, #{$content-width});
+  margin-inline: auto;
+  padding-inline: clamp(20px, 4vw, 48px);
 }
 
 .card {
-  background: $color-card;
+  border: 1px solid rgba($color-sage-dark, .11);
   border-radius: $radius-lg;
+  background: rgba($color-card, .94);
   box-shadow: $shadow-sm;
-  border: 1px solid $color-border;
-  transition: box-shadow 0.3s, transform 0.2s;
-
-  &:hover {
-    box-shadow: $shadow-md;
-  }
+  transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease;
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, $color-sage, $color-rose);
+  color: $color-sage;
+  background: linear-gradient(110deg, $color-sage-dark 4%, $color-sage 48%, $color-rose 105%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
-/* ── 覆盖 Element Plus 主题色 ───────────── */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: $color-sage-dark;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
 
+.eyebrow::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: $color-sage;
+  box-shadow: 0 0 0 5px rgba($color-sage, .1);
+  content: '';
+}
+
+/* Element Plus theme bridge */
 :root {
   --el-color-primary: #{$color-sage};
-  --el-color-primary-light-3: #{$color-sage-light};
+  --el-color-primary-light-3: #A7B7AB;
+  --el-color-primary-light-5: #BCC9BF;
+  --el-color-primary-light-7: #D5DED7;
+  --el-color-primary-light-8: #E2E8E3;
+  --el-color-primary-light-9: #F1F4F1;
   --el-color-primary-dark-2: #{$color-sage-dark};
   --el-color-success: #{$color-success};
   --el-color-warning: #{$color-warning};
   --el-color-danger: #{$color-danger};
   --el-color-info: #{$color-info};
-  --el-border-radius-base: #{$radius-md};
+  --el-bg-color: #{$color-card};
+  --el-fill-color-blank: #{$color-card};
+  --el-fill-color-light: #F0F1ED;
+  --el-border-color: #{$color-border};
+  --el-border-color-light: #{$color-divider};
+  --el-text-color-primary: #{$color-text-primary};
+  --el-text-color-regular: #{$color-text-secondary};
+  --el-text-color-placeholder: #{$color-text-placeholder};
+  --el-font-size-large: 16px;
+  --el-font-size-medium: 15px;
+  --el-font-size-base: 14px;
+  --el-font-size-small: 13px;
+  --el-font-size-extra-small: 12px;
+  --el-border-radius-base: #{$radius-sm};
+  --el-border-radius-round: 999px;
   --el-font-family: #{$font-family};
+  --el-box-shadow-light: #{$shadow-sm};
+}
+
+.el-button {
+  min-height: 42px;
+  padding-inline: 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+
+.el-button:hover:not(.is-disabled) { transform: translateY(-1px); }
+
+.el-button--primary {
+  border-color: $color-sage-dark;
+  background: $color-sage-dark;
+  box-shadow: 0 8px 18px rgba($color-sage-dark, .16);
+}
+
+.el-button--primary:hover:not(.is-disabled),
+.el-button--primary:focus-visible {
+  border-color: $color-sage;
+  background: $color-sage;
+  box-shadow: 0 12px 24px rgba($color-sage-dark, .22);
+}
+
+.el-button--large { min-height: 50px; padding-inline: 24px; }
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+  border-radius: $radius-sm;
+  box-shadow: 0 0 0 1px $color-border inset !important;
+  transition: box-shadow .2s ease, background-color .2s ease;
+}
+
+.el-input__wrapper,
+.el-select__wrapper { min-height: 44px; }
+
+.el-input__wrapper:hover,
+.el-select__wrapper:hover,
+.el-textarea__inner:hover {
+  box-shadow: 0 0 0 1px rgba($color-sage, .55) inset !important;
+}
+
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 2px rgba($color-sage, .38) inset !important;
+}
+
+.el-tag { min-height: 26px; padding-inline: 9px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.el-radio-button__inner { min-height: 40px; display: inline-flex; align-items: center; }
+
+@media (max-width: 820px) {
+  body { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
 }
 
 @media (max-width: $breakpoint-sm) {
-  body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
-  .page-container { padding-left: 16px; padding-right: 16px; }
+  .page-container { padding-inline: 18px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
+    animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: .01ms !important;
   }
 }

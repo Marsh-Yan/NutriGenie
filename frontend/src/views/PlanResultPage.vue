@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'
 import RecipeCard from '@/components/recipe/RecipeCard.vue'
@@ -17,6 +17,7 @@ const messageInput = ref('')
 const ingredientInput = ref('')
 const sendingMessage = ref(false)
 const showVersions = ref(false)
+const showAllValidationWarnings = ref(false)
 
 const loadingCopy = computed(() => {
   if (store.resultLoading) {
@@ -54,25 +55,35 @@ const overview = computed(() => {
 
 const currentError = computed(() => store.lastRunError || store.error)
 const isV2Result = computed(() => store.result?.schema_version === 'ai_native_v2')
+const validationWarningGroups = computed(() => {
+  const groups = new Map<string, number>()
+  for (const warning of store.result?.validation?.warnings || []) {
+    const message = warning.trim()
+    if (message) groups.set(message, (groups.get(message) || 0) + 1)
+  }
+  return Array.from(groups, ([message, count]) => ({ message, count }))
+})
+const visibleValidationWarningGroups = computed(() => (
+  showAllValidationWarnings.value
+    ? validationWarningGroups.value
+    : validationWarningGroups.value.slice(0, 4)
+))
+const hiddenValidationGroupCount = computed(() => Math.max(0, validationWarningGroups.value.length - 4))
 
-onMounted(async () => {
-  const planId = Number(route.params.id)
+watch(() => route.params.id, (value) => {
+  showAllValidationWarnings.value = false
+  const planId = Number(value)
   if (Number.isInteger(planId) && planId > 0) {
     store.load(planId)
   }
   else {
+    store.reset()
     store.status = 'failed'
     store.error = '方案编号无效，请从“我的方案”重新进入'
   }
-})
+}, { immediate: true })
 
 onUnmounted(() => store.stopPolling())
-
-watch(() => store.status, (status) => {
-  if (status === 'completed' || status === 'failed') {
-    store.stopPolling()
-  }
-})
 
 function printPlan() {
   window.print()
@@ -80,7 +91,7 @@ function printPlan() {
 
 async function submitMessage(action?: Record<string, any>) {
   const message = messageInput.value.trim()
-  if (!message && !action) return
+  if ((!message && !action) || sendingMessage.value || store.editing) return
   sendingMessage.value = true
   try {
     await store.sendMessage(message, action)
@@ -114,7 +125,7 @@ async function restoreVersion(versionId: number) {
   <div class="plan-result-page page-container">
 
     <!-- 首次生成等待状态 -->
-    <div v-if="!store.result && (store.status === 'pending' || store.status === 'running' || store.resultLoading)" class="loading-section">
+    <div v-if="!store.result && store.status !== 'failed'" class="loading-section">
       <div class="loading-card card">
         <div class="loading-glow glow-one" />
         <div class="loading-glow glow-two" />
@@ -137,8 +148,16 @@ async function restoreVersion(versionId: number) {
           <ProgressStepper :status="store.status" :progress="store.progress" />
         </div>
         <div class="loading-footer">
-          <span><i />无需刷新，完成后将自动展示</span>
-          <span>通常需要 30–60 秒</span>
+          <span><i />{{ store.error || '无需刷新，完成后将自动展示' }}</span>
+          <el-button
+            v-if="store.status === 'completed' && !store.polling && !store.resultLoading"
+            size="small"
+            round
+            @click="store.refreshResult()"
+          >
+            继续获取结果
+          </el-button>
+          <span v-else>通常需要 30–90 秒</span>
         </div>
       </div>
     </div>
@@ -195,63 +214,84 @@ async function restoreVersion(versionId: number) {
           </el-tag>
         </details>
       </section>
+      <div class="plan-dashboard">
+        <!-- 周计划：桌面端主视图 -->
+        <section v-if="store.result.weekly_plan.length > 0" class="dashboard-panel schedule-panel card">
+          <WeeklyTimeline :weekly-plan="store.result.weekly_plan" />
+        </section>
+
+        <aside class="insights-column" aria-label="营养与计划校验">
+          <section class="dashboard-panel nutrition-panel card">
+            <NutritionReport
+              :report="store.result.nutrition_report"
+              :target-range="store.result.validation?.derived?.target_calorie_range"
+            />
+          </section>
+
+          <section v-if="store.result.validation" class="validation-card card" :class="{ warning: store.result.validation.warnings.length }">
+            <div class="validation-title-row">
+              <h2 class="validation-heading"><PremiumIcon name="check" :size="14" :box-size="28" />计划校验</h2>
+              <span>{{ store.result.validation.warnings.length ? `${validationWarningGroups.length} 类提醒` : '状态良好' }}</span>
+            </div>
+            <div class="validation-metrics">
+              <p><strong>{{ (store.result.validation.derived.avg_daily_calories || store.result.nutrition_report.avg_daily_calories).toFixed(0) }}</strong><span>日均 kcal</span></p>
+              <p><strong>¥{{ store.result.shopping_list.total_cost.toFixed(1) }}</strong><span>预计采购</span></p>
+            </div>
+            <div
+              v-if="visibleValidationWarningGroups.length"
+              class="validation-warnings-list"
+              :class="{ expanded: showAllValidationWarnings }"
+            >
+              <p v-for="warning in visibleValidationWarningGroups" :key="warning.message" class="validation-warning">
+                <PremiumIcon name="alert" :size="12" :box-size="24" />
+                <span>{{ warning.message }}</span>
+                <small v-if="warning.count > 1">重复 {{ warning.count }} 次</small>
+              </p>
+            </div>
+            <button
+              v-if="validationWarningGroups.length > 4"
+              type="button"
+              class="validation-toggle"
+              :aria-expanded="showAllValidationWarnings"
+              @click="showAllValidationWarnings = !showAllValidationWarnings"
+            >
+              {{ showAllValidationWarnings ? '收起提醒' : `查看其余 ${hiddenValidationGroupCount} 类提醒` }}
+            </button>
+            <p v-if="!store.result.validation.warnings.length" class="validation-ok">计划完整，未发现需要提示的偏差。</p>
+          </section>
+        </aside>
+      </div>
+
       <!-- AI 生成菜谱 -->
-      <section class="result-block">
-        <h2 class="block-title">
-          <PremiumIcon name="trophy" class="heading-icon" :size="18" :box-size="34" />
-          AI 生成菜谱
-          <span class="block-subtitle">根据你的约束即时生成</span>
-        </h2>
+      <section class="result-block recipe-section">
+        <div class="block-heading">
+          <div><span class="eyebrow">AI 精选</span><h2 class="block-title"><PremiumIcon name="trophy" class="heading-icon" :size="18" :box-size="34" />生成菜谱</h2></div>
+          <p class="block-subtitle">根据你的画像、预算与忌口即时生成，点击菜谱查看依据与做法。</p>
+        </div>
         <div class="top5-list">
           <RecipeCard
             v-for="(recipe, i) in store.result.recipes"
-            :key="recipe.recipe_key"
+            :key="'recipe_key' in recipe ? recipe.recipe_key : `legacy-${recipe.recipe_id}`"
             :recipe="recipe"
             :rank="i + 1"
           />
         </div>
       </section>
 
-      <!-- 周计划 -->
-      <section v-if="store.result.weekly_plan.length > 0" class="result-block">
-        <WeeklyTimeline :weekly-plan="store.result.weekly_plan" />
-      </section>
+      <div class="result-lower-grid" :class="{ single: !store.result.summary }">
+        <section class="dashboard-panel shopping-panel card">
+          <ShoppingList :shopping-list="store.result.shopping_list" />
+        </section>
 
-      <section v-if="store.result.validation" class="result-block">
-        <div class="validation-card card" :class="{ warning: store.result.validation.warnings.length }">
-          <h3 class="validation-heading"><PremiumIcon name="check" :size="13" :box-size="26" />计划校验</h3>
-          <p>日均 {{ (store.result.validation.derived.avg_daily_calories || store.result.nutrition_report.avg_daily_calories).toFixed(0) }} kcal</p>
-          <p>预计采购 ¥{{ store.result.shopping_list.total_cost.toFixed(1) }}</p>
-          <p v-for="warning in store.result.validation.warnings" :key="warning" class="validation-warning">
-            <PremiumIcon name="alert" :size="12" :box-size="24" />{{ warning }}
-          </p>
-          <p v-if="!store.result.validation.warnings.length" class="validation-ok">计划完整，未发现需要提示的偏差。</p>
-        </div>
-      </section>
-
-      <!-- 营养报告 -->
-      <section class="result-block">
-        <NutritionReport
-          :report="store.result.nutrition_report"
-          :target-range="store.result.validation?.derived?.target_calorie_range"
-        />
-      </section>
-
-      <!-- 采购清单 -->
-      <section class="result-block">
-        <ShoppingList :shopping-list="store.result.shopping_list" />
-      </section>
-
-      <!-- AI 总结 -->
-      <section v-if="store.result.summary" class="result-block">
-        <div class="summary-card card">
-          <h3 class="summary-title">
+        <section v-if="store.result.summary" class="summary-card card">
+          <div class="summary-kicker">NUTRIGENIE NOTE</div>
+          <h2 class="summary-title">
             <PremiumIcon name="clipboard" class="heading-icon" :size="17" :box-size="32" />
             AI 总结
-          </h3>
+          </h2>
           <div class="summary-content">{{ store.result.summary }}</div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <section v-if="currentError && store.result" class="edit-error card">
         <PremiumIcon name="alert" :size="16" :box-size="30" />
@@ -264,18 +304,18 @@ async function restoreVersion(versionId: number) {
             <span class="eyebrow">继续调整</span>
             <h2>和 AI 一起修改方案</h2>
           </div>
-          <el-button link @click="showVersions = !showVersions">版本历史（{{ store.versions.length }}）</el-button>
+          <el-button link :aria-expanded="showVersions" :disabled="store.editing" @click="showVersions = !showVersions">版本历史（{{ store.versions.length }}）</el-button>
         </div>
         <div class="quick-actions">
-          <el-button size="small" round :disabled="store.editing" @click="submitMessage({ type: 'reduce_budget' })">降低预算</el-button>
-          <el-button size="small" round :disabled="store.editing" @click="submitMessage({ type: 'increase_protein' })">增加蛋白质</el-button>
-          <el-button size="small" round :disabled="store.editing" @click="submitMessage({ type: 'shorter_cooking' })">缩短烹饪时间</el-button>
-          <el-button size="small" round :disabled="store.editing" @click="submitMessage({ type: 'replace_meal', day: 1, slot: 'lunch' })">重做第 1 天午餐</el-button>
-          <el-button size="small" round :disabled="store.editing" @click="submitMessage({ type: 'replace_day', day: 1 })">重做第 1 天</el-button>
+          <el-button size="small" round :disabled="store.editing || sendingMessage" @click="submitMessage({ type: 'reduce_budget' })">降低预算</el-button>
+          <el-button size="small" round :disabled="store.editing || sendingMessage" @click="submitMessage({ type: 'increase_protein' })">增加蛋白质</el-button>
+          <el-button size="small" round :disabled="store.editing || sendingMessage" @click="submitMessage({ type: 'shorter_cooking' })">缩短烹饪时间</el-button>
+          <el-button size="small" round :disabled="store.editing || sendingMessage" @click="submitMessage({ type: 'replace_meal', day: 1, slot: 'lunch' })">重做第 1 天午餐</el-button>
+          <el-button size="small" round :disabled="store.editing || sendingMessage" @click="submitMessage({ type: 'replace_day', day: 1 })">重做第 1 天</el-button>
         </div>
         <div class="remove-ingredient-row">
-          <el-input v-model="ingredientInput" size="small" placeholder="输入要去除的食材，例如：花生" :disabled="store.editing" @keydown.enter="removeIngredient" />
-          <el-button size="small" round :disabled="!ingredientInput.trim() || store.editing" @click="removeIngredient">去除食材</el-button>
+          <el-input v-model="ingredientInput" size="small" placeholder="输入要去除的食材，例如：花生" :disabled="store.editing || sendingMessage" @keydown.enter="removeIngredient" />
+          <el-button size="small" round :disabled="!ingredientInput.trim() || store.editing || sendingMessage" @click="removeIngredient">去除食材</el-button>
         </div>
         <div class="conversation-input">
           <el-input
@@ -284,7 +324,7 @@ async function restoreVersion(versionId: number) {
             :rows="3"
             maxlength="1000"
             show-word-limit
-            :disabled="store.editing"
+            :disabled="store.editing || sendingMessage"
             placeholder="例如：把第三天晚餐换成不含海鲜、20 分钟内完成的菜"
             @keydown.ctrl.enter="submitMessage()"
           />
@@ -294,7 +334,7 @@ async function restoreVersion(versionId: number) {
           <div v-for="version in store.versions" :key="version.version_id" class="version-row">
             <span>版本 {{ version.version_no }} · {{ new Date(version.created_at).toLocaleString() }}</span>
             <el-tag v-if="version.is_current" size="small" type="success">当前</el-tag>
-            <el-button v-else size="small" link @click="restoreVersion(version.version_id)">恢复</el-button>
+            <el-button v-else size="small" link :disabled="store.editing || sendingMessage" @click="restoreVersion(version.version_id)">恢复</el-button>
           </div>
         </div>
       </section>
@@ -304,13 +344,16 @@ async function restoreVersion(versionId: number) {
 
 <style scoped lang="scss">
 .plan-result-page {
-  padding: 32px 20px;
-  max-width: 800px;
+  max-width: 1320px;
+  padding-top: clamp(28px, 4vw, 52px);
+  padding-bottom: 96px;
 }
 
 // ── 加载状态 ─────────────────────────────
 
 .loading-section {
+  max-width: 860px;
+  margin-inline: auto;
   padding-top: 22px;
 }
 
@@ -388,7 +431,7 @@ async function restoreVersion(versionId: number) {
 @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
 
 .loading-copy { text-align: left; }
-.loading-eyebrow { display: inline-flex; align-items: center; gap: 8px; color: $color-sage-dark; font-size: 11px; font-weight: 800; letter-spacing: .14em; }
+.loading-eyebrow { display: inline-flex; align-items: center; gap: 8px; color: $color-sage-dark; font-size: 12px; font-weight: 820; letter-spacing: .12em; }
 .loading-eyebrow i { width: 7px; height: 7px; border-radius: 50%; background: $color-sage; box-shadow: 0 0 0 5px rgba($color-sage,.1); animation: blink 1.5s ease-in-out infinite; }
 
 .loading-title {
@@ -406,17 +449,19 @@ async function restoreVersion(versionId: number) {
 }
 
 .loading-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
-.loading-tags span { padding: 4px 9px; border: 1px solid rgba($color-sage,.16); border-radius: 999px; background: rgba(255,255,255,.56); color: $color-text-secondary; font-size: 10px; }
+.loading-tags span { padding: 6px 10px; border: 1px solid rgba($color-sage,.2); border-radius: 999px; background: rgba(255,255,255,.68); color: $color-text-secondary; font-size: 12px; font-weight: 600; }
 
 .progress-panel { padding: 22px; border: 1px solid rgba($color-sage,.13); border-radius: 18px; background: rgba(255,255,255,.64); backdrop-filter: blur(8px); }
 
-.loading-footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; color: $color-text-placeholder; font-size: 11px; }
+.loading-footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; color: $color-text-secondary; font-size: 12px; font-weight: 550; }
 .loading-footer span:first-child { display: inline-flex; align-items: center; gap: 7px; }
 .loading-footer i { width: 6px; height: 6px; border-radius: 50%; background: $color-success; }
 
 // ── 错误状态 ─────────────────────────────
 
 .error-section {
+  max-width: 760px;
+  margin-inline: auto;
   padding-top: 60px;
 }
 
@@ -449,31 +494,47 @@ async function restoreVersion(versionId: number) {
   padding-top: 8px;
 }
 
-.overview-card { margin-bottom: 24px; padding: 28px; background: linear-gradient(135deg, rgba($color-sage,.14), rgba($color-rose,.09)); }
+.overview-card {
+  position: relative;
+  margin-bottom: 16px;
+  padding: clamp(26px, 4vw, 44px);
+  overflow: hidden;
+  border-color: rgba($color-sage,.18);
+  background:
+    radial-gradient(circle at 88% -30%, rgba($color-blue-soft,.9), transparent 20rem),
+    radial-gradient(circle at 0 120%, rgba($color-rose-light,.65), transparent 18rem),
+    linear-gradient(135deg, #DCE4DD, #ECE3DE);
+  box-shadow: 0 24px 64px rgba(79,88,82,.13);
+}
+.overview-card::after { position: absolute; right: -84px; bottom: -120px; width: 300px; height: 300px; border: 1px solid rgba($color-sage,.14); border-radius: 50%; content: ''; pointer-events: none; }
 .overview-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.overview-heading h1 { margin-top: 4px; color: $color-text-primary; font-size: 26px; }
-.eyebrow { color: $color-sage-dark; font-size: 13px; font-weight: 700; letter-spacing: .08em; }
+.overview-heading h1 { margin-top: 7px; color: $color-text-primary; font-size: clamp(30px, 3vw, 42px); letter-spacing: -.045em; }
+.overview-heading .eyebrow { color: $color-sage-dark; }
+.overview-heading .eyebrow::before { background: $color-sage; box-shadow: 0 0 0 5px rgba($color-sage,.11); }
 .overview-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-top: 22px; }
-.overview-grid div { display: flex; flex-direction: column; padding: 14px; border-radius: $radius-md; background: rgba(255,255,255,.72); }
-.overview-grid strong { color: $color-text-primary; font-size: 22px; }
-.overview-grid span { color: $color-text-secondary; font-size: 12px; }
+.overview-grid div { display: flex; flex-direction: column; padding: 16px 18px; border: 1px solid rgba($color-sage,.13); border-radius: $radius-md; background: rgba($color-card,.55); backdrop-filter: blur(10px); }
+.overview-grid strong { color: $color-text-primary; font-size: clamp(21px,2.2vw,28px); letter-spacing: -.03em; }
+.overview-grid span { color: $color-text-secondary; font-size: 12px; font-weight: 600; }
 .result-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.result-actions :deep(.el-button:not(.el-button--primary)) { border-color: rgba($color-sage,.24); background: rgba($color-card,.5); color: $color-sage-dark; }
+.result-actions :deep(.el-button--primary) { border-color: $color-sage-dark; background: $color-sage-dark; color: $color-text-inverse; }
 
 .result-block {
   margin-bottom: 40px;
 }
 
 .block-title {
-  font-size: 20px;
-  font-weight: 700;
+  margin: 6px 0 0;
+  font-size: 28px;
+  font-weight: 800;
   color: $color-text-primary;
-  margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .block-subtitle {
+  max-width: 480px;
   font-size: 13px;
   font-weight: 400;
   color: $color-text-secondary;
@@ -485,37 +546,72 @@ async function restoreVersion(versionId: number) {
   gap: 10px;
 }
 
-.recommendation-status { padding: 14px 18px; margin-bottom: 24px; }
+.recommendation-status { padding: 14px 18px; margin-bottom: 20px; border-radius: $radius-md; box-shadow: none; }
 .recommendation-status summary { color: $color-text-primary; cursor: pointer; font-weight: 600; }
 .recommendation-status p { margin: 10px 0; color: $color-text-secondary; font-size: 13px; }
-.validation-card { padding: 20px; }
+.plan-dashboard { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(330px, .85fr); gap: 20px; align-items: start; }
+.dashboard-panel { padding: 26px; }
+.schedule-panel,
+.nutrition-panel,
+.shopping-panel { min-width: 0; }
+.schedule-panel :deep(.weekly-timeline),
+.nutrition-panel :deep(.nutrition-report),
+.shopping-panel :deep(.shopping-list) { margin-bottom: 0; }
+.insights-column { display: grid; gap: 20px; min-width: 0; }
+.validation-card { padding: 22px; box-shadow: none; }
+.validation-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.validation-title-row > span { padding: 6px 10px; border-radius: 999px; background: $color-lime-soft; color: $color-sage-dark; font-size: 12px; font-weight: 750; }
 .validation-heading { display: flex; align-items: center; gap: 8px; }
 .validation-heading .premium-icon,
 .validation-warning .premium-icon { border-radius: 8px; box-shadow: none; vertical-align: -7px; }
-.validation-card h3 { margin-bottom: 8px; color: $color-text-primary; font-size: 17px; }
+.validation-card h2 { color: $color-text-primary; font-size: 17px; }
 .validation-card p { margin-top: 6px; font-size: 14px; color: $color-text-secondary; line-height: 1.6; }
 .validation-card.warning { border-color: $color-rose; }
+.validation-card.warning .validation-title-row > span { background: $color-rose-light; color: $color-rose-dark; }
+.validation-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 18px 0 14px; }
+.validation-metrics p { display: grid; gap: 1px; margin: 0; padding: 12px; border-radius: $radius-sm; background: $color-surface-soft; }
+.validation-metrics strong { color: $color-text-primary; font-size: 18px; }
+.validation-metrics span { color: $color-text-secondary; font-size: 12px; font-weight: 600; }
 .validation-ok { color: $color-sage-dark !important; }
-.validation-warning { display: flex; align-items: center; gap: 8px; }
+.validation-warnings-list { display: grid; gap: 7px; }
+.validation-warnings-list.expanded { max-height: 238px; overflow-y: auto; padding-right: 5px; scrollbar-color: rgba($color-sage,.35) transparent; scrollbar-width: thin; }
+.validation-warning { display: flex; align-items: flex-start; gap: 8px; margin: 0 !important; }
+.validation-warning .premium-icon { flex: 0 0 auto; }
+.validation-warning > span { min-width: 0; flex: 1; }
+.validation-warning > small { flex: 0 0 auto; margin-top: 2px; padding: 2px 7px; border-radius: 999px; background: $color-rose-light; color: $color-rose-dark; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.validation-toggle { width: 100%; margin-top: 12px; padding: 9px 12px; border: 1px solid rgba($color-rose-dark,.16); border-radius: $radius-sm; background: rgba($color-rose-light,.45); color: $color-rose-dark; cursor: pointer; font: inherit; font-size: 12px; font-weight: 750; transition: background-color .2s ease, border-color .2s ease; }
+.validation-toggle:hover { border-color: rgba($color-rose-dark,.3); background: $color-rose-light; }
+.validation-toggle:focus-visible { outline: 2px solid rgba($color-rose-dark,.35); outline-offset: 2px; }
+.recipe-section { margin-top: 76px; }
+.block-heading { display: flex; align-items: end; justify-content: space-between; gap: 28px; margin-bottom: 20px; }
+.top5-list { gap: 12px; }
+.result-lower-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); gap: 20px; align-items: start; margin-top: 64px; }
+.result-lower-grid.single { grid-template-columns: 1fr; }
 
 // ── 总结 ─────────────────────────────────
 
 .summary-card {
-  padding: 24px;
+  position: sticky;
+  top: 106px;
+  padding: 28px;
+  border-color: rgba($color-rose-dark,.1);
+  background: $color-surface-warm;
+  box-shadow: none;
 }
+.summary-kicker { margin-bottom: 10px; color: $color-rose-dark; font-size: 12px; font-weight: 850; letter-spacing: .1em; }
 
 .summary-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 750;
   color: $color-text-primary;
   margin-bottom: 12px;
 }
 
 .summary-content {
-  font-size: 14px;
+  font-size: 13px;
   color: $color-text-primary;
   line-height: 1.8;
   white-space: pre-wrap;
@@ -537,8 +633,11 @@ async function restoreVersion(versionId: number) {
 }
 
 .conversation-card {
-  padding: 24px;
-  margin-bottom: 36px;
+  margin: 64px 0 36px;
+  padding: clamp(24px, 4vw, 36px);
+  border-color: rgba($color-sage,.16);
+  background: linear-gradient(135deg, rgba($color-sage-light,.56), rgba(255,255,255,.96));
+  box-shadow: none;
 }
 
 .conversation-heading {
@@ -551,7 +650,7 @@ async function restoreVersion(versionId: number) {
 
 .conversation-heading h2 {
   margin-top: 4px;
-  font-size: 20px;
+  font-size: 26px;
   color: $color-text-primary;
 }
 
@@ -594,6 +693,13 @@ async function restoreVersion(versionId: number) {
   font-size: 13px;
 }
 
+@media (max-width: 1050px) {
+  .plan-dashboard { grid-template-columns: 1fr; }
+  .insights-column { grid-template-columns: 1fr 1fr; }
+  .result-lower-grid { grid-template-columns: 1fr; }
+  .summary-card { position: static; }
+}
+
 @media (max-width: $breakpoint-sm) {
   .plan-result-page { padding-top: 24px; }
   .loading-section { padding-top: 4px; }
@@ -609,8 +715,18 @@ async function restoreVersion(versionId: number) {
   .overview-heading { flex-direction: column; }
   .overview-grid { gap: 8px; }
   .overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .overview-grid div { padding: 12px 8px; }
+  .overview-grid div { padding: 12px; }
   .overview-grid strong { font-size: 18px; }
+  .result-actions { justify-content: stretch; }
+  .result-actions :deep(.el-button) { flex: 1; margin: 0; }
+  .dashboard-panel { padding: 18px; }
+  .insights-column { grid-template-columns: 1fr; }
+  .recipe-section { margin-top: 54px; }
+  .block-heading { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .block-title { font-size: 24px; }
+  .result-lower-grid { margin-top: 48px; }
+  .conversation-card { margin-top: 48px; }
+  .conversation-heading { align-items: flex-start; flex-direction: column; }
   .conversation-input { flex-direction: column; align-items: stretch; }
   .remove-ingredient-row { flex-direction: column; }
 }
@@ -618,6 +734,10 @@ async function restoreVersion(versionId: number) {
 @media print {
   .result-actions, :global(.app-header), :global(.mobile-nav), :global(.app-footer) { display: none !important; }
   .plan-result-page { max-width: none; padding: 0; }
+  .plan-dashboard,
+  .result-lower-grid { display: block; }
+  .dashboard-panel,
+  .summary-card { margin-bottom: 18px; }
   .card { break-inside: avoid; box-shadow: none; }
 }
 </style>

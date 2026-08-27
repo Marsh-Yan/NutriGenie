@@ -1,58 +1,69 @@
-/* ═══════════════════════════════════════════
-   NutriGenie — Morandi Palette
-   ═══════════════════════════════════════════ */
+/* NutriGenie — light Morandi nutrition design system */
 
-// ── 莫兰迪主色调 ──────────────────────────
-$color-sage: #557565;         // 鼠尾草绿（主色）
-$color-sage-light: #C5D5CB;   // 浅鼠尾草
-$color-sage-dark: #3F6250;    // 深鼠尾草
+// Brand palette
+$color-sage: #829789;
+$color-sage-light: #DCE4DD;
+$color-sage-dark: #627367;
 
-$color-rose: #C9A9A6;         // 干枯玫瑰（副色）
-$color-rose-light: #E8C5B8;   // 蜜桃粉
-$color-rose-dark: #8A5F5B;    // 深玫瑰
+$color-rose: #B48E8A;
+$color-rose-light: #EADCD9;
+$color-rose-dark: #7B5F5B;
 
-// ── 背景/卡片 ────────────────────────────
-$color-bg: #F7F4F0;           // 燕麦白（页底）
-$color-card: #FFFFFF;          // 卡片白
-$color-border: #E5E0DA;       // 灰石灰（边框）
-$color-divider: #F0EBE5;      // 浅灰分
+$color-lime: #CAD1B7;
+$color-lime-soft: #E9ECDF;
+$color-peach: #D7B7AA;
+$color-butter: #D5CAA7;
+$color-blue: #98A9B8;
+$color-blue-soft: #E3E8EB;
 
-// ── 文字 ────────────────────────────────
-$color-text-primary: #4A4A4A; // 深灰（正文）
-$color-text-secondary: #6F6F6F; // 中灰（辅助）
-$color-text-placeholder: #707070;
-$color-text-inverse: #FFFFFF; // 深色背景上的文字
+// Surfaces
+$color-bg: #F3F0EB;
+$color-card: #FCFBF8;
+$color-surface-soft: #E7EAE4;
+$color-surface-warm: #EEE5DE;
+$color-border: #D8D6CF;
+$color-divider: #E6E2DB;
 
-// ── 功能色 ──────────────────────────────
-$color-success: #3F7250;      // 莫兰迪绿（成功）
-$color-warning: #8C5E14;      // 暗金（警告）
-$color-danger: #A94C40;       // 豆沙红（危险）
-$color-info: #4B6C80;         // 灰蓝（信息）
+// Typography
+$color-text-primary: #3E4741;
+$color-text-secondary: #6F7771;
+$color-text-placeholder: #747C76;
+$color-text-inverse: #FFFFFF;
 
-// ── 评分色（六维雷达用）──────────────────
-$score-health: #8FAA9B;
-$score-budget: #C9A9A6;
-$score-preference: #B8C5B0;
-$score-season: #D4B97A;
-$score-variety: #C5B5C5;
-$score-utilization: #D4897B;
+// Functional colors
+$color-success: #718B79;
+$color-warning: #A28355;
+$color-danger: #A76F6A;
+$color-info: #71879B;
 
-// ── 圆角 ────────────────────────────────
-$radius-sm: 8px;
-$radius-md: 12px;
-$radius-lg: 16px;
-$radius-xl: 24px;
+// Nutrition semantics
+$score-health: #829B8A;
+$score-budget: #C39A86;
+$score-preference: #9890AD;
+$score-season: #B6A273;
+$score-variety: #8FA3B5;
+$score-utilization: #B6817B;
 
-// ── 阴影 ────────────────────────────────
-$shadow-sm: 0 2px 8px rgba(74, 74, 74, 0.06);
-$shadow-md: 0 4px 16px rgba(74, 74, 74, 0.08);
-$shadow-lg: 0 8px 32px rgba(74, 74, 74, 0.10);
+// Shape
+$radius-xs: 8px;
+$radius-sm: 12px;
+$radius-md: 18px;
+$radius-lg: 24px;
+$radius-xl: 32px;
 
-// ── 字体 ────────────────────────────────
-$font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-  'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+// Elevation
+$shadow-xs: 0 1px 2px rgba(79, 88, 82, .05);
+$shadow-sm: 0 8px 24px rgba(79, 88, 82, .07);
+$shadow-md: 0 16px 44px rgba(79, 88, 82, .1);
+$shadow-lg: 0 28px 80px rgba(79, 88, 82, .14);
 
-// ── 断点 ────────────────────────────────
+// Type
+$font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont,
+  'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+$font-display: 'SF Pro Display', 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+// Layout
+$content-width: 1320px;
 $breakpoint-sm: 640px;
 $breakpoint-md: 768px;
 $breakpoint-lg: 1024px;

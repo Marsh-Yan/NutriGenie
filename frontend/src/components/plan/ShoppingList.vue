@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { ShoppingList as ShoppingListType } from '@/types'
 import { ArrowDown } from '@element-plus/icons-vue'
 import PremiumIcon from '@/components/common/PremiumIcon.vue'
@@ -11,6 +11,12 @@ const props = defineProps<{
 const expandedCats = ref<Set<string>>(new Set(Object.keys(props.shoppingList.by_category || {})))
 const checkedItems = ref<Set<string>>(new Set())
 const copyFeedback = ref('复制清单')
+
+watch(() => props.shoppingList, (shoppingList) => {
+  expandedCats.value = new Set(Object.keys(shoppingList.by_category || {}))
+  checkedItems.value = new Set()
+  copyFeedback.value = '复制清单'
+})
 
 function toggleCat(cat: string) {
   if (expandedCats.value.has(cat)) {
@@ -43,17 +49,28 @@ async function copyList() {
 
 <template>
   <div class="shopping-list">
-    <h3 class="section-title">
-      <span class="title-main"><PremiumIcon name="shopping" class="section-icon" :size="16" :box-size="32" />采购清单</span>
-      <span class="title-actions"><button type="button" class="copy-button" @click="copyList">{{ copyFeedback }}</button><span class="total-cost">预计 ¥{{ shoppingList.total_cost.toFixed(1) }}</span></span>
-    </h3>
+    <div class="section-heading">
+      <h3 class="section-title"><PremiumIcon name="shopping" class="section-icon" :size="16" :box-size="32" />采购清单</h3>
+      <div class="title-actions">
+        <button type="button" class="copy-button" @click="copyList">
+          <span aria-live="polite">{{ copyFeedback }}</span>
+        </button>
+        <span class="total-cost"><small>预计</small> ¥{{ shoppingList.total_cost.toFixed(1) }}</span>
+      </div>
+    </div>
 
     <div v-if="Object.keys(shoppingList.by_category || {}).length === 0" class="empty-state">
       暂无采购清单数据
     </div>
 
-    <div v-for="(items, cat) in shoppingList.by_category" :key="cat" class="category-group">
-      <button class="category-header" type="button" :aria-expanded="expandedCats.has(cat)" @click="toggleCat(cat)">
+    <div v-for="(items, cat, catIndex) in shoppingList.by_category" :key="cat" class="category-group">
+      <button
+        class="category-header"
+        type="button"
+        :aria-expanded="expandedCats.has(cat)"
+        :aria-controls="`shopping-category-${catIndex}`"
+        @click="toggleCat(cat)"
+      >
         <span class="category-name">{{ cat }}</span>
         <span class="category-count">{{ items.length }} 项</span>
         <el-icon class="cat-arrow" :class="{ rotated: expandedCats.has(cat) }">
@@ -62,7 +79,7 @@ async function copyList() {
       </button>
 
       <transition name="collapse">
-        <div v-if="expandedCats.has(cat)" class="category-items">
+        <div v-if="expandedCats.has(cat)" :id="`shopping-category-${catIndex}`" class="category-items">
           <div v-for="item in items" :key="item.name" class="item-row" :class="{ checked: checkedItems.has(`${cat}-${item.name}`) }">
             <label class="item-name"><input type="checkbox" :checked="checkedItems.has(`${cat}-${item.name}`)" @change="toggleItem(`${cat}-${item.name}`)" />{{ item.name }}</label>
             <span class="item-quantity">{{ item.quantity }} {{ item.unit }}</span>
@@ -76,23 +93,25 @@ async function copyList() {
 
 <style scoped lang="scss">
 .shopping-list {
-  margin-bottom: 32px;
+  width: 100%;
 }
 
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: $color-text-primary;
-  margin-bottom: 16px;
+.section-heading {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
-.title-main {
-  display: inline-flex;
+.section-title {
+  display: flex;
   align-items: center;
   gap: 9px;
+  margin: 0;
+  color: $color-text-primary;
+  font-size: 19px;
+  font-weight: 750;
 }
 
 .section-icon {
@@ -101,28 +120,62 @@ async function copyList() {
 }
 
 .total-cost {
-  font-size: 14px;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: $color-surface-warm;
   color: $color-rose-dark;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+
+  small { color: $color-text-secondary; font-size: 12px; font-weight: 650; }
 }
 .title-actions { display: inline-flex; align-items: center; gap: 10px; }
-.copy-button { padding: 5px 9px; border: 1px solid $color-border; border-radius: 999px; background: $color-card; color: $color-sage-dark; cursor: pointer; font: inherit; font-size: 12px; }
+.copy-button {
+  min-height: 32px;
+  padding: 5px 11px;
+  border: 1px solid rgba($color-sage, .22);
+  border-radius: 999px;
+  background: $color-card;
+  color: $color-sage-dark;
+  box-shadow: $shadow-xs;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  transition: border-color .2s ease, background-color .2s ease, transform .2s ease;
+
+  &:hover { border-color: rgba($color-sage, .5); background: $color-surface-soft; transform: translateY(-1px); }
+}
 
 .empty-state {
-  text-align: center;
-  padding: 24px;
+  padding: 28px 20px;
+  border: 1px dashed rgba($color-sage, .28);
+  border-radius: $radius-md;
+  background: $color-surface-soft;
   color: $color-text-placeholder;
   font-size: 14px;
+  text-align: center;
 }
 
 // 分类组
 
 .category-group {
-  background: $color-card;
-  border: 1px solid $color-border;
+  border: 1px solid rgba($color-sage-dark, .11);
   border-radius: $radius-md;
+  background: rgba($color-card, .9);
+  box-shadow: $shadow-xs;
   overflow: hidden;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  transition: border-color .2s ease, box-shadow .2s ease;
+
+  &:has(.category-header[aria-expanded='true']) {
+    border-color: rgba($color-sage, .24);
+    box-shadow: $shadow-sm;
+  }
 }
 
 .category-header {
@@ -130,7 +183,8 @@ async function copyList() {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 12px 16px;
+  min-height: 50px;
+  padding: 12px 14px 12px 16px;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -139,12 +193,12 @@ async function copyList() {
   transition: background 0.2s;
 
   &:hover {
-    background: rgba($color-sage, 0.03);
+    background: rgba($color-sage, .045);
   }
 }
 
 .category-name {
-  font-weight: 600;
+  font-weight: 750;
 }
 
 .category-count {
@@ -154,6 +208,12 @@ async function copyList() {
 }
 
 .cat-arrow {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: $color-surface-soft;
   font-size: 14px;
   color: $color-text-placeholder;
   transition: transform 0.2s;
@@ -176,13 +236,16 @@ async function copyList() {
 
 .category-items {
   border-top: 1px solid $color-divider;
+  background: linear-gradient(180deg, rgba($color-surface-soft, .44), rgba($color-card, .88));
 }
 
 .item-row {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: 46px;
   padding: 10px 16px;
+  transition: background-color .2s ease, opacity .2s ease;
 
   & + & {
     border-top: 1px solid $color-divider;
@@ -196,8 +259,16 @@ async function copyList() {
   gap: 8px;
   font-size: 14px;
   color: $color-text-primary;
+
+  input {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    accent-color: $color-sage-dark;
+    cursor: pointer;
+  }
 }
-.item-row.checked { opacity: .58; }
+.item-row.checked { background: rgba($color-sage, .045); opacity: .62; }
 .item-row.checked .item-name { text-decoration: line-through; }
 
 .item-quantity {
@@ -211,5 +282,21 @@ async function copyList() {
   color: $color-text-primary;
   min-width: 50px;
   text-align: right;
+}
+
+@media (max-width: $breakpoint-sm) {
+  .section-heading { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .title-actions { width: 100%; justify-content: space-between; }
+
+  .item-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 5px 12px;
+    padding-block: 12px;
+  }
+
+  .item-name { grid-column: 1 / -1; }
+  .item-quantity { padding-left: 25px; }
+  .item-cost { min-width: auto; }
 }
 </style>

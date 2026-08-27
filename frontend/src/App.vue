@@ -51,7 +51,7 @@ watch(
   z-index: 1000;
   padding: 10px 14px;
   border-radius: $radius-sm;
-  background: #fff;
+  background: $color-card;
   color: $color-sage-dark;
   box-shadow: $shadow-md;
   transform: translateY(-150%);

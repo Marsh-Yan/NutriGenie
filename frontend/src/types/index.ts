@@ -196,7 +196,7 @@ export interface PlanResult {
   schema_version: string
   version_id?: number
   version_no?: number
-  recipes: GeneratedRecipe[]
+  recipes: (GeneratedRecipe | TopRecipe)[]
   weekly_plan: WeeklyDay[]
   nutrition_report: NutritionReport
   shopping_list: ShoppingList

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { WeeklyDay } from '@/types'
 import PremiumIcon from '@/components/common/PremiumIcon.vue'
 
@@ -12,6 +12,10 @@ const mealNames: Record<string, string> = { breakfast: '早餐', lunch: '午餐'
 
 const selectedDay = ref(0)
 
+watch(() => props.weeklyPlan, (plan) => {
+  if (!plan.length || selectedDay.value >= plan.length) selectedDay.value = 0
+})
+
 function scrollTo(idx: number) {
   selectedDay.value = idx
 }
@@ -19,15 +23,21 @@ function scrollTo(idx: number) {
 
 <template>
   <div class="weekly-timeline">
-    <h3 class="section-title"><PremiumIcon name="timeline" class="section-icon" :size="16" :box-size="32" />本周饮食规划</h3>
+    <div class="section-heading">
+      <h3 class="section-title"><PremiumIcon name="timeline" class="section-icon" :size="16" :box-size="32" />本周饮食规划</h3>
+      <span class="section-context">点击日期查看三餐</span>
+    </div>
 
     <!-- 日期导航 -->
-    <div class="days-scroll">
+    <div class="days-scroll" role="tablist" aria-label="一周饮食日期">
       <button
         v-for="(day, i) in weeklyPlan"
         :key="day.day"
+        type="button"
+        role="tab"
         class="day-btn"
         :class="{ active: selectedDay === i }"
+        :aria-selected="selectedDay === i"
         @click="scrollTo(i)"
       >
         <span class="day-name">{{ dayNames[i] || day.day }}</span>
@@ -37,7 +47,7 @@ function scrollTo(idx: number) {
     </div>
 
     <!-- 选中日详情 -->
-    <div v-if="weeklyPlan[selectedDay]" class="day-detail">
+    <div v-if="weeklyPlan[selectedDay]" class="day-detail" role="tabpanel" aria-live="polite">
       <div
         v-for="(meal, slot) in weeklyPlan[selectedDay].meals"
         :key="slot"
@@ -59,6 +69,8 @@ function scrollTo(idx: number) {
         <span class="total-nutrition">
           {{ weeklyPlan[selectedDay].total_nutrition.calories.toFixed(0) }}kcal
           · P{{ (weeklyPlan[selectedDay].total_nutrition.protein_g || 0).toFixed(0) }}g
+          · F{{ (weeklyPlan[selectedDay].total_nutrition.fat_g || 0).toFixed(0) }}g
+          · C{{ (weeklyPlan[selectedDay].total_nutrition.carbs_g || 0).toFixed(0) }}g
         </span>
       </div>
     </div>
@@ -67,17 +79,25 @@ function scrollTo(idx: number) {
 
 <style scoped lang="scss">
 .weekly-timeline {
-  margin-bottom: 32px;
+  width: 100%;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
 .section-title {
   display: flex;
   align-items: center;
   gap: 9px;
-  font-size: 18px;
-  font-weight: 600;
+  margin: 0;
   color: $color-text-primary;
-  margin-bottom: 16px;
+  font-size: 19px;
+  font-weight: 750;
 }
 
 .section-icon {
@@ -85,13 +105,20 @@ function scrollTo(idx: number) {
   box-shadow: none;
 }
 
+.section-context {
+  color: $color-text-secondary;
+  font-size: 12px;
+  font-weight: 650;
+}
+
 // 日期导航
 
 .days-scroll {
   display: flex;
-  gap: 8px;
+  gap: 9px;
   overflow-x: auto;
-  padding-bottom: 12px;
+  padding: 2px 2px 14px;
+  scroll-snap-type: x proximity;
   scroll-behavior: smooth;
 
   &::-webkit-scrollbar { height: 4px; }
@@ -101,23 +128,29 @@ function scrollTo(idx: number) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 10px 16px;
-  min-width: 64px;
-  border: 1px solid $color-border;
+  gap: 1px;
+  min-width: 72px;
+  min-height: 72px;
+  padding: 10px 14px;
+  border: 1px solid rgba($color-sage-dark, .12);
   border-radius: $radius-md;
-  background: $color-card;
+  background: rgba($color-card, .92);
+  box-shadow: $shadow-xs;
   cursor: pointer;
-  transition: all 0.2s;
+  scroll-snap-align: start;
+  transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease, color .2s ease, transform .2s ease;
 
   &:hover {
-    border-color: $color-sage-light;
+    border-color: rgba($color-sage, .4);
+    transform: translateY(-1px);
   }
 
   &.active {
-    background: $color-sage;
-    border-color: $color-sage;
-    color: #fff;
+    border-color: $color-sage-dark;
+    background: linear-gradient(145deg, $color-sage, $color-sage-dark);
+    box-shadow: 0 10px 22px rgba($color-sage-dark, .2);
+    color: $color-text-inverse;
+    transform: translateY(-2px);
   }
 }
 
@@ -132,24 +165,39 @@ function scrollTo(idx: number) {
 }
 
 .day-unit {
-  font-size: 10px;
-  opacity: 0.7;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: .82;
 }
 
 // 日详情
 
 .day-detail {
-  background: $color-card;
-  border: 1px solid $color-border;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba($color-sage-dark, .12);
   border-radius: $radius-lg;
-  padding: 16px;
+  background: linear-gradient(145deg, rgba($color-card, .96), rgba($color-surface-soft, .66));
+  box-shadow: $shadow-sm;
+  padding: 18px;
+
+  &::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 4px;
+    background: linear-gradient($color-lime, $color-sage);
+    content: '';
+  }
 }
 
 .meal-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 0;
+  min-height: 54px;
+  padding: 10px 8px 10px 10px;
 
   & + & {
     border-top: 1px solid $color-divider;
@@ -157,9 +205,15 @@ function scrollTo(idx: number) {
 }
 
 .meal-label {
-  width: 40px;
-  font-size: 13px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  min-height: 28px;
+  border-radius: 999px;
+  background: rgba($color-sage, .09);
+  font-size: 12px;
+  font-weight: 750;
   color: $color-sage-dark;
   flex-shrink: 0;
 }
@@ -173,7 +227,7 @@ function scrollTo(idx: number) {
 
 .meal-name {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 650;
   color: $color-text-primary;
 }
 
@@ -185,8 +239,13 @@ function scrollTo(idx: number) {
 }
 
 .meal-cal {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: $color-surface-warm;
   font-size: 13px;
-  color: $color-text-secondary;
+  color: $color-rose-dark;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .meal-empty {
@@ -199,14 +258,27 @@ function scrollTo(idx: number) {
   justify-content: space-between;
   align-items: center;
   margin-top: 12px;
-  padding-top: 12px;
+  padding: 14px 8px 0 10px;
   border-top: 1px solid $color-divider;
   font-size: 13px;
   color: $color-text-secondary;
 }
 
 .total-nutrition {
-  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
   color: $color-text-primary;
+}
+
+@media (max-width: $breakpoint-sm) {
+  .section-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .days-scroll { margin-inline: -2px; }
+  .day-btn { min-width: 68px; }
+  .day-detail { padding: 12px; }
+  .meal-row { align-items: flex-start; }
+  .meal-content { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .meal-cal { padding: 0; background: transparent; font-size: 12px; }
+  .day-total { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .total-nutrition { line-height: 1.6; }
 }
 </style>

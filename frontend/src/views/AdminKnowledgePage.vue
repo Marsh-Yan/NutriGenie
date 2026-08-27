@@ -25,5 +25,25 @@ onMounted(loadList)
 </template>
 
 <style scoped lang="scss">
-.knowledge-admin{max-width:1180px;padding-top:44px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}h1{margin:0 0 6px}.top p{margin:0;color:$color-text-secondary}.tools{display:flex;gap:10px}.el-alert{margin-bottom:16px}.workspace{display:grid;grid-template-columns:230px 1fr;min-height:600px;overflow:hidden;padding:0}aside{border-right:1px solid $color-border;padding:16px;display:grid;align-content:start;gap:6px}.aside-title{font-size:13px;color:$color-text-secondary;margin-bottom:6px}aside button{text-align:left;background:transparent;border:0;border-radius:$radius-sm;padding:10px;cursor:pointer;color:$color-text-primary}aside button.active,aside button:hover{background:rgba($color-sage,0.12)}small{display:block;color:$color-text-secondary;margin-top:3px}section{padding:20px}.hint{font-size:13px;color:$color-text-secondary;margin:0 0 12px}.markdown-editor :deep(textarea){font-family:ui-monospace,SFMono-Regular,Consolas,monospace;line-height:1.55}.save-row{margin-top:14px;text-align:right}@media(max-width:$breakpoint-sm){.workspace{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid $color-border}.top{align-items:flex-start;gap:12px}.tools{flex-wrap:wrap}}
+.knowledge-admin { max-width: 1280px; padding-top: 44px; padding-bottom: 88px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 16px; padding: 28px 30px; border: 1px solid rgba($color-sage-dark,.1); border-radius: $radius-xl; background: linear-gradient(135deg, $color-surface-soft, $color-surface-warm); }
+h1 { margin: 0 0 6px; font-size: clamp(28px,4vw,40px); letter-spacing: -.04em; }.top p { margin: 0; color: $color-text-secondary; }
+.tools { display: flex; flex: 0 0 auto; gap: 10px; }.el-alert { margin-bottom: 16px; border-radius: $radius-md; }
+.workspace { display: grid; grid-template-columns: 250px minmax(0,1fr); min-height: 620px; overflow: hidden; padding: 0; box-shadow: $shadow-sm; }
+aside { display: grid; align-content: start; gap: 6px; padding: 20px; border-right: 1px solid $color-border; background: $color-surface-soft; }
+.aside-title { margin-bottom: 6px; color: $color-text-secondary; font-size: 12px; font-weight: 750; letter-spacing: .06em; }
+aside button { padding: 12px; border: 1px solid transparent; border-radius: $radius-sm; background: transparent; color: $color-text-primary; cursor: pointer; text-align: left; }
+aside button.active, aside button:hover { border-color: rgba($color-sage,.18); background: #fff; box-shadow: $shadow-xs; }
+small { display: block; margin-top: 3px; color: $color-text-secondary; } section { min-width: 0; padding: 26px; }
+.hint { margin: 0 0 12px; color: $color-text-secondary; font-size: 13px; }.markdown-editor :deep(textarea) { border-radius: $radius-sm; font-family: ui-monospace,SFMono-Regular,Consolas,monospace; line-height: 1.55; }
+.save-row { margin-top: 14px; text-align: right; }
+@media (max-width: 900px) {
+  .top { align-items: flex-start; flex-direction: column; }.tools { flex-wrap: wrap; }
+  .workspace { grid-template-columns: 1fr; }.workspace aside { grid-template-columns: repeat(2,minmax(0,1fr)); max-height: 260px; overflow-y: auto; border-right: 0; border-bottom: 1px solid $color-border; }
+  .aside-title { grid-column: 1 / -1; }
+}
+@media (max-width: $breakpoint-sm) {
+  .knowledge-admin { padding-top: 24px; }.top { padding: 24px 20px; }.tools { display: grid; grid-template-columns: 1fr; width: 100%; }.tools :deep(.el-button) { width: 100%; margin: 0; }
+  .workspace aside { grid-template-columns: 1fr; }.aside-title { grid-column: auto; } section { padding: 18px; }
+}
 </style>

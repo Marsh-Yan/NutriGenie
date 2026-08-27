@@ -28,5 +28,23 @@ onMounted(load)
 </template>
 
 <style scoped lang="scss">
-.admin-ingredients { max-width: 1080px; padding-top: 44px; }.top { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; h1{margin:0 0 6px} p{margin:0;color:$color-text-secondary} }.el-table{padding:10px;border-radius:$radius-lg;overflow:hidden}
+.admin-ingredients { max-width: 1200px; padding-top: 44px; padding-bottom: 88px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; padding: 28px 30px; border: 1px solid rgba($color-sage-dark,.1); border-radius: $radius-xl; background: linear-gradient(135deg, $color-surface-soft, rgba($color-lime-soft,.7)); }
+.top h1 { margin: 0 0 6px; font-size: clamp(28px,4vw,40px); letter-spacing: -.04em; }.top p { margin: 0; color: $color-text-secondary; }
+.el-table { width: 100%; padding: 12px; overflow: hidden; border-radius: $radius-lg; box-shadow: $shadow-sm; }
+:deep(.el-table th.el-table__cell) { height: 52px; background: $color-surface-soft; color: $color-text-secondary; font-size: 12px; }
+:deep(.el-table td.el-table__cell) { height: 56px; }
+:global(.el-dialog) { max-width: calc(100vw - 32px); border-radius: $radius-lg; }
+@media (max-width: $breakpoint-sm) {
+  .admin-ingredients { padding-top: 24px; }
+  .top { align-items: stretch; flex-direction: column; padding: 24px 20px; }
+  .top :deep(.el-button) { width: 100%; }
+  .el-table { overflow-x: auto; }
+  .el-table :deep(.el-table__inner-wrapper) { min-width: 720px; }
+  :global(.el-dialog__body) { padding-inline: 16px; }
+  :global(.el-dialog .el-form-item) { display: block; }
+  :global(.el-dialog .el-form-item__label) { width: auto !important; }
+  :global(.el-dialog .el-form-item__content) { margin-left: 0 !important; }
+  :global(.el-dialog .el-col-12) { max-width: 100%; flex: 0 0 100%; }
+}
 </style>
