@@ -90,245 +90,685 @@ async function submit() {
 
 <template>
   <div class="plan-new-page page-container">
-    <div class="hero-section">
-      <h1 class="page-title">创建饮食规划</h1>
-      <p class="page-desc">描述你的需求，AI 为你量身定制方案</p>
-    </div>
+    <div class="planning-workspace">
+      <aside class="intro-panel" aria-labelledby="plan-new-title">
+        <div class="intro-copy">
+          <span class="intro-kicker"><i aria-hidden="true" />AI 营养规划工作台</span>
+          <h1 id="plan-new-title" class="intro-title">
+            把目标说清楚，<br />
+            <span>剩下的交给 AI。</span>
+          </h1>
+          <p class="intro-desc">
+            不需要学习复杂的营养术语。告诉我们你的目标、预算和忌口，AI 会把它们整理成一份真正能执行的饮食计划。
+          </p>
+        </div>
 
-    <form class="input-card card" novalidate @submit.prevent="submit">
-      <!-- 输入框 -->
-      <div class="input-area">
-        <label class="input-label" :for="inputId">告诉 AI 你的需求</label>
-        <el-input
-          :id="inputId"
-          v-model="userInput"
-          type="textarea"
-          :rows="4"
-          placeholder="例如：减脂一周，预算300元，家里有鸡蛋和番茄"
-          maxlength="500"
-          show-word-limit
-          class="plan-input"
-        />
-        <p class="constraint-hint">文本中明确写出的天数、预算和忌口会优先生效；下方选项可用于核对。</p>
-      </div>
+        <ol class="workflow-list" aria-label="规划生成流程">
+          <li>
+            <span class="workflow-index">01</span>
+            <span class="workflow-copy"><strong>描述真实需求</strong><span>目标、周期、预算与已有食材</span></span>
+          </li>
+          <li>
+            <span class="workflow-index">02</span>
+            <span class="workflow-copy"><strong>AI 编排与校验</strong><span>兼顾营养、成本和菜品多样性</span></span>
+          </li>
+          <li>
+            <span class="workflow-index">03</span>
+            <span class="workflow-copy"><strong>获得可执行方案</strong><span>菜谱、每日餐单和采购清单</span></span>
+          </li>
+        </ol>
 
-      <!-- 快捷示例 -->
-      <div class="examples">
-        <span class="examples-label">试试这些：</span>
-        <div class="example-chips">
-          <button
-            v-for="(ex, i) in examples"
-            :key="i"
-            class="example-tag"
-            :class="{ active: activeExample === i }"
-            type="button"
-            @click="selectExample(i)"
+        <div class="profile-readiness" :class="{ ready: profileExists }" aria-live="polite">
+          <span class="readiness-dot" aria-hidden="true" />
+          <div>
+            <strong v-if="profileStore.loading">正在同步健康画像</strong>
+            <strong v-else-if="profileExists">健康画像已准备好</strong>
+            <strong v-else>还差一份健康画像</strong>
+            <span v-if="profileStore.loading">正在核对你的身体数据与偏好…</span>
+            <span v-else-if="profileExists">提交需求后即可开始生成</span>
+            <span v-else>提交时会先带你完成基础信息</span>
+          </div>
+        </div>
+      </aside>
+
+      <form class="prompt-card card" novalidate @submit.prevent="submit">
+        <header class="prompt-heading">
+          <div>
+            <span class="eyebrow">创建新方案</span>
+            <h2>今天，想怎样好好吃饭？</h2>
+            <p>像和营养师聊天一样自然地描述，细节越具体，方案越贴合。</p>
+          </div>
+          <span class="time-badge">约 30–90 秒</span>
+        </header>
+
+        <div class="input-area">
+          <label class="section-label" :for="inputId"><span>01</span>描述你的需求</label>
+          <el-input
+            :id="inputId"
+            v-model="userInput"
+            type="textarea"
+            :rows="7"
+            placeholder="例如：我想减脂一周，总预算 300 元，家里有鸡蛋和番茄，不吃海鲜，希望晚餐 20 分钟内做好……"
+            maxlength="500"
+            show-word-limit
+            class="plan-input"
+            :aria-invalid="Boolean(submitError)"
+            :aria-describedby="`${inputId}-hint`"
+          />
+          <p :id="`${inputId}-hint`" class="constraint-hint">
+            <span aria-hidden="true">✦</span>
+            文本中明确写出的天数、预算和忌口会优先生效；下方选项用于最后核对。
+          </p>
+        </div>
+
+        <section class="examples" aria-labelledby="example-title">
+          <div class="section-heading">
+            <div>
+              <span id="example-title" class="section-label"><span>02</span>从灵感模板开始</span>
+              <small>点击后仍可继续修改</small>
+            </div>
+          </div>
+          <div class="example-grid">
+            <button
+              v-for="(ex, i) in examples"
+              :key="i"
+              class="example-tag"
+              :class="{ active: activeExample === i }"
+              type="button"
+              @click="selectExample(i)"
+            >
+              <span class="example-index">0{{ i + 1 }}</span>
+              <span class="example-copy">{{ ex.text }}</span>
+              <el-icon aria-hidden="true"><MagicStick /></el-icon>
+            </button>
+          </div>
+        </section>
+
+        <section class="controls-panel" aria-labelledby="controls-title">
+          <div class="controls-heading">
+            <span id="controls-title" class="section-label"><span>03</span>核对规划范围</span>
+            <small>这些选项会和上方文字一起提交</small>
+          </div>
+          <div class="options-row">
+            <fieldset class="option-item days-option">
+              <legend>规划天数</legend>
+              <el-radio-group v-model="durationDays" size="small">
+                <el-radio-button :value="3">3 天</el-radio-button>
+                <el-radio-button :value="5">5 天</el-radio-button>
+                <el-radio-button :value="7">7 天</el-radio-button>
+              </el-radio-group>
+              <span>适合短期尝试或完整一周安排</span>
+            </fieldset>
+            <div class="option-item budget-option">
+              <label :for="budgetId">总预算（元）</label>
+              <el-input-number
+                :id="budgetId"
+                v-model="totalBudget"
+                :min="0"
+                :max="9999"
+                :step="50"
+                size="small"
+                controls-position="right"
+                class="budget-input"
+                placeholder="不限制"
+              />
+              <span>填写 0 代表本次不限制预算</span>
+            </div>
+          </div>
+        </section>
+
+        <div v-if="submitError || profileLoadError" class="error-stack">
+          <p v-if="submitError" class="submit-error" role="alert">{{ submitError }}</p>
+          <p v-if="profileLoadError" class="submit-error" role="alert">{{ profileLoadError }}</p>
+        </div>
+
+        <footer class="submit-row">
+          <div class="profile-hint" aria-live="polite">
+            <span class="hint-check" :class="{ ready: profileExists }" aria-hidden="true">✓</span>
+            <span>
+              <strong v-if="profileStore.loading">正在检查健康画像…</strong>
+              <strong v-else-if="profileExists">信息已就绪，可以开始规划</strong>
+              <strong v-else>需要先完成健康画像</strong>
+              <small v-if="!profileStore.loading && !profileExists">点击后将自动前往画像页面</small>
+              <small v-else>你的草稿会一直保留到成功创建方案</small>
+            </span>
+          </div>
+          <el-button
+            type="primary"
+            size="large"
+            round
+            :loading="submitting"
+            :disabled="!userInput.trim() || profileStore.loading"
+            native-type="submit"
+            class="submit-btn"
           >
             <el-icon><MagicStick /></el-icon>
-            {{ ex.text.slice(0, 20) }}...
-          </button>
-        </div>
-      </div>
-
-      <!-- 选项 -->
-      <div class="options-row">
-        <div class="option-item">
-          <label>规划天数</label>
-          <el-radio-group v-model="durationDays" size="small">
-            <el-radio-button :value="3">3天</el-radio-button>
-            <el-radio-button :value="5">5天</el-radio-button>
-            <el-radio-button :value="7">7天</el-radio-button>
-          </el-radio-group>
-        </div>
-        <div class="option-item">
-          <label :for="budgetId">预算（元）</label>
-          <el-input-number :id="budgetId" v-model="totalBudget" :min="0" :max="9999" :step="50"
-            size="small" controls-position="right" style="width: 140px"
-            placeholder="不限制" />
-        </div>
-      </div>
-
-      <div class="submit-row">
-        <p class="profile-hint" v-if="profileStore.loading">正在检查健康画像…</p>
-        <p class="profile-hint" v-else-if="!profileExists">
-          需要先完成健康画像，才能生成准确方案
-        </p>
-        <el-button
-          type="primary"
-          size="large"
-          round
-          :loading="submitting"
-          :disabled="!userInput.trim() || profileStore.loading"
-          native-type="submit"
-          class="submit-btn"
-        >
-          <el-icon><MagicStick /></el-icon>
-          {{ submitting ? 'AI 规划中...' : '开始规划' }}
-          <el-icon v-if="!submitting"><Right /></el-icon>
-        </el-button>
-      </div>
-      <p v-if="submitError" class="submit-error" role="alert">{{ submitError }}</p>
-      <p v-if="profileLoadError" class="submit-error" role="alert">{{ profileLoadError }}</p>
-    </form>
+            {{ submitting ? 'AI 规划中...' : '生成我的饮食方案' }}
+            <el-icon v-if="!submitting"><Right /></el-icon>
+          </el-button>
+        </footer>
+      </form>
+    </div>
   </div>
 </template>
 
 <style scoped lang="scss">
 .plan-new-page {
-  padding: 48px 20px;
-  max-width: 680px;
+  padding-block: clamp(36px, 5vw, 72px) 96px;
 }
 
-.hero-section {
-  text-align: center;
-  margin-bottom: 36px;
+.planning-workspace {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: start;
+  gap: clamp(24px, 3vw, 48px);
 }
 
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: $color-text-primary;
-  margin-bottom: 8px;
-}
-
-.page-desc {
-  font-size: 16px;
-  color: $color-text-secondary;
-}
-
-.input-card {
-  padding: 36px;
-}
-
-.input-label {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  color: $color-text-primary;
-  margin-bottom: 8px;
-}
-
-.plan-input {
-  :deep(.el-textarea__inner) {
-    border-radius: $radius-md;
-    font-size: 15px;
-    line-height: 1.6;
-    padding: 14px 16px;
-    resize: none;
-  }
-}
-
-.constraint-hint { margin-top: 8px; color: $color-text-secondary; font-size: 12px; }
-
-// ── 快捷示例 ─────────────────────────────
-
-.examples {
-  margin-top: 16px;
-}
-
-.examples-label {
-  font-size: 13px;
-  color: $color-text-secondary;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.example-chips {
+.intro-panel {
+  position: sticky;
+  top: 92px;
+  grid-column: span 4;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  min-height: 676px;
+  overflow: hidden;
+  flex-direction: column;
+  padding: clamp(30px, 3vw, 46px);
+  border: 1px solid rgba($color-sage, .18);
+  border-radius: $radius-xl;
+  background:
+    radial-gradient(circle at 100% 0, rgba($color-blue-soft, .88), transparent 18rem),
+    radial-gradient(circle at 0 100%, rgba($color-rose-light, .7), transparent 20rem),
+    linear-gradient(155deg, #DCE4DD 0%, #ECE5DF 100%);
+  box-shadow: $shadow-lg;
+  color: $color-text-secondary;
 }
 
-.example-tag {
+.intro-panel::before,
+.intro-panel::after {
+  position: absolute;
+  border: 1px solid rgba($color-sage, .16);
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+}
+
+.intro-panel::before {
+  top: -110px;
+  right: -120px;
+  width: 300px;
+  height: 300px;
+}
+
+.intro-panel::after {
+  right: 36px;
+  bottom: 130px;
+  width: 72px;
+  height: 72px;
+  background: rgba($color-rose-light, .58);
+}
+
+.intro-copy,
+.workflow-list,
+.profile-readiness { position: relative; z-index: 1; }
+
+.intro-kicker {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  min-height: 32px;
-  padding: 5px 11px;
-  border: 1px solid $color-border;
-  border-radius: 999px;
-  background: $color-card;
-  color: $color-text-secondary;
-  font: inherit;
+  gap: 9px;
+  color: $color-sage-dark;
   font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    transform: translateY(-1px);
-  }
-
-  &.active { border-color: $color-sage; background: rgba($color-sage, .1); color: $color-sage-dark; }
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
 }
 
-// ── 选项 ─────────────────────────────────
+.intro-kicker i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 5px rgba($color-sage, .12);
+}
 
-.options-row {
+.intro-title {
+  margin-top: 22px;
+  color: $color-text-primary;
+  font-size: clamp(38px, 3.5vw, 56px);
+  font-weight: 780;
+  letter-spacing: -.055em;
+  line-height: 1.04;
+}
+
+.intro-title span { color: $color-rose-dark; }
+
+.intro-desc {
+  max-width: 38rem;
+  margin-top: 22px;
+  color: $color-text-secondary;
+  font-size: 14px;
+  line-height: 1.85;
+}
+
+.workflow-list {
+  display: grid;
+  gap: 2px;
+  margin-top: 40px;
+  list-style: none;
+}
+
+.workflow-list li {
   display: flex;
-  gap: 24px;
-  margin-top: 24px;
-  flex-wrap: wrap;
-
-  @media (max-width: $breakpoint-sm) {
-    flex-direction: column;
-    gap: 16px;
-  }
+  align-items: center;
+  gap: 14px;
+  padding: 15px 0;
+  border-top: 1px solid rgba($color-sage, .16);
 }
 
-.option-item {
+.workflow-index {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba($color-sage, .2);
+  border-radius: 12px;
+  background: rgba($color-card, .58);
+  color: $color-sage-dark;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.workflow-copy { display: grid; gap: 2px; }
+.workflow-copy strong { color: $color-text-primary; font-size: 13px; }
+.workflow-copy > span { color: $color-text-secondary; font-size: 12px; font-weight: 550; }
+
+.profile-readiness {
   display: flex;
   align-items: center;
   gap: 12px;
-
-  label {
-    font-size: 14px;
-    font-weight: 500;
-    color: $color-text-primary;
-    white-space: nowrap;
-  }
+  margin-top: auto;
+  padding: 15px;
+  border: 1px solid rgba($color-sage, .16);
+  border-radius: $radius-md;
+  background: rgba($color-card, .52);
 }
 
-// ── 提交 ─────────────────────────────────
+.readiness-dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: $color-butter;
+  box-shadow: 0 0 0 6px rgba($color-butter, .1);
+}
+
+.profile-readiness.ready .readiness-dot {
+  background: $color-sage;
+  box-shadow: 0 0 0 6px rgba($color-sage, .12);
+}
+
+.profile-readiness div { display: grid; gap: 2px; }
+.profile-readiness strong { color: $color-text-primary; font-size: 12px; }
+.profile-readiness div span { color: $color-text-secondary; font-size: 12px; }
+
+.prompt-card {
+  grid-column: span 8;
+  padding: clamp(28px, 4vw, 52px);
+  border-radius: $radius-xl;
+  background: rgba($color-card, .96);
+  box-shadow: $shadow-md;
+}
+
+.prompt-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 34px;
+}
+
+.prompt-heading h2 {
+  margin-top: 10px;
+  font-size: clamp(28px, 3vw, 40px);
+  letter-spacing: -.045em;
+  line-height: 1.12;
+}
+
+.prompt-heading p {
+  max-width: 34rem;
+  margin-top: 10px;
+  color: $color-text-secondary;
+  font-size: 14px;
+}
+
+.time-badge {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid rgba($color-sage, .14);
+  border-radius: 999px;
+  background: $color-lime-soft;
+  color: $color-sage-dark;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: $color-text-primary;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.section-label > span {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 9px;
+  background: $color-sage-dark;
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: .04em;
+}
+
+.plan-input { margin-top: 12px; }
+
+.plan-input :deep(.el-textarea__inner) {
+  min-height: 206px !important;
+  padding: 20px 22px 34px;
+  border: 1px solid transparent;
+  border-radius: $radius-md;
+  background: $color-surface-soft;
+  font-size: 15px;
+  line-height: 1.75;
+  resize: vertical;
+  box-shadow: none !important;
+}
+
+.plan-input :deep(.el-textarea__inner:hover) {
+  border-color: rgba($color-sage, .3);
+}
+
+.plan-input :deep(.el-textarea__inner:focus) {
+  border-color: $color-sage;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba($color-sage, .1) !important;
+}
+
+.plan-input :deep(.el-input__count) {
+  right: 16px;
+  bottom: 10px;
+  background: transparent;
+  color: $color-text-placeholder;
+}
+
+.constraint-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 10px;
+  color: $color-text-secondary;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.constraint-hint span { color: $color-rose; }
+
+.examples { margin-top: 34px; }
+
+.section-heading,
+.controls-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 13px;
+}
+
+.section-heading > div { display: flex; align-items: center; gap: 10px; }
+.section-heading small,
+.controls-heading small { color: $color-text-secondary; font-size: 12px; }
+
+.example-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.example-tag {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 62px;
+  padding: 11px 13px;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: #fff;
+  color: $color-text-primary;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .2s ease, background-color .2s ease, transform .2s ease;
+}
+
+.example-tag:hover {
+  border-color: rgba($color-sage, .5);
+  transform: translateY(-2px);
+}
+
+.example-tag.active {
+  border-color: $color-sage;
+  background: $color-lime-soft;
+}
+
+.example-index {
+  color: $color-rose-dark;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.example-copy {
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+}
+
+.example-tag .el-icon { color: $color-sage; font-size: 15px; }
+
+.controls-panel {
+  margin-top: 34px;
+  padding: 20px;
+  border: 1px solid rgba($color-sage, .1);
+  border-radius: $radius-md;
+  background: $color-surface-soft;
+}
+
+.options-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.option-item {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 15px;
+  border: 0;
+  border-radius: $radius-sm;
+  background: rgba($color-card, .86);
+}
+
+.option-item legend,
+.option-item > label {
+  color: $color-text-primary;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.option-item > span {
+  color: $color-text-secondary;
+  font-size: 12px;
+}
+
+.days-option .el-radio-group { display: flex; width: 100%; }
+.days-option :deep(.el-radio-button) { flex: 1; }
+.days-option :deep(.el-radio-button__inner) {
+  width: 100%;
+  justify-content: center;
+  padding-inline: 10px;
+  background: transparent;
+}
+
+.budget-input { width: 100%; }
+.budget-input :deep(.el-input__wrapper) { background: transparent; }
+
+.error-stack {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.submit-error {
+  padding: 11px 13px;
+  border: 1px solid rgba($color-danger, .16);
+  border-radius: $radius-sm;
+  background: rgba($color-danger, .07);
+  color: $color-danger;
+  font-size: 12px;
+}
 
 .submit-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 22px;
   margin-top: 28px;
-
-  @media (max-width: $breakpoint-sm) {
-    flex-direction: column;
-    gap: 12px;
-  }
+  padding-top: 24px;
+  border-top: 1px solid $color-divider;
 }
 
 .profile-hint {
-  font-size: 12px;
-  color: $color-text-placeholder;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
+
+.hint-check {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: $color-surface-warm;
+  color: $color-warning;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.hint-check.ready { background: $color-lime-soft; color: $color-sage-dark; }
+.profile-hint > span:last-child { display: grid; gap: 1px; min-width: 0; }
+.profile-hint strong { color: $color-text-primary; font-size: 13px; }
+.profile-hint small { color: $color-text-secondary; font-size: 12px; }
 
 .submit-btn {
-  padding-left: 24px;
-  padding-right: 24px;
-  font-size: 15px;
-
-  .el-icon {
-    margin: 0 4px;
-  }
+  flex: 0 0 auto;
+  min-width: 226px;
+  font-size: 14px;
 }
 
-.submit-error {
-  margin-top: 16px;
-  padding: 10px 12px;
-  border-radius: $radius-sm;
-  background: rgba($color-danger, 0.1);
-  color: $color-danger;
-  font-size: 13px;
+.submit-btn .el-icon { margin-inline: 3px; }
+
+@media (max-width: $breakpoint-lg) {
+  .planning-workspace { grid-template-columns: 1fr; }
+
+  .intro-panel,
+  .prompt-card { grid-column: auto; }
+
+  .intro-panel {
+    position: relative;
+    top: auto;
+    min-height: auto;
+  }
+
+  .intro-desc { max-width: 48rem; }
+
+  .workflow-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 28px;
+  }
+
+  .workflow-list li {
+    align-items: flex-start;
+    padding: 14px;
+    border: 1px solid rgba($color-sage, .15);
+    border-radius: $radius-sm;
+    background: rgba($color-card, .46);
+  }
+
+  .profile-readiness { margin-top: 24px; }
 }
 
 @media (max-width: $breakpoint-sm) {
-  .plan-new-page { padding-top: 32px; }
-  .input-card { padding: 24px 18px; }
-  .submit-btn { width: 100%; min-height: 46px; }
+  .plan-new-page { padding-block: 24px 56px; }
+  .planning-workspace { gap: 16px; }
+
+  .intro-panel {
+    padding: 26px 22px;
+    border-radius: $radius-lg;
+  }
+
+  .intro-title { margin-top: 16px; font-size: 35px; }
+  .intro-title br { display: none; }
+  .intro-desc { margin-top: 14px; font-size: 13px; line-height: 1.7; }
+
+  .workflow-list { grid-template-columns: 1fr; gap: 7px; margin-top: 22px; }
+  .workflow-list li { align-items: center; padding: 10px 12px; }
+  .workflow-index { width: 30px; height: 30px; border-radius: 10px; }
+  .workflow-copy > span { display: none; }
+  .profile-readiness { margin-top: 16px; padding: 12px; }
+
+  .prompt-card {
+    padding: 24px 18px;
+    border-radius: $radius-lg;
+  }
+
+  .prompt-heading { flex-direction: column; gap: 13px; margin-bottom: 28px; }
+  .prompt-heading h2 { font-size: 29px; }
+  .prompt-heading p { font-size: 13px; }
+  .time-badge { align-self: flex-start; }
+
+  .plan-input :deep(.el-textarea__inner) {
+    min-height: 180px !important;
+    padding: 17px 16px 32px;
+    font-size: 14px;
+  }
+
+  .examples,
+  .controls-panel { margin-top: 28px; }
+
+  .section-heading > div,
+  .controls-heading { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .example-grid,
+  .options-row { grid-template-columns: 1fr; }
+  .example-tag { min-height: 56px; }
+
+  .controls-panel { padding: 15px; }
+  .option-item { padding: 13px; }
+
+  .submit-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .submit-btn { width: 100%; min-width: 0; }
 }
 </style>

@@ -24,5 +24,25 @@ onMounted(async () => {
 </template>
 
 <style scoped lang="scss">
-.admin-page{max-width:980px;padding-top:48px}.heading{margin-bottom:28px}h1{margin:0 0 6px}.heading p{margin:0;color:$color-text-secondary}.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;min-height:120px}.stat-card{padding:22px;display:grid;gap:8px}.stat-card span{color:$color-text-secondary;font-size:14px}.stat-card strong{font-size:30px;color:$color-sage-dark}.actions{margin-top:22px;display:flex;gap:12px}@media(max-width:$breakpoint-sm){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+.admin-page { max-width: 1200px; padding-top: 44px; padding-bottom: 88px; }
+.heading { position: relative; margin-bottom: 22px; padding: 36px; overflow: hidden; border: 1px solid rgba($color-sage,.16); border-radius: $radius-xl; background: linear-gradient(135deg, $color-sage-light, $color-blue-soft 54%, $color-rose-light); box-shadow: $shadow-md; }
+.heading::after { position: absolute; right: -60px; bottom: -100px; width: 260px; height: 260px; border: 1px solid rgba($color-sage,.15); border-radius: 50%; content: ''; }
+h1 { margin: 0 0 7px; color: $color-text-primary; font-size: clamp(30px,4vw,44px); letter-spacing: -.045em; }
+.heading p { margin: 0; color: $color-text-secondary; }
+.stats-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; min-height: 140px; }
+.stat-card { position: relative; display: grid; gap: 18px; padding: 24px; overflow: hidden; box-shadow: none; }
+.stat-card::before { position: absolute; top: 0; right: 0; left: 0; height: 4px; background: $color-sage; content: ''; }
+.stat-card:nth-child(2)::before { background: $color-rose; }.stat-card:nth-child(3)::before { background: $color-blue; }.stat-card:nth-child(4)::before { background: $color-butter; }.stat-card:nth-child(5)::before { background: $color-lime; }
+.stat-card span { color: $color-text-secondary; font-size: 13px; font-weight: 650; }
+.stat-card strong { color: $color-text-primary; font-size: clamp(30px,3vw,40px); letter-spacing: -.04em; }
+.actions { display: flex; gap: 10px; margin-top: 20px; padding: 16px; border: 1px solid rgba($color-sage-dark,.1); border-radius: $radius-lg; background: rgba(255,255,255,.72); }
+@media (max-width: $breakpoint-lg) { .stats-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: $breakpoint-sm) {
+  .admin-page { padding-top: 24px; }
+  .heading { padding: 28px 22px; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .stat-card { padding: 18px; }
+  .actions { align-items: stretch; flex-direction: column; }
+  .actions :deep(.el-button) { width: 100%; margin: 0; }
+}
 </style>

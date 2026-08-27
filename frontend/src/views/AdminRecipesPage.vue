@@ -26,5 +26,21 @@ onMounted(load)
 </template>
 
 <style scoped lang="scss">
-.recipe-admin{max-width:1080px;padding-top:44px}.top{margin-bottom:22px;h1{margin:0 0 6px}p{margin:0;color:$color-text-secondary}}.el-alert{margin-bottom:16px}.el-table{padding:10px;border-radius:$radius-lg;overflow:hidden}.hint{font-size:13px;color:$color-text-secondary;margin:0 0 12px}.json-editor :deep(textarea){font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.55}
+.recipe-admin { max-width: 1200px; padding-top: 44px; padding-bottom: 88px; }
+.top { margin-bottom: 16px; padding: 28px 30px; border: 1px solid rgba($color-sage-dark,.1); border-radius: $radius-xl; background: linear-gradient(135deg, $color-surface-soft, $color-blue-soft); }
+.top h1 { margin: 0 0 6px; font-size: clamp(28px,4vw,40px); letter-spacing: -.04em; }.top p { margin: 0; color: $color-text-secondary; }
+.el-alert { margin-bottom: 16px; border-radius: $radius-md; }
+.el-table { width: 100%; padding: 12px; overflow: hidden; border-radius: $radius-lg; box-shadow: $shadow-sm; }
+:deep(.el-table th.el-table__cell) { height: 52px; background: $color-surface-soft; color: $color-text-secondary; font-size: 12px; }
+:deep(.el-table td.el-table__cell) { height: 56px; }
+.hint { margin: 0 0 12px; color: $color-text-secondary; font-size: 13px; }
+.json-editor :deep(textarea) { border-radius: $radius-sm; font-family: ui-monospace,SFMono-Regular,Consolas,monospace; font-size: 12px; line-height: 1.55; }
+:global(.el-dialog) { max-width: calc(100vw - 32px); border-radius: $radius-lg; }
+@media (max-width: $breakpoint-sm) {
+  .recipe-admin { padding-top: 24px; }
+  .top { padding: 24px 20px; }
+  .el-table { overflow-x: auto; }
+  .el-table :deep(.el-table__inner-wrapper) { min-width: 720px; }
+  :global(.el-dialog__body) { padding-inline: 16px; }
+}
 </style>

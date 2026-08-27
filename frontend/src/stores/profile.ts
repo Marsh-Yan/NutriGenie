@@ -66,5 +66,10 @@ export const useProfileStore = defineStore('profile', () => {
     }
   }
 
-  return { profile, loading, hasProfile, defaultForm, fetchProfile, fetchMyProfile, saveProfile, updateProfile }
+  function reset() {
+    profile.value = null
+    loading.value = false
+  }
+
+  return { profile, loading, hasProfile, defaultForm, fetchProfile, fetchMyProfile, saveProfile, updateProfile, reset }
 })

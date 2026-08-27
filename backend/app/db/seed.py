@@ -54,15 +54,18 @@ def seed_profiles():
 def seed_ingredients():
     session = SessionLocal()
     try:
-        if session.query(Ingredient).first():
-            print("[SKIP] ingredients 已有数据，跳过")
-            return
-
         data = load_json("ingredients.json")
-        for item in data:
+        existing_ids = {
+            row[0] for row in session.query(Ingredient.ingredient_id).all()
+        }
+        missing = [item for item in data if item["ingredient_id"] not in existing_ids]
+        for item in missing:
             session.add(Ingredient(**item))
         session.commit()
-        print(f"[OK] 导入 {len(data)} 种食材")
+        if missing:
+            print(f"[OK] 新增 {len(missing)} 种食材（目录共 {len(data)} 种）")
+        else:
+            print(f"[SKIP] 食材目录已完整（共 {len(data)} 种）")
     finally:
         session.close()
 
@@ -70,15 +73,18 @@ def seed_ingredients():
 def seed_ingredient_nutrition():
     session = SessionLocal()
     try:
-        if session.query(IngredientNutrition).first():
-            print("[SKIP] ingredient_nutrition 已有数据，跳过")
-            return
-
         data = load_json("ingredient_nutrition.json")
-        for item in data:
+        existing_ids = {
+            row[0] for row in session.query(IngredientNutrition.ingredient_id).all()
+        }
+        missing = [item for item in data if item["ingredient_id"] not in existing_ids]
+        for item in missing:
             session.add(IngredientNutrition(**item))
         session.commit()
-        print(f"[OK] 导入 {len(data)} 条食材营养数据")
+        if missing:
+            print(f"[OK] 新增 {len(missing)} 条营养数据（目录共 {len(data)} 条）")
+        else:
+            print(f"[SKIP] 营养目录已完整（共 {len(data)} 条）")
     finally:
         session.close()
 
@@ -157,14 +163,24 @@ def verify_data():
         recipes = session.query(Recipe).count()
         rels = session.query(RecipeIngredient).count()
         profiles = session.query(Profile).count()
+        ingredients_without_nutrition = (
+            session.query(Ingredient)
+            .outerjoin(
+                IngredientNutrition,
+                IngredientNutrition.ingredient_id == Ingredient.ingredient_id,
+            )
+            .filter(IngredientNutrition.ingredient_id.is_(None))
+            .count()
+        )
 
         print(f"  食材: {ingredients} 种")
         print(f"  营养数据: {nutrition} 条")
         print(f"  菜谱: {recipes} 道")
         print(f"  菜谱-食材关联: {rels} 条")
         print(f"  用户画像: {profiles} 个")
+        print(f"  缺少营养数据的食材: {ingredients_without_nutrition} 种")
 
-        if all([ingredients > 0, nutrition > 0, recipes > 0, rels > 0]):
+        if all([ingredients > 0, nutrition > 0, recipes > 0, rels > 0]) and ingredients_without_nutrition == 0:
             print("[OK] 数据完整性验证通过")
         else:
             print("[WARN] 部分数据为空，请检查")

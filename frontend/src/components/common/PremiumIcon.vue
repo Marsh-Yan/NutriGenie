@@ -158,25 +158,38 @@ const svgAttrs = computed(() => {
 
 <style scoped lang="scss">
 .premium-icon {
-  --icon-color: #6B8A7A;
-  --icon-bg: linear-gradient(145deg, rgba(197, 213, 203, .9), rgba(247, 244, 240, .96));
+  --icon-color: #{$color-sage-dark};
+  --icon-bg: linear-gradient(145deg, #{$color-surface-soft}, #{$color-card});
+  position: relative;
   display: inline-grid;
   place-items: center;
   width: var(--icon-box-size);
   height: var(--icon-box-size);
   flex: 0 0 auto;
+  overflow: hidden;
   color: var(--icon-color);
-  border: 1px solid rgba(255, 255, 255, .7);
-  border-radius: 18px;
+  border: 1px solid rgba($color-sage-dark, .1);
+  border-radius: min(18px, 35%);
   background: var(--icon-bg);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72), 0 10px 22px rgba(74, 74, 74, .08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 8px 22px rgba($color-sage-dark, .08);
+  isolation: isolate;
   vertical-align: middle;
-  transition: transform .25s ease, box-shadow .25s ease;
+  transition: transform .2s ease, box-shadow .2s ease;
+
+  &::after {
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(145deg, rgba(255, 255, 255, .34), transparent 52%);
+    pointer-events: none;
+    content: '';
+  }
 }
 
 .premium-icon:hover {
-  transform: translateY(-2px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 14px 28px rgba(74, 74, 74, .12);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 10px 26px rgba($color-sage-dark, .11);
 }
 
 .premium-icon svg {
@@ -187,50 +200,50 @@ const svgAttrs = computed(() => {
 
 .premium-icon--target,
 .premium-icon--flame {
-  --icon-color: #B86472;
-  --icon-bg: linear-gradient(145deg, #F2D2D3, #F7E9DF);
+  --icon-color: #{$color-rose-dark};
+  --icon-bg: linear-gradient(145deg, #{$color-rose-light}, #{$color-surface-warm});
 }
 
 .premium-icon--nutrition,
 .premium-icon--salad,
 .premium-icon--leaf {
-  --icon-color: #5C8876;
-  --icon-bg: linear-gradient(145deg, #D6E8DA, #EFF3E8);
+  --icon-color: #{$color-sage-dark};
+  --icon-bg: linear-gradient(145deg, #{$color-sage-light}, #{$color-lime-soft});
 }
 
 .premium-icon--shopping,
 .premium-icon--trophy {
-  --icon-color: #A77A3C;
-  --icon-bg: linear-gradient(145deg, #F3E1B9, #F8EFE0);
+  --icon-color: #{$color-warning};
+  --icon-bg: linear-gradient(145deg, #FBE9A9, #{$color-surface-warm});
 }
 
 .premium-icon--timeline,
 .premium-icon--clipboard {
-  --icon-color: #7C718F;
-  --icon-bg: linear-gradient(145deg, #E6DFEE, #F4EEF2);
+  --icon-color: #{$score-preference};
+  --icon-bg: linear-gradient(145deg, #E8E6FF, #{$color-blue-soft});
 }
 
 .premium-icon--home,
 .premium-icon--plan,
 .premium-icon--thinking {
-  --icon-color: #617D98;
-  --icon-bg: linear-gradient(145deg, #DCE7F0, #EFF3F3);
+  --icon-color: #{$color-info};
+  --icon-bg: linear-gradient(145deg, #{$color-blue-soft}, #EEF6F4);
 }
 
 .premium-icon--profile,
 .premium-icon--strength {
-  --icon-color: #876B83;
-  --icon-bg: linear-gradient(145deg, #EADBE6, #F4EDEC);
+  --icon-color: #6E587E;
+  --icon-bg: linear-gradient(145deg, #EFE4F3, #{$color-rose-light});
 }
 
 .premium-icon--blood,
 .premium-icon--alert {
-  --icon-color: #B9685F;
-  --icon-bg: linear-gradient(145deg, #F0D7D2, #F8ECE4);
+  --icon-color: #{$color-danger};
+  --icon-bg: linear-gradient(145deg, #{$color-rose-light}, #{$color-surface-warm});
 }
 
 .premium-icon--check {
-  --icon-color: #5C8876;
-  --icon-bg: linear-gradient(145deg, #D6E8DA, #EFF3E8);
+  --icon-color: #{$color-success};
+  --icon-bg: linear-gradient(145deg, #{$color-sage-light}, #{$color-lime-soft});
 }
 </style>

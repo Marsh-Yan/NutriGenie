@@ -41,6 +41,8 @@ export const usePlanStore = defineStore('plan', () => {
     error.value = null
     lastRunError.value = null
     editing.value = false
+    messages.value = []
+    versions.value = []
     retryCount.value = 0
     resultLoading.value = false
     resultFetchAttempts = 0
@@ -180,6 +182,8 @@ export const usePlanStore = defineStore('plan', () => {
     error.value = null
     lastRunError.value = null
     resultLoading.value = false
+    messages.value = []
+    versions.value = []
     resultFetchAttempts = 0
     editing.value = false
     retryCount.value = 0

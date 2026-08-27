@@ -59,17 +59,26 @@ const progressPercent = computed(() => {
       <strong class="progress-value">{{ progressPercent }}%</strong>
     </div>
 
-    <div class="progress-track" role="progressbar" :aria-valuenow="progressPercent" aria-valuemin="0" aria-valuemax="100">
+    <div
+      class="progress-track"
+      role="progressbar"
+      :aria-valuenow="progressPercent"
+      :aria-valuetext="`${progressPercent}%`"
+      aria-valuemin="0"
+      aria-valuemax="100"
+    >
       <div class="progress-fill" :style="{ width: `${progressPercent}%` }">
-        <span />
+        <span aria-hidden="true" />
       </div>
     </div>
 
-    <div class="steps-grid">
+    <div class="steps-grid" role="list">
       <div
         v-for="(label, i) in stepLabels"
         :key="label"
         class="step-item"
+        role="listitem"
+        :aria-current="activeStep === i + 1 && progressPercent < 100 ? 'step' : undefined"
         :class="{
           done: progressPercent === 100 || activeStep > i + 1,
           active: activeStep === i + 1 && progressPercent < 100,
@@ -83,7 +92,7 @@ const progressPercent = computed(() => {
           <strong>{{ label }}</strong>
           <span>{{ descriptionByLabel[label] || '处理中' }}</span>
         </div>
-        <span v-if="activeStep === i + 1 && progressPercent < 100" class="active-wave" />
+        <span v-if="activeStep === i + 1 && progressPercent < 100" class="active-wave" aria-hidden="true" />
       </div>
     </div>
   </div>
@@ -92,6 +101,13 @@ const progressPercent = computed(() => {
 <style scoped lang="scss">
 .progress-stepper {
   width: 100%;
+  padding: clamp(18px, 3vw, 26px);
+  border: 1px solid rgba($color-sage-dark, .11);
+  border-radius: $radius-lg;
+  background:
+    radial-gradient(circle at 100% 0, rgba($color-lime, .18), transparent 15rem),
+    rgba($color-card, .9);
+  box-shadow: $shadow-sm;
 }
 
 .status-header {
@@ -99,7 +115,7 @@ const progressPercent = computed(() => {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .status-copy {
@@ -112,28 +128,34 @@ const progressPercent = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
+  min-height: 30px;
+  padding: 7px 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 750;
 
   &.pending {
     background: rgba($color-warning, 0.12);
+    border-color: rgba($color-warning, .16);
     color: $color-warning;
   }
 
   &.running {
-    background: rgba($color-info, 0.12);
-    color: $color-info;
+    background: rgba($color-sage, .1);
+    border-color: rgba($color-sage, .18);
+    color: $color-sage-dark;
   }
 
   &.completed {
     background: rgba($color-success, 0.12);
+    border-color: rgba($color-success, .16);
     color: $color-success;
   }
 
   &.failed {
     background: rgba($color-danger, 0.12);
+    border-color: rgba($color-danger, .16);
     color: $color-danger;
   }
 }
@@ -142,7 +164,8 @@ const progressPercent = computed(() => {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: $color-info;
+  background: $color-sage;
+  box-shadow: 0 0 0 4px rgba($color-sage, .12);
   animation: blink 1s ease-in-out infinite;
 }
 
@@ -152,22 +175,24 @@ const progressPercent = computed(() => {
 }
 
 .step-hint {
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
   color: $color-text-secondary;
 }
 
 .progress-value {
   color: $color-sage-dark;
-  font-size: 22px;
+  font-size: 24px;
   font-variant-numeric: tabular-nums;
   letter-spacing: -.04em;
 }
 
 .progress-track {
-  height: 8px;
+  height: 10px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba($color-sage, .12);
+  border: 1px solid rgba($color-sage-dark, .06);
+  background: rgba($color-sage, .1);
   box-shadow: inset 0 1px 2px rgba(63, 98, 80, .08);
 }
 
@@ -175,7 +200,7 @@ const progressPercent = computed(() => {
   position: relative;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, $color-sage-dark, $color-sage 65%, #83a792);
+  background: linear-gradient(90deg, $color-sage-dark, $color-sage 70%, $color-lime);
   box-shadow: 0 0 16px rgba($color-sage, .32);
   transition: width .6s cubic-bezier(.2, .8, .2, 1);
 
@@ -195,8 +220,8 @@ const progressPercent = computed(() => {
 .steps-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 18px;
+  gap: 10px;
+  margin-top: 20px;
 
   @media (max-width: $breakpoint-sm) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -207,29 +232,29 @@ const progressPercent = computed(() => {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 58px;
-  padding: 9px;
+  gap: 10px;
+  min-height: 74px;
+  padding: 13px;
   overflow: hidden;
   border: 1px solid rgba($color-border, .82);
-  border-radius: 12px;
-  background: rgba(255,255,255,.56);
+  border-radius: $radius-sm;
+  background: rgba($color-card, .74);
   transition: border-color .3s, background .3s, transform .3s;
 
-  &.done { border-color: rgba($color-sage, .22); background: rgba($color-sage, .07); }
-  &.active { border-color: rgba($color-sage, .52); background: rgba($color-sage-light, .28); transform: translateY(-2px); box-shadow: 0 8px 18px rgba(63,98,80,.08); }
+  &.done { border-color: rgba($color-sage, .2); background: rgba($color-sage, .06); }
+  &.active { border-color: rgba($color-sage, .46); background: linear-gradient(145deg, rgba($color-sage-light, .6), rgba($color-lime-soft, .46)); transform: translateY(-2px); box-shadow: 0 10px 22px rgba($color-sage-dark,.09); }
 }
 
 .step-index {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
   flex: 0 0 auto;
-  border-radius: 9px;
+  border-radius: 10px;
   background: $color-divider;
   color: $color-text-placeholder;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
 
   .done & { background: $color-sage-dark; color: #fff; }
@@ -238,11 +263,11 @@ const progressPercent = computed(() => {
 
 .step-text {
   display: grid;
-  gap: 1px;
+  gap: 3px;
   min-width: 0;
 
-  strong { color: $color-text-secondary; font-size: 11px; white-space: nowrap; }
-  span { color: $color-text-placeholder; font-size: 9px; white-space: nowrap; }
+  strong { color: $color-text-primary; font-size: 13px; font-weight: 720; line-height: 1.4; }
+  span { color: $color-text-secondary; font-size: 12px; font-weight: 550; line-height: 1.45; }
   .done & strong, .active & strong { color: $color-text-primary; }
 }
 
@@ -263,10 +288,17 @@ const progressPercent = computed(() => {
 }
 
 @media (max-width: $breakpoint-sm) {
+  .status-header { align-items: flex-start; }
   .status-copy { align-items: flex-start; flex-direction: column; gap: 6px; }
   .progress-value { font-size: 20px; }
-  .step-item { min-height: 56px; padding: 9px 11px; }
-  .step-text strong { font-size: 12px; }
-  .step-text span { font-size: 10px; }
+  .step-item { min-height: 70px; padding: 12px; }
+  .step-text strong { font-size: 13px; }
+  .step-text span { font-size: 12px; }
+}
+
+@media (max-width: 420px) {
+  .progress-stepper { padding: 16px; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .step-item { min-height: 66px; }
 }
 </style>

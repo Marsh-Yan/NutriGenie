@@ -3,6 +3,7 @@ from app.services.ingredient_catalog import (
     CATALOG_SOURCE,
     CatalogIngredient,
     build_catalog,
+    load_seed_catalog,
     normalize_generated_plan,
     strict_grams,
 )
@@ -74,3 +75,26 @@ def test_unknown_unit_does_not_silently_fall_back_to_one_gram():
 
 def test_category_specific_unit_conversion_is_deterministic():
     assert strict_grams(2, "个", "vegetable") == 300
+
+
+def test_seed_catalog_contains_expanded_ingredient_facts():
+    catalog = load_seed_catalog()
+    names = {item.name for item in catalog.entries}
+
+    assert len(catalog.entries) >= 130
+    assert len({item.ingredient_id for item in catalog.entries}) == len(catalog.entries)
+    assert {"水", "糙米", "藜麦", "鸡翅", "鲫鱼", "鹰嘴豆", "苹果", "杏仁", "菜籽油"} <= names
+
+
+def test_water_and_common_water_alias_are_resolved():
+    catalog = load_seed_catalog()
+
+    exact = normalize_generated_plan(_plan(name="水", unit="ml"), catalog)
+    alias = normalize_generated_plan(_plan(name="清水", unit="ml"), catalog)
+
+    assert exact.unresolved_ingredients == []
+    assert exact.plan.recipes[0].ingredients[0].estimated_grams == 200
+    assert exact.plan.recipes[0].ingredients[0].nutrition_estimate.calories == 0
+    assert alias.unresolved_ingredients == []
+    assert alias.plan.recipes[0].ingredients[0].name == "水"
+    assert alias.plan.recipes[0].ingredients[0].resolution_source == "alias"

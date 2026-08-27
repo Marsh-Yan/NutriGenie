@@ -202,19 +202,24 @@ function createMyPlan() {
 <template>
   <div class="demo-page page-container">
     <section class="demo-hero">
-      <div>
+      <div class="demo-hero-copy">
         <div class="demo-kicker"><PremiumIcon name="plan" :size="15" :box-size="30" />只读方案示例</div>
         <h1>减脂期 · 7 天轻盈饮食计划</h1>
         <p>这是 NutriGenie 根据“减脂、预算 300 元、高蛋白”生成的示例方案，用来快速了解最终结果页。</p>
       </div>
-      <span class="demo-badge">示例数据</span>
+      <aside class="demo-hero-meta" aria-label="方案条件">
+        <span class="demo-badge">示例数据</span>
+        <span>减脂目标</span>
+        <span>预算 ¥300</span>
+        <span>高蛋白</span>
+      </aside>
     </section>
 
-    <section class="overview-card card">
-      <div><strong>{{ overview.calories.toFixed(0) }}</strong><span>日均 kcal</span></div>
-      <div><strong>{{ overview.protein.toFixed(0) }}g</strong><span>日均蛋白质</span></div>
-      <div><strong>¥{{ overview.cost.toFixed(0) }}</strong><span>预计采购</span></div>
-      <div><strong>7 天</strong><span>规划周期</span></div>
+    <section class="overview-card card" aria-label="方案核心指标">
+      <div class="overview-item overview-item--calories"><strong>{{ overview.calories.toFixed(0) }}</strong><span>日均 kcal</span></div>
+      <div class="overview-item overview-item--protein"><strong>{{ overview.protein.toFixed(0) }}g</strong><span>日均蛋白质</span></div>
+      <div class="overview-item overview-item--cost"><strong>¥{{ overview.cost.toFixed(0) }}</strong><span>预计采购</span></div>
+      <div class="overview-item overview-item--days"><strong>7 天</strong><span>规划周期</span></div>
     </section>
 
     <section class="demo-section">
@@ -236,56 +241,94 @@ function createMyPlan() {
     <section class="summary-card card">
       <div class="summary-heading"><PremiumIcon name="clipboard" :size="17" :box-size="32" /><h2>AI 方案总结</h2></div>
       <p>这套方案以高蛋白、适中碳水和可执行预算为核心，优先安排鸡胸肉、虾仁、鸡蛋等易获得食材，并用不同烹饪方式保持三餐的新鲜感。</p>
-      <el-button type="primary" round size="large" @click="createMyPlan">创建我的专属方案</el-button>
+      <el-button class="summary-action" type="primary" round size="large" @click="createMyPlan">创建我的专属方案</el-button>
     </section>
   </div>
 </template>
 
 <style scoped lang="scss">
-.demo-page { max-width: 980px; padding: 36px 20px 80px; }
+.demo-page { max-width: 1120px; padding-top: clamp(28px, 5vw, 56px); padding-bottom: 88px; }
 
 .demo-hero {
+  position: relative;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 20px;
-  padding: 32px;
+  gap: clamp(24px, 5vw, 64px);
+  margin-bottom: 18px;
+  padding: clamp(28px, 5vw, 52px);
+  overflow: hidden;
+  border: 1px solid rgba($color-sage-dark, .12);
   border-radius: $radius-xl;
-  background: linear-gradient(135deg, rgba($color-sage, .18), rgba($color-rose-light, .24));
-  border: 1px solid rgba(255,255,255,.7);
-  box-shadow: $shadow-md;
+  background:
+    radial-gradient(circle at 92% 8%, rgba($color-lime, .4), transparent 15rem),
+    linear-gradient(135deg, rgba($color-sage-light, .8), rgba($color-surface-warm, .82));
+  box-shadow: $shadow-lg;
+
+  &::after {
+    position: absolute;
+    right: -56px;
+    bottom: -86px;
+    width: 220px;
+    height: 220px;
+    border: 1px solid rgba($color-card, .68);
+    border-radius: 50%;
+    content: '';
+  }
 }
 
+.demo-hero-copy { position: relative; z-index: 1; max-width: 680px; }
 .demo-kicker { display: flex; align-items: center; gap: 9px; color: $color-sage-dark; font-size: 13px; font-weight: 700; }
 .demo-kicker .premium-icon { border-radius: 10px; box-shadow: none; }
-.demo-hero h1 { margin-top: 14px; color: $color-text-primary; font-size: clamp(26px, 4vw, 38px); line-height: 1.2; }
-.demo-hero p { max-width: 620px; margin-top: 12px; color: $color-text-secondary; font-size: 14px; line-height: 1.8; }
-.demo-badge { padding: 7px 12px; border-radius: 999px; color: $color-sage-dark; background: rgba(255,255,255,.68); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.demo-hero h1 { max-width: 620px; margin-top: 16px; color: $color-text-primary; font-size: clamp(30px, 4.8vw, 50px); letter-spacing: -.035em; line-height: 1.12; }
+.demo-hero p { max-width: 620px; margin-top: 16px; color: $color-text-secondary; font-size: 15px; line-height: 1.8; }
+.demo-hero-meta { position: relative; z-index: 1; display: flex; flex: 0 0 152px; flex-direction: column; justify-content: center; gap: 9px; padding: 18px; border: 1px solid rgba($color-card,.72); border-radius: $radius-lg; background: rgba($color-card,.58); box-shadow: inset 0 1px 0 rgba(255,255,255,.7); backdrop-filter: blur(8px); }
+.demo-hero-meta > span:not(.demo-badge) { color: $color-text-secondary; font-size: 12px; font-weight: 650; }
+.demo-hero-meta > span:not(.demo-badge)::before { display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: $color-sage; content: ''; }
+.demo-badge { align-self: flex-start; margin-bottom: 4px; padding: 6px 10px; border-radius: 999px; color: $color-text-inverse; background: $color-sage-dark; font-size: 11px; font-weight: 750; white-space: nowrap; }
 
-.overview-card { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 40px; padding: 18px; }
-.overview-card div { display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: $radius-md; background: rgba($color-sage, .06); }
-.overview-card strong { color: $color-text-primary; font-size: 22px; }
+.overview-card { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: -10px 18px 48px; padding: 12px; }
+.overview-item { position: relative; display: flex; flex-direction: column; gap: 3px; overflow: hidden; padding: 15px 16px; border-radius: $radius-md; background: $color-surface-soft; }
+.overview-item::before { position: absolute; top: 0; right: 0; left: 0; height: 3px; background: $color-sage; content: ''; }
+.overview-item--protein { background: rgba($score-utilization,.07); &::before { background: $score-utilization; } }
+.overview-item--cost { background: $color-surface-warm; &::before { background: $color-rose; } }
+.overview-item--days { background: $color-blue-soft; &::before { background: $color-blue; } }
+.overview-card strong { color: $color-text-primary; font-size: 23px; font-variant-numeric: tabular-nums; font-weight: 800; }
 .overview-card span { color: $color-text-secondary; font-size: 12px; }
 
-.demo-section { margin-bottom: 38px; }
-.section-title { display: flex; align-items: center; gap: 9px; margin-bottom: 16px; color: $color-text-primary; font-size: 20px; }
+.demo-section { margin-bottom: 48px; }
+.section-title { display: flex; align-items: center; gap: 9px; margin-bottom: 18px; color: $color-text-primary; font-size: 21px; font-weight: 750; }
 .section-title .premium-icon { border-radius: 10px; box-shadow: none; }
 .section-title small { color: $color-text-secondary; font-size: 12px; font-weight: 400; }
-.recipe-list { display: flex; flex-direction: column; gap: 10px; }
+.recipe-list { display: flex; flex-direction: column; gap: 12px; }
 
-.detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
-.panel-card { padding: 22px; }
-.summary-card { margin-top: 4px; padding: 26px; }
+.detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 20px; }
+.panel-card { padding: clamp(18px, 3vw, 24px); }
+.summary-card { position: relative; overflow: hidden; margin-top: 4px; padding: clamp(24px, 4vw, 34px); border-color: rgba($color-sage,.2); background: linear-gradient(135deg, rgba($color-card,.96), rgba($color-lime-soft,.42)); }
+.summary-card::after { position: absolute; right: -64px; bottom: -84px; width: 190px; height: 190px; border: 24px solid rgba($color-lime,.16); border-radius: 50%; content: ''; pointer-events: none; }
 .summary-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
 .summary-heading .premium-icon { border-radius: 10px; box-shadow: none; }
 .summary-heading h2 { color: $color-text-primary; font-size: 20px; }
-.summary-card p { margin-bottom: 20px; color: $color-text-secondary; font-size: 14px; line-height: 1.8; }
+.summary-card p { position: relative; z-index: 1; max-width: 760px; margin-bottom: 22px; color: $color-text-secondary; font-size: 14px; line-height: 1.8; }
+.summary-action { position: relative; z-index: 1; }
 
 @media (max-width: $breakpoint-sm) {
   .demo-page { padding-top: 24px; }
-  .demo-hero { flex-direction: column; padding: 24px; }
-  .overview-card { grid-template-columns: repeat(2, 1fr); }
+  .demo-hero { flex-direction: column; padding: 26px 22px; }
+  .demo-hero-meta { display: grid; grid-template-columns: repeat(3, auto); flex: none; gap: 8px 12px; padding: 13px; }
+  .demo-badge { grid-column: 1 / -1; }
+  .overview-card { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 12px 0 40px; }
   .detail-grid { grid-template-columns: 1fr; }
+  .section-title { align-items: flex-start; flex-wrap: wrap; }
+  .section-title small { width: 100%; padding-left: 43px; }
+  .summary-action { width: 100%; }
+}
+
+@media (max-width: 400px) {
+  .demo-hero-meta { grid-template-columns: 1fr; }
+  .demo-badge { grid-column: auto; }
+  .overview-card { gap: 8px; padding: 9px; }
+  .overview-item { padding: 13px 12px; }
+  .overview-card strong { font-size: 20px; }
 }
 </style>
