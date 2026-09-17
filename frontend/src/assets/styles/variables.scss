@@ -1,70 +1,130 @@
-/* NutriGenie — light Morandi nutrition design system */
+/* NutriGenie V2.1 — Living Nutrition design tokens */
 
-// Brand palette
-$color-sage: #829789;
-$color-sage-light: #DCE4DD;
-$color-sage-dark: #627367;
+// Primitive palette. Product semantics should reference the tokens below.
+$forest-900: #173f31;
+$forest-800: #245441;
+$leaf-600: #3f7c5b;
+$leaf-500: #55906d;
+$leaf-200: #cfe0d5;
+$leaf-100: #e7efe9;
+$citrus-400: #dceb72;
+$citrus-200: #edf4b6;
+$tomato-500: #e46f51;
+$tomato-100: #f9ded6;
+$porcelain-50: #f4f6f1;
+$white: #ffffff;
+$ink-900: #183129;
+$ink-700: #3d534a;
+$ink-600: #52675e;
+$ink-500: #6a7b74;
+$stone-300: #cbd5ce;
+$stone-200: #dce4de;
+$stone-100: #e9eee9;
+$blue-600: #35667c;
+$blue-100: #deebf0;
+$amber-700: #76530c;
+$amber-100: #f7edc5;
+$plum-600: #745f81;
+$plum-100: #eee7f1;
 
-$color-rose: #B48E8A;
-$color-rose-light: #EADCD9;
-$color-rose-dark: #7B5F5B;
+// Semantic colors.
+$color-background: $porcelain-50;
+$color-surface: $white;
+$color-surface-muted: $leaf-100;
+$color-surface-accent: $citrus-200;
+$color-surface-danger: $tomato-100;
+$color-text-primary: $ink-900;
+$color-text-secondary: $ink-600;
+$color-text-placeholder: $ink-500;
+$color-text-inverse: $white;
+$color-brand: $forest-900;
+$color-brand-hover: $forest-800;
+$color-accent: $citrus-400;
+$color-accent-strong: #c8da4c;
+$color-border: $stone-300;
+$color-divider: $stone-200;
+$color-focus-ring: $forest-900;
+$color-success: #2f6b4b;
+$color-warning: $amber-700;
+$color-danger: #a63e2e;
+$color-info: $blue-600;
 
-$color-lime: #CAD1B7;
-$color-lime-soft: #E9ECDF;
-$color-peach: #D7B7AA;
-$color-butter: #D5CAA7;
-$color-blue: #98A9B8;
-$color-blue-soft: #E3E8EB;
+// Nutrition and data semantics. Never rely on these colors alone.
+$score-health: $leaf-600;
+$score-budget: $amber-700;
+$score-preference: $plum-600;
+$score-season: #8a701e;
+$score-variety: $blue-600;
+$score-utilization: $tomato-500;
 
-// Surfaces
-$color-bg: #F3F0EB;
-$color-card: #FCFBF8;
-$color-surface-soft: #E7EAE4;
-$color-surface-warm: #EEE5DE;
-$color-border: #D8D6CF;
-$color-divider: #E6E2DB;
+// Typography. Font files are intentionally not fetched remotely; the product
+// falls back to licensed system CJK fonts when MiSans/Manrope are unavailable.
+$font-family: 'MiSans', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system,
+  BlinkMacSystemFont, 'Segoe UI', sans-serif;
+$font-display: 'MiSans', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+$font-numeric: 'Manrope', 'DIN Alternate', 'Segoe UI', sans-serif;
+$text-xs: 0.75rem;
+$text-sm: 0.875rem;
+$text-base: 1rem;
+$text-lg: 1.125rem;
+$text-xl: 1.375rem;
+$text-2xl: clamp(1.75rem, 3vw, 2.5rem);
+$text-display: clamp(2.75rem, 6vw, 5.75rem);
 
-// Typography
-$color-text-primary: #3E4741;
-$color-text-secondary: #6F7771;
-$color-text-placeholder: #747C76;
-$color-text-inverse: #FFFFFF;
-
-// Functional colors
-$color-success: #718B79;
-$color-warning: #A28355;
-$color-danger: #A76F6A;
-$color-info: #71879B;
-
-// Nutrition semantics
-$score-health: #829B8A;
-$score-budget: #C39A86;
-$score-preference: #9890AD;
-$score-season: #B6A273;
-$score-variety: #8FA3B5;
-$score-utilization: #B6817B;
-
-// Shape
-$radius-xs: 8px;
-$radius-sm: 12px;
-$radius-md: 18px;
+// Spacing and shape.
+$space-1: 4px;
+$space-2: 8px;
+$space-3: 12px;
+$space-4: 16px;
+$space-5: 24px;
+$space-6: 32px;
+$space-7: 48px;
+$space-8: 64px;
+$radius-xs: 6px;
+$radius-sm: 10px;
+$radius-md: 16px;
 $radius-lg: 24px;
-$radius-xl: 32px;
+$radius-xl: 36px;
+$radius-round: 999px;
 
-// Elevation
-$shadow-xs: 0 1px 2px rgba(79, 88, 82, .05);
-$shadow-sm: 0 8px 24px rgba(79, 88, 82, .07);
-$shadow-md: 0 16px 44px rgba(79, 88, 82, .1);
-$shadow-lg: 0 28px 80px rgba(79, 88, 82, .14);
+// Elevation is deliberately restrained: structure comes from borders and space.
+$shadow-xs: 0 1px 2px rgba($forest-900, .05);
+$shadow-sm: 0 10px 28px rgba($forest-900, .08);
+$shadow-md: 0 20px 50px rgba($forest-900, .12);
+$shadow-lg: 0 32px 80px rgba($forest-900, .16);
 
-// Type
-$font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont,
-  'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-$font-display: 'SF Pro Display', 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+// Motion and layers.
+$motion-fast: 140ms;
+$motion-base: 220ms;
+$motion-slow: 360ms;
+$ease-standard: cubic-bezier(.2, .75, .25, 1);
+$layer-header: 100;
+$layer-mobile-nav: 120;
+$layer-skip-link: 1000;
 
-// Layout
-$content-width: 1320px;
+// Layout.
+$content-width: 1280px;
+$header-height: 72px;
 $breakpoint-sm: 640px;
 $breakpoint-md: 768px;
 $breakpoint-lg: 1024px;
 $breakpoint-xl: 1280px;
+
+// Compatibility aliases for existing feature pages. New shell and homepage code
+// use the semantic tokens above; these aliases keep the migration incremental.
+$color-sage: $leaf-600;
+$color-sage-light: $leaf-200;
+$color-sage-dark: $forest-900;
+$color-rose: $tomato-500;
+$color-rose-light: $tomato-100;
+$color-rose-dark: $color-danger;
+$color-lime: $citrus-400;
+$color-lime-soft: $citrus-200;
+$color-peach: #efb99f;
+$color-butter: #e5d49e;
+$color-blue: $blue-600;
+$color-blue-soft: $blue-100;
+$color-bg: $color-background;
+$color-card: $color-surface;
+$color-surface-soft: $color-surface-muted;
+$color-surface-warm: #f5e9e2;

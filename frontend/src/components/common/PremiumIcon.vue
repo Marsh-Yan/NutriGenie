@@ -174,7 +174,6 @@ const svgAttrs = computed(() => {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 8px 22px rgba($color-sage-dark, .08);
   isolation: isolate;
   vertical-align: middle;
-  transition: transform .2s ease, box-shadow .2s ease;
 
   &::after {
     position: absolute;
@@ -185,11 +184,6 @@ const svgAttrs = computed(() => {
     pointer-events: none;
     content: '';
   }
-}
-
-.premium-icon:hover {
-  transform: translateY(-1px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 10px 26px rgba($color-sage-dark, .11);
 }
 
 .premium-icon svg {

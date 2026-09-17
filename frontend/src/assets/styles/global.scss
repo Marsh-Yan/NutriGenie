@@ -1,6 +1,6 @@
 @use 'variables' as *;
 
-/* Reset and document foundation */
+/* Document foundation */
 *,
 *::before,
 *::after {
@@ -9,9 +9,53 @@
   padding: 0;
 }
 
+:root {
+  color-scheme: light;
+  --color-background: #{$color-background};
+  --color-surface: #{$color-surface};
+  --color-surface-muted: #{$color-surface-muted};
+  --color-text-primary: #{$color-text-primary};
+  --color-text-secondary: #{$color-text-secondary};
+  --color-brand: #{$color-brand};
+  --color-accent: #{$color-accent};
+  --color-danger: #{$color-danger};
+  --color-border: #{$color-border};
+  --header-height: #{$header-height};
+
+  --el-color-primary: #{$color-brand};
+  --el-color-primary-light-3: #{$leaf-600};
+  --el-color-primary-light-5: #{$leaf-500};
+  --el-color-primary-light-7: #{$leaf-200};
+  --el-color-primary-light-8: #{$leaf-100};
+  --el-color-primary-light-9: #{$porcelain-50};
+  --el-color-primary-dark-2: #{$forest-800};
+  --el-color-success: #{$color-success};
+  --el-color-warning: #{$color-warning};
+  --el-color-danger: #{$color-danger};
+  --el-color-info: #{$color-info};
+  --el-bg-color: #{$color-surface};
+  --el-fill-color-blank: #{$color-surface};
+  --el-fill-color-light: #{$color-surface-muted};
+  --el-border-color: #{$color-border};
+  --el-border-color-light: #{$color-divider};
+  --el-text-color-primary: #{$color-text-primary};
+  --el-text-color-regular: #{$color-text-secondary};
+  --el-text-color-placeholder: #{$color-text-placeholder};
+  --el-font-size-large: 16px;
+  --el-font-size-medium: 15px;
+  --el-font-size-base: 14px;
+  --el-font-size-small: 13px;
+  --el-font-size-extra-small: 12px;
+  --el-border-radius-base: #{$radius-sm};
+  --el-border-radius-round: #{$radius-round};
+  --el-font-family: #{$font-family};
+  --el-box-shadow-light: #{$shadow-sm};
+}
+
 html {
   min-width: 320px;
   scroll-behavior: smooth;
+  scroll-padding-top: calc(#{$header-height} + 20px);
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -20,19 +64,21 @@ html {
 body {
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   color: $color-text-primary;
   background:
-    radial-gradient(circle at 4% 2%, rgba($color-sage-light, .72), transparent 25rem),
-    radial-gradient(circle at 96% 18%, rgba($color-rose-light, .56), transparent 26rem),
-    $color-bg;
+    linear-gradient(rgba($forest-900, .025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba($forest-900, .025) 1px, transparent 1px),
+    $color-background;
+  background-size: 32px 32px;
   font-family: $font-family;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 body::selection {
-  background: rgba($color-rose-light, .86);
-  color: $color-sage-dark;
+  background: $color-accent;
+  color: $color-brand;
 }
 
 button,
@@ -41,7 +87,7 @@ input,
 textarea,
 select {
   &:focus-visible {
-    outline: 3px solid rgba($color-sage, .42);
+    outline: 3px solid $color-focus-ring;
     outline-offset: 3px;
   }
 }
@@ -53,12 +99,17 @@ select {
   font: inherit;
 }
 
-a {
-  color: $color-sage-dark;
-  text-decoration: none;
-  transition: color .2s ease;
+button,
+[role='button'] {
+  touch-action: manipulation;
+}
 
-  &:hover { color: $color-sage; }
+a {
+  color: $color-brand;
+  text-decoration: none;
+  transition: color $motion-fast $ease-standard;
+
+  &:hover { color: $color-brand-hover; }
 }
 
 img {
@@ -73,21 +124,27 @@ h3,
 h4 {
   color: $color-text-primary;
   font-family: $font-display;
+  line-height: 1.16;
   text-wrap: balance;
 }
 
 p { text-wrap: pretty; }
 
+::selection {
+  background: $color-accent;
+  color: $color-brand;
+}
+
 /* Scrollbars */
-::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
-  border-radius: 999px;
-  background: rgba($color-sage-dark, .22);
+  border-radius: $radius-round;
+  background: rgba($color-brand, .26);
   background-clip: padding-box;
 }
-::-webkit-scrollbar-thumb:hover { background-color: rgba($color-sage-dark, .38); }
+::-webkit-scrollbar-thumb:hover { background-color: rgba($color-brand, .44); }
 
 /* Shared layout and surfaces */
 .page-container {
@@ -97,94 +154,76 @@ p { text-wrap: pretty; }
 }
 
 .card {
-  border: 1px solid rgba($color-sage-dark, .11);
+  border: 1px solid $color-border;
   border-radius: $radius-lg;
-  background: rgba($color-card, .94);
-  box-shadow: $shadow-sm;
-  transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+  background: $color-surface;
+  box-shadow: $shadow-xs;
+  transition:
+    border-color $motion-base $ease-standard,
+    box-shadow $motion-base $ease-standard,
+    transform $motion-base $ease-standard;
 }
 
 .gradient-text {
-  color: $color-sage;
-  background: linear-gradient(110deg, $color-sage-dark 4%, $color-sage 48%, $color-rose 105%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: $color-brand;
+  -webkit-text-fill-color: currentColor;
 }
 
 .eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: $color-sage-dark;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .1em;
-  text-transform: uppercase;
+  gap: 9px;
+  color: $color-brand;
+  font-size: $text-sm;
+  font-weight: 750;
 }
 
 .eyebrow::before {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: $color-sage;
-  box-shadow: 0 0 0 5px rgba($color-sage, .1);
+  width: 18px;
+  height: 3px;
+  border-radius: $radius-round;
+  background: $color-accent-strong;
   content: '';
 }
 
-/* Element Plus theme bridge */
-:root {
-  --el-color-primary: #{$color-sage};
-  --el-color-primary-light-3: #A7B7AB;
-  --el-color-primary-light-5: #BCC9BF;
-  --el-color-primary-light-7: #D5DED7;
-  --el-color-primary-light-8: #E2E8E3;
-  --el-color-primary-light-9: #F1F4F1;
-  --el-color-primary-dark-2: #{$color-sage-dark};
-  --el-color-success: #{$color-success};
-  --el-color-warning: #{$color-warning};
-  --el-color-danger: #{$color-danger};
-  --el-color-info: #{$color-info};
-  --el-bg-color: #{$color-card};
-  --el-fill-color-blank: #{$color-card};
-  --el-fill-color-light: #F0F1ED;
-  --el-border-color: #{$color-border};
-  --el-border-color-light: #{$color-divider};
-  --el-text-color-primary: #{$color-text-primary};
-  --el-text-color-regular: #{$color-text-secondary};
-  --el-text-color-placeholder: #{$color-text-placeholder};
-  --el-font-size-large: 16px;
-  --el-font-size-medium: 15px;
-  --el-font-size-base: 14px;
-  --el-font-size-small: 13px;
-  --el-font-size-extra-small: 12px;
-  --el-border-radius-base: #{$radius-sm};
-  --el-border-radius-round: 999px;
-  --el-font-family: #{$font-family};
-  --el-box-shadow-light: #{$shadow-sm};
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
+/* Element Plus theme bridge */
 .el-button {
-  min-height: 42px;
+  min-height: 44px;
   padding-inline: 18px;
-  border-radius: 999px;
-  font-weight: 700;
-  transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease;
+  border-radius: $radius-round;
+  font-weight: 720;
+  transition:
+    transform $motion-fast $ease-standard,
+    box-shadow $motion-fast $ease-standard,
+    background-color $motion-fast $ease-standard,
+    border-color $motion-fast $ease-standard;
 }
 
 .el-button:hover:not(.is-disabled) { transform: translateY(-1px); }
+.el-button:active:not(.is-disabled) { transform: translateY(0); }
 
 .el-button--primary {
-  border-color: $color-sage-dark;
-  background: $color-sage-dark;
-  box-shadow: 0 8px 18px rgba($color-sage-dark, .16);
+  border-color: $color-brand;
+  background: $color-brand;
+  box-shadow: 0 8px 20px rgba($color-brand, .16);
 }
 
 .el-button--primary:hover:not(.is-disabled),
 .el-button--primary:focus-visible {
-  border-color: $color-sage;
-  background: $color-sage;
-  box-shadow: 0 12px 24px rgba($color-sage-dark, .22);
+  border-color: $color-brand-hover;
+  background: $color-brand-hover;
+  box-shadow: 0 11px 24px rgba($color-brand, .22);
 }
 
 .el-button--large { min-height: 50px; padding-inline: 24px; }
@@ -193,8 +232,9 @@ p { text-wrap: pretty; }
 .el-select__wrapper,
 .el-textarea__inner {
   border-radius: $radius-sm;
+  background: $color-surface;
   box-shadow: 0 0 0 1px $color-border inset !important;
-  transition: box-shadow .2s ease, background-color .2s ease;
+  transition: box-shadow $motion-fast $ease-standard, background-color $motion-fast $ease-standard;
 }
 
 .el-input__wrapper,
@@ -203,20 +243,27 @@ p { text-wrap: pretty; }
 .el-input__wrapper:hover,
 .el-select__wrapper:hover,
 .el-textarea__inner:hover {
-  box-shadow: 0 0 0 1px rgba($color-sage, .55) inset !important;
+  box-shadow: 0 0 0 1px $leaf-600 inset !important;
 }
 
 .el-input__wrapper.is-focus,
 .el-select__wrapper.is-focused,
 .el-textarea__inner:focus {
-  box-shadow: 0 0 0 2px rgba($color-sage, .38) inset !important;
+  box-shadow: 0 0 0 2px $color-brand inset !important;
 }
 
-.el-tag { min-height: 26px; padding-inline: 9px; border-radius: 999px; font-size: 12px; font-weight: 700; }
-.el-radio-button__inner { min-height: 40px; display: inline-flex; align-items: center; }
+.el-tag {
+  min-height: 28px;
+  padding-inline: 10px;
+  border-radius: $radius-round;
+  font-size: 12px;
+  font-weight: 700;
+}
 
-@media (max-width: 820px) {
-  body { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+.el-radio-button__inner {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
 }
 
 @media (max-width: $breakpoint-sm) {
@@ -224,12 +271,14 @@ p { text-wrap: pretty; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
   *,
   *::before,
   *::after {
-    scroll-behavior: auto !important;
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
     transition-duration: .01ms !important;
   }
 }

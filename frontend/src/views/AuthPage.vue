@@ -42,7 +42,7 @@ async function submit() {
     else await auth.register(email.value.trim(), nickname.value.trim(), password.value, code.value.trim())
     const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
       ? route.query.redirect
-      : '/plan/new'
+      : '/dashboard'
     await router.replace(redirect)
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : '操作失败，请稍后重试'
