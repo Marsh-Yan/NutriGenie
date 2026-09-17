@@ -217,9 +217,10 @@ const decisionSteps: { icon: PremiumIconName; title: string; description: string
   gap: clamp(40px, 6vw, 86px);
   padding: clamp(42px, 6vw, 82px);
   overflow: hidden;
+  border: 1px solid $leaf-200;
   border-radius: $radius-xl;
-  background: $color-brand;
-  box-shadow: $shadow-lg;
+  background: linear-gradient(135deg, $leaf-100 0%, $color-surface-accent 100%);
+  box-shadow: $shadow-md;
 }
 
 .hero-shell::before,
@@ -229,29 +230,29 @@ const decisionSteps: { icon: PremiumIconName; title: string; description: string
   content: '';
   pointer-events: none;
 }
-.hero-shell::before { top: -210px; left: 35%; width: 420px; height: 420px; border: 1px solid rgba($color-accent, .2); }
-.hero-shell::after { right: -100px; bottom: -170px; width: 380px; height: 380px; background: rgba($leaf-600, .28); }
+.hero-shell::before { top: -210px; left: 35%; width: 420px; height: 420px; border: 1px solid rgba($color-brand, .12); }
+.hero-shell::after { right: -100px; bottom: -170px; width: 380px; height: 380px; background: rgba($leaf-200, .72); }
 
 .hero-copy { position: relative; z-index: 2; max-width: 590px; }
-.hero-label { display: inline-flex; align-items: center; gap: 10px; color: $color-accent; font-size: $text-sm; font-weight: 760; }
+.hero-label { display: inline-flex; align-items: center; gap: 10px; color: $color-brand; font-size: $text-sm; font-weight: 760; }
 .hero-label i { width: 24px; height: 3px; border-radius: $radius-round; background: currentColor; }
-.hero h1 { max-width: 10ch; margin-top: $space-5; color: $color-text-inverse; font-size: $text-display; letter-spacing: -.065em; line-height: 1.02; }
-.hero-copy > p { max-width: 55ch; margin-top: $space-5; color: rgba($color-text-inverse, .76); font-size: clamp(16px, 1.4vw, 18px); line-height: 1.78; }
+.hero h1 { max-width: 10ch; margin-top: $space-5; color: $color-text-primary; font-size: $text-display; letter-spacing: -.065em; line-height: 1.02; }
+.hero-copy > p { max-width: 55ch; margin-top: $space-5; color: $color-text-secondary; font-size: clamp(16px, 1.4vw, 18px); line-height: 1.78; }
 .hero-actions { display: flex; align-items: center; gap: $space-3; margin-top: $space-6; }
-.hero-primary-action { border-color: $color-accent !important; background: $color-accent !important; box-shadow: 0 12px 26px rgba(0, 0, 0, .18) !important; color: $color-brand !important; }
-.hero-primary-action:hover { border-color: $color-accent-strong !important; background: $color-accent-strong !important; }
+.hero-primary-action { border-color: $color-brand !important; background: $color-brand !important; box-shadow: 0 12px 26px rgba($color-brand, .2) !important; color: $color-text-inverse !important; }
+.hero-primary-action:hover { border-color: $color-brand-hover !important; background: $color-brand-hover !important; }
 .hero-secondary-action {
   min-height: 50px;
   padding: 10px 16px;
-  border: 1px solid rgba($color-text-inverse, .34);
+  border: 1px solid rgba($color-brand, .32);
   border-radius: $radius-round;
   background: transparent;
-  color: $color-text-inverse;
+  color: $color-brand;
   cursor: pointer;
   font-weight: 720;
 }
-.hero-secondary-action:hover { border-color: $color-accent; color: $color-accent; }
-.trust-list { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: $space-6; list-style: none; color: rgba($color-text-inverse, .72); font-size: 12px; }
+.hero-secondary-action:hover { border-color: $color-brand; background: rgba($color-surface, .52); color: $color-brand-hover; }
+.trust-list { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: $space-6; list-style: none; color: $color-text-secondary; font-size: 12px; }
 .trust-list li { display: inline-flex; align-items: center; gap: 6px; }
 .trust-list :deep(.premium-icon) { --icon-color: #{$color-brand}; --icon-bg: #{$color-accent}; border: 0; box-shadow: none; }
 
@@ -260,10 +261,10 @@ const decisionSteps: { icon: PremiumIconName; title: string; description: string
   z-index: 2;
   min-width: 0;
   padding: clamp(18px, 2.4vw, 28px);
-  border: 1px solid rgba($color-text-inverse, .42);
+  border: 1px solid rgba($color-brand, .14);
   border-radius: 28px 28px 10px 28px;
   background: $color-surface;
-  box-shadow: 0 34px 70px rgba(0, 0, 0, .26);
+  box-shadow: 0 28px 64px rgba($color-brand, .16);
   transform: rotate(.6deg);
 }
 .plan-preview__header { display: flex; align-items: center; justify-content: space-between; gap: $space-4; }
