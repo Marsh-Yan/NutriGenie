@@ -287,7 +287,7 @@ async function handleAccountCommand(command: string) {
   min-height: 44px;
   align-items: center;
   padding: 9px 18px;
-  border: 1px solid rgba($color-brand, .16);
+  border: 1px solid $leaf-600;
   border-radius: $radius-round;
   background: $color-accent;
   box-shadow: 0 7px 18px rgba($color-brand, .12);
