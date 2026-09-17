@@ -273,7 +273,7 @@ watch(displayImage, () => {
 .recipe-visual.variant-3 .recipe-fallback {
   background:
     radial-gradient(circle at 72% 24%, rgba($color-blue, .34), transparent 24%),
-    linear-gradient(145deg, $color-blue-soft, #EEF6F4);
+    linear-gradient(145deg, $color-blue-soft, $color-surface-soft);
 }
 
 .fallback-orbit {

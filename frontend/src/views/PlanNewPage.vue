@@ -278,7 +278,7 @@ async function submit() {
   background:
     radial-gradient(circle at 100% 0, rgba($color-blue-soft, .88), transparent 18rem),
     radial-gradient(circle at 0 100%, rgba($color-rose-light, .7), transparent 20rem),
-    linear-gradient(155deg, #DCE4DD 0%, #ECE5DF 100%);
+    linear-gradient(155deg, $color-surface-muted 0%, $color-surface-warm 100%);
   box-shadow: $shadow-lg;
   color: $color-text-secondary;
 }

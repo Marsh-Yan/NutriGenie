@@ -159,7 +159,7 @@ const svgAttrs = computed(() => {
 <style scoped lang="scss">
 .premium-icon {
   --icon-color: #{$color-sage-dark};
-  --icon-bg: linear-gradient(145deg, #{$color-surface-soft}, #{$color-card});
+  --icon-bg: #{$color-surface-soft};
   position: relative;
   display: inline-grid;
   place-items: center;
@@ -169,27 +169,13 @@ const svgAttrs = computed(() => {
   overflow: hidden;
   color: var(--icon-color);
   border: 1px solid rgba($color-sage-dark, .1);
-  border-radius: min(18px, 35%);
+  border-radius: $radius-sm;
   background: var(--icon-bg);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 8px 22px rgba($color-sage-dark, .08);
+  box-shadow: none;
   isolation: isolate;
   vertical-align: middle;
-  transition: transform .2s ease, box-shadow .2s ease;
 
-  &::after {
-    position: absolute;
-    inset: 1px;
-    z-index: -1;
-    border-radius: inherit;
-    background: linear-gradient(145deg, rgba(255, 255, 255, .34), transparent 52%);
-    pointer-events: none;
-    content: '';
-  }
-}
-
-.premium-icon:hover {
-  transform: translateY(-1px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 10px 26px rgba($color-sage-dark, .11);
+  &::after { display: none; }
 }
 
 .premium-icon svg {
@@ -201,45 +187,45 @@ const svgAttrs = computed(() => {
 .premium-icon--target,
 .premium-icon--flame {
   --icon-color: #{$color-rose-dark};
-  --icon-bg: linear-gradient(145deg, #{$color-rose-light}, #{$color-surface-warm});
+  --icon-bg: #{$color-rose-light};
 }
 
 .premium-icon--nutrition,
 .premium-icon--salad,
 .premium-icon--leaf {
   --icon-color: #{$color-sage-dark};
-  --icon-bg: linear-gradient(145deg, #{$color-sage-light}, #{$color-lime-soft});
+  --icon-bg: #{$color-sage-light};
 }
 
 .premium-icon--shopping,
 .premium-icon--trophy {
   --icon-color: #{$color-warning};
-  --icon-bg: linear-gradient(145deg, #FBE9A9, #{$color-surface-warm});
+  --icon-bg: #{$amber-100};
 }
 
 .premium-icon--timeline,
 .premium-icon--clipboard {
   --icon-color: #{$score-preference};
-  --icon-bg: linear-gradient(145deg, #E8E6FF, #{$color-blue-soft});
+  --icon-bg: #{$plum-100};
 }
 
 .premium-icon--home,
 .premium-icon--plan,
 .premium-icon--thinking {
   --icon-color: #{$color-info};
-  --icon-bg: linear-gradient(145deg, #{$color-blue-soft}, #EEF6F4);
+  --icon-bg: #{$color-blue-soft};
 }
 
 .premium-icon--profile,
 .premium-icon--strength {
-  --icon-color: #6E587E;
-  --icon-bg: linear-gradient(145deg, #EFE4F3, #{$color-rose-light});
+  --icon-color: #{$score-preference};
+  --icon-bg: #{$plum-100};
 }
 
 .premium-icon--blood,
 .premium-icon--alert {
   --icon-color: #{$color-danger};
-  --icon-bg: linear-gradient(145deg, #{$color-rose-light}, #{$color-surface-warm});
+  --icon-bg: #{$color-rose-light};
 }
 
 .premium-icon--check {

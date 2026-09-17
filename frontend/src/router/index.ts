@@ -4,6 +4,12 @@ import { pinia } from '@/stores/pinia'
 
 const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    if (to.hash) return { el: to.hash, top: 92, behavior: 'smooth' }
+    if (to.path === from.path) return false
+    return { top: 0, behavior: 'auto' }
+  },
   routes: [
     {
       path: '/',
@@ -16,6 +22,12 @@ const router = createRouter({
       name: 'demo-plan',
       component: () => import('@/views/DemoPlanPage.vue'),
       meta: { title: '方案示例' },
+    },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('@/views/DashboardPage.vue'),
+      meta: { requiresAuth: true, title: '今日计划' },
     },
     {
       path: '/profile',
@@ -72,7 +84,7 @@ router.beforeEach(async (to) => {
     return { name: 'auth', query: { redirect: to.fullPath } }
   }
   if (to.meta.requiresAdmin && !auth.isAdmin) return { name: 'home' }
-  if (to.name === 'auth' && auth.isLoggedIn) return { name: 'home' }
+  if (to.name === 'auth' && auth.isLoggedIn) return { name: 'dashboard' }
 })
 
 router.afterEach((to) => {

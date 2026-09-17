@@ -363,8 +363,8 @@ async function restoreVersion(versionId: number) {
   overflow: hidden;
   padding: 34px;
   border-color: rgba($color-sage, .18);
-  background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(248,250,247,.92));
-  box-shadow: 0 20px 54px rgba(63, 74, 67, .09);
+  background: linear-gradient(145deg, rgba($color-card,.96), rgba($color-background,.92));
+  box-shadow: 0 20px 54px rgba($color-brand, .09);
 }
 
 .loading-glow {
@@ -423,7 +423,7 @@ async function restoreVersion(versionId: number) {
   position: relative;
   z-index: 1;
   border-radius: 24px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 14px 32px rgba(63,98,80,.14);
+  box-shadow: inset 0 1px 0 rgba($color-card,.8), 0 14px 32px rgba($color-brand,.14);
   animation: breathe 2.8s ease-in-out infinite;
 }
 
@@ -503,8 +503,8 @@ async function restoreVersion(versionId: number) {
   background:
     radial-gradient(circle at 88% -30%, rgba($color-blue-soft,.9), transparent 20rem),
     radial-gradient(circle at 0 120%, rgba($color-rose-light,.65), transparent 18rem),
-    linear-gradient(135deg, #DCE4DD, #ECE3DE);
-  box-shadow: 0 24px 64px rgba(79,88,82,.13);
+    linear-gradient(135deg, $color-surface-muted, $color-surface-warm);
+  box-shadow: 0 24px 64px rgba($color-brand,.13);
 }
 .overview-card::after { position: absolute; right: -84px; bottom: -120px; width: 300px; height: 300px; border: 1px solid rgba($color-sage,.14); border-radius: 50%; content: ''; pointer-events: none; }
 .overview-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }

@@ -193,7 +193,7 @@ const progressPercent = computed(() => {
   border-radius: 999px;
   border: 1px solid rgba($color-sage-dark, .06);
   background: rgba($color-sage, .1);
-  box-shadow: inset 0 1px 2px rgba(63, 98, 80, .08);
+  box-shadow: inset 0 1px 2px rgba($color-brand, .08);
 }
 
 .progress-fill {
