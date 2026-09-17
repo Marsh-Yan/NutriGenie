@@ -1,20 +1,27 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { ShoppingList as ShoppingListType } from '@/types'
 import { ArrowDown } from '@element-plus/icons-vue'
 import PremiumIcon from '@/components/common/PremiumIcon.vue'
 
 const props = defineProps<{
   shoppingList: ShoppingListType
+  checkedKeys?: string[]
+}>()
+
+const emit = defineEmits<{
+  toggle: [key: string]
+  reset: []
 }>()
 
 const expandedCats = ref<Set<string>>(new Set(Object.keys(props.shoppingList.by_category || {})))
-const checkedItems = ref<Set<string>>(new Set())
 const copyFeedback = ref('复制清单')
+const checkedItems = computed(() => new Set(props.checkedKeys || []))
+const totalItems = computed(() => Object.values(props.shoppingList.by_category || {}).reduce((total, items) => total + items.length, 0))
+const checkedCount = computed(() => Math.min(checkedItems.value.size, totalItems.value))
 
 watch(() => props.shoppingList, (shoppingList) => {
   expandedCats.value = new Set(Object.keys(shoppingList.by_category || {}))
-  checkedItems.value = new Set()
   copyFeedback.value = '复制清单'
 })
 
@@ -27,9 +34,11 @@ function toggleCat(cat: string) {
 }
 
 function toggleItem(key: string) {
-  const next = new Set(checkedItems.value)
-  next.has(key) ? next.delete(key) : next.add(key)
-  checkedItems.value = next
+  emit('toggle', key)
+}
+
+function printList() {
+  window.print()
 }
 
 async function copyList() {
@@ -52,9 +61,12 @@ async function copyList() {
     <div class="section-heading">
       <h3 class="section-title"><PremiumIcon name="shopping" class="section-icon" :size="16" :box-size="32" />采购清单</h3>
       <div class="title-actions">
+        <span class="shopping-progress">已备 {{ checkedCount }}/{{ totalItems }}</span>
+        <button v-if="checkedCount" type="button" class="copy-button" @click="emit('reset')">全部重置</button>
         <button type="button" class="copy-button" @click="copyList">
           <span aria-live="polite">{{ copyFeedback }}</span>
         </button>
+        <button type="button" class="copy-button" @click="printList">打印</button>
         <span class="total-cost"><small>预计</small> ¥{{ shoppingList.total_cost.toFixed(1) }}</span>
       </div>
     </div>
@@ -134,6 +146,7 @@ async function copyList() {
   small { color: $color-text-secondary; font-size: 12px; font-weight: 650; }
 }
 .title-actions { display: inline-flex; align-items: center; gap: 10px; }
+.shopping-progress { color: $color-text-secondary; font-size: 13px; font-weight: 700; }
 .copy-button {
   min-height: 32px;
   padding: 5px 11px;
@@ -298,5 +311,10 @@ async function copyList() {
   .item-name { grid-column: 1 / -1; }
   .item-quantity { padding-left: 25px; }
   .item-cost { min-width: auto; }
+}
+
+@media print {
+  .copy-button { display: none; }
+  .shopping-list { color: #111; }
 }
 </style>

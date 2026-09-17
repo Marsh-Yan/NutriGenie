@@ -14,7 +14,7 @@ type NavigationItem = {
 
 const items: NavigationItem[] = [
   { to: '/dashboard', label: '今日', icon: 'home', routeNames: ['dashboard'] },
-  { to: '/plans', label: '计划', icon: 'clipboard', routeNames: ['plan-history', 'plan-result'] },
+  { to: '/plans', label: '计划', icon: 'clipboard', routeNames: ['plan-history', 'plan-workspace', 'recipe-detail'] },
   { to: '/plan/new', label: '创建', icon: 'plan', routeNames: ['plan-new'] },
   { to: '/profile', label: '我的', icon: 'profile', routeNames: ['profile'] },
 ]

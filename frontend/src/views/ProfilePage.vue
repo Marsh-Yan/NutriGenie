@@ -119,6 +119,11 @@ async function submitForm() {
       </div>
     </header>
 
+    <aside class="local-data-note" aria-label="数据保存说明">
+      <strong>数据保存说明</strong>
+      <span>健康画像保存在你的账户中；计划入口、执行状态、购物勾选、已有食材和偏好备注仅保存在本设备。</span>
+    </aside>
+
     <p v-if="store.loading && !submitting" class="status-message" aria-live="polite"><i /> 正在加载已有画像…</p>
     <p v-if="initialError" class="submit-error" role="alert">{{ initialError }}</p>
 
@@ -354,6 +359,21 @@ async function submitForm() {
   padding-top: clamp(38px, 5vw, 68px);
   padding-bottom: clamp(60px, 7vw, 96px);
 }
+
+.local-data-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 13px 16px;
+  border: 1px solid rgba($color-sage, .16);
+  border-radius: $radius-sm;
+  background: rgba($color-lime-soft, .52);
+  color: $color-text-secondary;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.local-data-note strong { flex: 0 0 auto; color: $color-sage-dark; }
 
 .profile-heading {
   display: flex;

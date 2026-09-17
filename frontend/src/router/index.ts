@@ -44,9 +44,15 @@ const router = createRouter({
     },
     {
       path: '/plan/:id',
-      name: 'plan-result',
+      name: 'plan-workspace',
       component: () => import('@/views/PlanResultPage.vue'),
-      meta: { requiresAuth: true, title: '方案结果' },
+      meta: { requiresAuth: true, title: '计划工作台' },
+    },
+    {
+      path: '/recipes/:id',
+      name: 'recipe-detail',
+      component: () => import('@/views/RecipeDetailPage.vue'),
+      meta: { requiresAuth: true, title: '菜谱详情' },
     },
     {
       path: '/plans',

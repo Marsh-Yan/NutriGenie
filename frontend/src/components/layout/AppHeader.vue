@@ -6,12 +6,24 @@ import PremiumIcon from '@/components/common/PremiumIcon.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePlanStore } from '@/stores/plan'
 import { useProfileStore } from '@/stores/profile'
+import { useDashboardStore } from '@/stores/dashboard'
+import { useExecutionStore } from '@/stores/execution'
+import { usePantryStore } from '@/stores/pantry'
+import { usePlanIndexStore } from '@/stores/planIndex'
+import { usePreferenceStore } from '@/stores/preference'
+import { useShoppingStateStore } from '@/stores/shoppingState'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const profileStore = useProfileStore()
 const planStore = usePlanStore()
+const dashboardStore = useDashboardStore()
+const executionStore = useExecutionStore()
+const pantryStore = usePantryStore()
+const planIndexStore = usePlanIndexStore()
+const preferenceStore = usePreferenceStore()
+const shoppingStateStore = useShoppingStateStore()
 
 type NavigationItem = {
   to: string
@@ -21,7 +33,7 @@ type NavigationItem = {
 
 const userNavigation: NavigationItem[] = [
   { to: '/dashboard', label: '今日', routeNames: ['dashboard'] },
-  { to: '/plans', label: '计划', routeNames: ['plan-history', 'plan-result'] },
+  { to: '/plans', label: '计划', routeNames: ['plan-history', 'plan-workspace', 'recipe-detail'] },
   { to: '/plan/new', label: '创建', routeNames: ['plan-new'] },
   { to: '/profile', label: '我的', routeNames: ['profile'] },
 ]
@@ -52,6 +64,12 @@ function goBack() {
 async function logout() {
   profileStore.reset()
   planStore.reset()
+  dashboardStore.resetMemory()
+  executionStore.resetMemory()
+  pantryStore.resetMemory()
+  planIndexStore.resetMemory()
+  preferenceStore.resetMemory()
+  shoppingStateStore.resetMemory()
   auth.logout()
   await router.push('/')
 }

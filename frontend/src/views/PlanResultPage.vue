@@ -9,10 +9,22 @@ import ShoppingList from '@/components/plan/ShoppingList.vue'
 import { Refresh } from '@element-plus/icons-vue'
 import PremiumIcon from '@/components/common/PremiumIcon.vue'
 import ProgressStepper from '@/components/plan/ProgressStepper.vue'
+import TodayMeals from '@/components/plan/TodayMeals.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useDashboardStore } from '@/stores/dashboard'
+import { useExecutionStore } from '@/stores/execution'
+import { usePlanIndexStore } from '@/stores/planIndex'
+import { useShoppingStateStore } from '@/stores/shoppingState'
+import type { MealExecutionStatus } from '@/types/localState'
 
 const route = useRoute()
 const router = useRouter()
 const store = usePlanStore()
+const auth = useAuthStore()
+const dashboardStore = useDashboardStore()
+const executionStore = useExecutionStore()
+const planIndexStore = usePlanIndexStore()
+const shoppingStateStore = useShoppingStateStore()
 const messageInput = ref('')
 const ingredientInput = ref('')
 const sendingMessage = ref(false)
@@ -69,11 +81,32 @@ const visibleValidationWarningGroups = computed(() => (
     : validationWarningGroups.value.slice(0, 4)
 ))
 const hiddenValidationGroupCount = computed(() => Math.max(0, validationWarningGroups.value.length - 4))
+const workspaceTabs = [
+  { value: 'today', label: '今日执行' },
+  { value: 'week', label: '整周计划' },
+  { value: 'shopping', label: '采购清单' },
+  { value: 'analysis', label: '分析与调整' },
+] as const
+type WorkspaceTab = typeof workspaceTabs[number]['value']
+const activeTab = computed<WorkspaceTab>(() => {
+  const tab = String(route.query.tab || 'today')
+  return workspaceTabs.some(item => item.value === tab) ? tab as WorkspaceTab : 'today'
+})
+const todayPlan = computed(() => {
+  const days = store.result?.weekly_plan || []
+  return days.find(day => Object.entries(day.meals).some(([slot, meal]) => meal && executionStore.statusFor(day.day, slot) === 'pending')) || days[0]
+})
 
-watch(() => route.params.id, (value) => {
+watch([() => route.params.id, () => auth.user?.user_id], ([value, currentUserId]) => {
   showAllValidationWarnings.value = false
   const planId = Number(value)
-  if (Number.isInteger(planId) && planId > 0) {
+  if (Number.isInteger(planId) && planId > 0 && currentUserId) {
+    planIndexStore.hydrate(currentUserId)
+    dashboardStore.hydrate(currentUserId)
+    executionStore.hydrate(currentUserId, planId)
+    shoppingStateStore.hydrate(currentUserId, planId)
+    dashboardStore.selectPlan(planId)
+    planIndexStore.touch(planId)
     store.load(planId)
   }
   else {
@@ -83,10 +116,31 @@ watch(() => route.params.id, (value) => {
   }
 }, { immediate: true })
 
+watch(() => store.status, (status) => {
+  const planId = Number(route.params.id)
+  if (!Number.isInteger(planId) || planId <= 0) return
+  planIndexStore.update(planId, {
+    status,
+    completedAt: status === 'completed' ? new Date().toISOString() : null,
+  })
+})
+
 onUnmounted(() => store.stopPolling())
 
 function printPlan() {
   window.print()
+}
+
+function setTab(tab: WorkspaceTab) {
+  router.replace({ query: { ...route.query, tab } })
+}
+
+function setMealStatus(day: number, slot: string, status: MealExecutionStatus) {
+  executionStore.setStatus(day, slot, status)
+}
+
+function openRecipe(recipeId: string) {
+  router.push({ name: 'recipe-detail', params: { id: recipeId }, query: { plan: route.params.id } })
 }
 
 async function submitMessage(action?: Record<string, any>) {
@@ -202,7 +256,31 @@ async function restoreVersion(versionId: number) {
           <el-button type="primary" round @click="router.push('/plan/new')">重新规划</el-button>
         </div>
       </section>
-      <section class="recommendation-status card">
+      <p class="local-data-notice">本地进度仅保存在本设备，并按当前账号隔离。</p>
+      <nav class="workspace-tabs" role="tablist" aria-label="计划工作台">
+        <button
+          v-for="tab in workspaceTabs"
+          :key="tab.value"
+          type="button"
+          role="tab"
+          :aria-selected="activeTab === tab.value"
+          :class="{ active: activeTab === tab.value }"
+          @click="setTab(tab.value)"
+        >
+          {{ tab.label }}
+        </button>
+      </nav>
+
+      <section v-if="activeTab === 'today' && todayPlan" class="dashboard-panel today-panel card">
+        <TodayMeals
+          :day="todayPlan"
+          :status-for="executionStore.statusFor"
+          @status="setMealStatus"
+          @recipe="openRecipe"
+        />
+      </section>
+
+      <section v-if="activeTab === 'analysis'" class="recommendation-status card">
         <details>
           <summary>查看 AI 生成依据</summary>
           <p>菜谱由大模型生成，程序对硬性限制、营养汇总和预算进行校验。</p>
@@ -214,13 +292,13 @@ async function restoreVersion(versionId: number) {
           </el-tag>
         </details>
       </section>
-      <div class="plan-dashboard">
+      <div v-if="activeTab === 'week' || activeTab === 'analysis'" class="plan-dashboard" :class="{ single: activeTab === 'week' }">
         <!-- 周计划：桌面端主视图 -->
-        <section v-if="store.result.weekly_plan.length > 0" class="dashboard-panel schedule-panel card">
+        <section v-if="activeTab === 'week' && store.result.weekly_plan.length > 0" class="dashboard-panel schedule-panel card">
           <WeeklyTimeline :weekly-plan="store.result.weekly_plan" />
         </section>
 
-        <aside class="insights-column" aria-label="营养与计划校验">
+        <aside v-if="activeTab === 'analysis'" class="insights-column" aria-label="营养与计划校验">
           <section class="dashboard-panel nutrition-panel card">
             <NutritionReport
               :report="store.result.nutrition_report"
@@ -263,7 +341,7 @@ async function restoreVersion(versionId: number) {
       </div>
 
       <!-- AI 生成菜谱 -->
-      <section class="result-block recipe-section">
+      <section v-if="activeTab === 'analysis'" class="result-block recipe-section">
         <div class="block-heading">
           <div><span class="eyebrow">AI 精选</span><h2 class="block-title"><PremiumIcon name="trophy" class="heading-icon" :size="18" :box-size="34" />生成菜谱</h2></div>
           <p class="block-subtitle">根据你的画像、预算与忌口即时生成，点击菜谱查看依据与做法。</p>
@@ -278,12 +356,17 @@ async function restoreVersion(versionId: number) {
         </div>
       </section>
 
-      <div class="result-lower-grid" :class="{ single: !store.result.summary }">
-        <section class="dashboard-panel shopping-panel card">
-          <ShoppingList :shopping-list="store.result.shopping_list" />
+      <div v-if="activeTab === 'shopping' || (activeTab === 'analysis' && store.result.summary)" class="result-lower-grid" :class="{ single: activeTab === 'shopping' || !store.result.summary }">
+        <section v-if="activeTab === 'shopping'" class="dashboard-panel shopping-panel card">
+          <ShoppingList
+            :shopping-list="store.result.shopping_list"
+            :checked-keys="shoppingStateStore.checkedKeys"
+            @toggle="shoppingStateStore.toggle"
+            @reset="shoppingStateStore.reset"
+          />
         </section>
 
-        <section v-if="store.result.summary" class="summary-card card">
+        <section v-if="activeTab === 'analysis' && store.result.summary" class="summary-card card">
           <div class="summary-kicker">NUTRIGENIE NOTE</div>
           <h2 class="summary-title">
             <PremiumIcon name="clipboard" class="heading-icon" :size="17" :box-size="32" />
@@ -298,7 +381,7 @@ async function restoreVersion(versionId: number) {
         <span>本次修改没有生成新版本，当前仍显示上一个成功版本：{{ currentError }}</span>
       </section>
 
-      <section class="conversation-card card">
+      <section v-if="activeTab === 'analysis'" class="conversation-card card">
         <div class="conversation-heading">
           <div>
             <span class="eyebrow">继续调整</span>
@@ -494,6 +577,50 @@ async function restoreVersion(versionId: number) {
   padding-top: 8px;
 }
 
+.local-data-notice {
+  margin: 14px 0;
+  color: $color-text-secondary;
+  font-size: 13px;
+  text-align: right;
+}
+
+.workspace-tabs {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 20px;
+  padding: 6px;
+  overflow-x: auto;
+  border: 1px solid rgba($color-sage-dark, .11);
+  border-radius: $radius-md;
+  background: rgba($color-surface-soft, .8);
+}
+
+.workspace-tabs button {
+  min-width: 112px;
+  min-height: 44px;
+  flex: 1;
+  padding: 9px 15px;
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.workspace-tabs button:hover { color: $color-sage-dark; }
+.workspace-tabs button.active {
+  border-color: rgba($color-sage, .2);
+  background: $color-card;
+  box-shadow: $shadow-xs;
+  color: $color-sage-dark;
+}
+
+.today-panel { margin-bottom: 20px; padding: clamp(20px, 3vw, 30px); }
+
 .overview-card {
   position: relative;
   margin-bottom: 16px;
@@ -550,6 +677,7 @@ async function restoreVersion(versionId: number) {
 .recommendation-status summary { color: $color-text-primary; cursor: pointer; font-weight: 600; }
 .recommendation-status p { margin: 10px 0; color: $color-text-secondary; font-size: 13px; }
 .plan-dashboard { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(330px, .85fr); gap: 20px; align-items: start; }
+.plan-dashboard.single { grid-template-columns: 1fr; }
 .dashboard-panel { padding: 26px; }
 .schedule-panel,
 .nutrition-panel,
