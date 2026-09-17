@@ -24,11 +24,11 @@ function startWithGoal(prompt: string) {
   startUsing()
 }
 
-const goals: { icon: PremiumIconName; label: string; prompt: string }[] = [
-  { icon: 'flame', label: '轻松减脂', prompt: '我想制定一周减脂饮食计划，兼顾饱腹感与日常预算' },
-  { icon: 'strength', label: '科学增肌', prompt: '我想制定高蛋白增肌饮食计划，菜谱要简单易执行' },
-  { icon: 'blood', label: '平稳控糖', prompt: '我想制定一周控糖饮食计划，减少精制碳水并保证营养均衡' },
-  { icon: 'leaf', label: '均衡饮食', prompt: '我想制定一周均衡饮食计划，食材丰富、做法家常' },
+const goals: { signal: 'energy' | 'protein' | 'glucose' | 'balance'; label: string; meta: string; prompt: string }[] = [
+  { signal: 'energy', label: '轻松减脂', meta: '能量管理', prompt: '我想制定一周减脂饮食计划，兼顾饱腹感与日常预算' },
+  { signal: 'protein', label: '科学增肌', meta: '蛋白质优先', prompt: '我想制定高蛋白增肌饮食计划，菜谱要简单易执行' },
+  { signal: 'glucose', label: '平稳控糖', meta: '餐后波动', prompt: '我想制定一周控糖饮食计划，减少精制碳水并保证营养均衡' },
+  { signal: 'balance', label: '均衡饮食', meta: '饮食结构', prompt: '我想制定一周均衡饮食计划，食材丰富、做法家常' },
 ]
 
 const weekDays = [
@@ -142,8 +142,32 @@ const decisionSteps: { icon: PremiumIconName; title: string; description: string
       </div>
       <div class="goal-options">
         <button v-for="goal in goals" :key="goal.label" type="button" @click="startWithGoal(goal.prompt)">
-          <PremiumIcon :name="goal.icon" :size="20" :box-size="40" />
-          <span>{{ goal.label }}</span>
+          <span class="goal-option__copy">
+            <small>{{ goal.meta }}</small>
+            <strong>{{ goal.label }}</strong>
+          </span>
+          <span class="goal-signal" :class="`goal-signal--${goal.signal}`" aria-hidden="true">
+            <svg viewBox="0 0 64 36" fill="none">
+              <template v-if="goal.signal === 'energy'">
+                <path d="M7 7v22M18 11v18M29 15v14M40 19v10M51 23v6" />
+                <path d="m6 8 11 4 11 4 11 4 13 4" />
+              </template>
+              <template v-else-if="goal.signal === 'protein'">
+                <path d="M7 26V18M18 26V14M29 26V10M40 26V6M51 26V3" />
+                <path d="M5 29h50" />
+              </template>
+              <template v-else-if="goal.signal === 'glucose'">
+                <path d="M4 20c6-1 7-8 13-8s7 11 13 11 7-8 13-8 7 5 17 3" />
+                <path d="M4 27h56" opacity=".32" />
+              </template>
+              <template v-else>
+                <circle cx="18" cy="18" r="8" />
+                <circle cx="32" cy="12" r="8" />
+                <circle cx="46" cy="18" r="8" />
+                <path d="M24 27h16" />
+              </template>
+            </svg>
+          </span>
         </button>
       </div>
     </section>
@@ -196,12 +220,7 @@ const decisionSteps: { icon: PremiumIconName; title: string; description: string
   min-height: 650px;
   align-items: center;
   gap: clamp(40px, 6vw, 86px);
-  padding: clamp(42px, 6vw, 82px);
-  border: 1px solid $color-border;
-  border-top: 4px solid $color-accent;
-  border-radius: $radius-xl;
-  background: $color-surface;
-  box-shadow: $shadow-xs;
+  padding: clamp(42px, 6vw, 76px) 0 clamp(48px, 7vw, 88px);
 }
 
 .hero-copy { position: relative; z-index: 2; max-width: 590px; }
@@ -222,9 +241,9 @@ const decisionSteps: { icon: PremiumIconName; title: string; description: string
   font-weight: 720;
 }
 .hero-secondary-action:hover { border-color: $color-brand; background: rgba($color-surface, .52); color: $color-brand-hover; }
-.trust-list { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: $space-6; list-style: none; color: $color-text-secondary; font-size: 12px; }
+.trust-list { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: $space-6; list-style: none; color: $color-text-secondary; font-size: 13px; }
 .trust-list li { display: inline-flex; align-items: center; gap: 6px; }
-.trust-list :deep(.premium-icon) { --icon-color: #{$color-brand}; --icon-bg: #{$color-accent}; border: 0; box-shadow: none; }
+.trust-list :deep(.premium-icon) { --icon-color: #{$color-brand}; --icon-bg: #{$blue-100}; border: 0; box-shadow: none; }
 
 .plan-preview {
   position: relative;
@@ -238,43 +257,53 @@ const decisionSteps: { icon: PremiumIconName; title: string; description: string
 }
 .plan-preview__header { display: flex; align-items: center; justify-content: space-between; gap: $space-4; }
 .plan-preview__header > div { display: grid; }
-.plan-preview__header span { color: $color-text-secondary; font-size: 12px; }
+.plan-preview__header span { color: $color-text-secondary; font-size: 13px; }
 .plan-preview__header strong { font-size: $text-xl; letter-spacing: -.025em; }
 .week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: $space-5; list-style: none; }
 .week-strip li { display: grid; min-width: 0; justify-items: center; gap: 2px; padding: 10px 4px; border: 1px solid $color-divider; border-radius: $radius-sm; color: $color-text-secondary; }
 .week-strip li.is-active { border-color: $color-brand; background: $color-brand; color: $color-text-inverse; }
-.week-strip span { font-size: 11px; }
-.week-strip strong { font-family: $font-numeric; font-size: 12px; font-variant-numeric: tabular-nums; }
-.week-strip small { font-size: 8px; opacity: .74; }
+.week-strip span { font-size: 12px; }
+.week-strip strong { font-family: $font-numeric; font-size: 13px; font-variant-numeric: tabular-nums; }
+.week-strip small { font-size: 9px; opacity: .78; }
 .selected-day { margin-top: $space-4; padding: $space-4; border: 1px solid $color-divider; border-radius: $radius-md; background: $color-background; }
 .selected-day__heading { display: flex; align-items: flex-end; justify-content: space-between; gap: $space-3; padding-bottom: $space-3; border-bottom: 1px solid $color-divider; }
 .selected-day__heading > div { display: grid; }
 .selected-day__heading span,
-.selected-day__heading small { color: $color-text-secondary; font-size: 11px; }
+.selected-day__heading small { color: $color-text-secondary; font-size: 12px; }
 .selected-day__heading strong { font-size: 17px; }
 .meal-list { list-style: none; }
 .meal-list li { display: grid; grid-template-columns: 8px 42px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 52px; border-bottom: 1px solid $color-divider; }
 .meal-list li:last-child { border-bottom: 0; }
 .meal-list > li > i { width: 8px; height: 26px; border-radius: $radius-round; }
-.meal-list .tone-citrus { background: $color-accent-strong; }
+.meal-list .tone-citrus { background: $apricot-500; }
 .meal-list .tone-leaf { background: $leaf-600; }
 .meal-list .tone-tomato { background: $tomato-500; }
-.meal-list span { color: $color-text-secondary; font-size: 11px; }
-.meal-list strong { min-width: 0; overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
-.meal-list small { color: $color-text-secondary; font-family: $font-numeric; font-size: 10px; font-variant-numeric: tabular-nums; }
+.meal-list span { color: $color-text-secondary; font-size: 12px; }
+.meal-list strong { min-width: 0; overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.meal-list small { color: $color-text-secondary; font-family: $font-numeric; font-size: 11px; font-variant-numeric: tabular-nums; }
 .plan-preview__footer { display: grid; grid-template-columns: repeat(3, 1fr); gap: $space-3; margin-top: $space-4; }
-.plan-preview__footer > div { display: grid; padding-left: $space-3; border-left: 3px solid $color-accent-strong; }
+.plan-preview__footer > div { display: grid; padding-left: $space-3; border-left: 3px solid $color-info; }
 .plan-preview__footer span,
-.plan-preview__footer small { color: $color-text-secondary; font-size: 10px; }
+.plan-preview__footer small { color: $color-text-secondary; font-size: 11px; }
 .plan-preview__footer strong { color: $color-brand; font-family: $font-numeric; font-size: 17px; font-variant-numeric: tabular-nums; }
 
 .goal-entry { display: grid; grid-template-columns: 260px 1fr; align-items: center; gap: $space-7; padding-top: $space-7; }
 .goal-entry__heading h2 { font-size: $text-xl; letter-spacing: -.025em; }
 .goal-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-block: 1px solid $color-border; }
-.goal-options button { display: flex; min-width: 0; min-height: 68px; align-items: center; gap: 9px; padding: 10px 14px; border: 0; border-right: 1px solid $color-border; background: transparent; color: $color-text-primary; cursor: pointer; font-weight: 720; text-align: left; transition: background $motion-fast $ease-standard; }
+.goal-options button { display: grid; min-width: 0; min-height: 86px; grid-template-columns: minmax(0, 1fr) 64px; align-items: center; gap: 12px; padding: 14px 16px; border: 0; border-right: 1px solid $color-border; background: transparent; color: $color-text-primary; cursor: pointer; text-align: left; transition: background $motion-fast $ease-standard; }
 .goal-options button:last-child { border-right: 0; }
 .goal-options button:hover { background: $color-surface; }
-.goal-options button :deep(.premium-icon) { border: 0; box-shadow: none; }
+.goal-option__copy { display: grid; gap: 4px; }
+.goal-option__copy small { color: $color-text-secondary; font-size: 12px; font-weight: 600; }
+.goal-option__copy strong { font-size: 16px; font-weight: 780; letter-spacing: -.02em; }
+.goal-signal { display: grid; width: 64px; height: 40px; place-items: center; color: $color-info; }
+.goal-signal svg { width: 64px; height: 36px; overflow: visible; }
+.goal-signal path,
+.goal-signal circle { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.goal-signal--energy { color: $apricot-500; }
+.goal-signal--protein { color: $leaf-600; }
+.goal-signal--glucose { color: $color-info; }
+.goal-signal--balance { color: $color-success; }
 
 .decision-section { display: grid; grid-template-columns: minmax(280px, .72fr) minmax(0, 1.28fr); gap: clamp(48px, 8vw, 120px); padding-top: clamp(100px, 13vw, 170px); }
 .decision-intro { align-self: start; position: sticky; top: 110px; }
@@ -300,7 +329,7 @@ const decisionSteps: { icon: PremiumIconName; title: string; description: string
 .execution-map__route > i { height: 2px; background: $color-brand; }
 
 @media (max-width: 1100px) {
-  .hero-shell { grid-template-columns: minmax(0, .82fr) minmax(460px, 1.18fr); padding: 52px 44px; }
+  .hero-shell { grid-template-columns: minmax(0, .82fr) minmax(460px, 1.18fr); }
   .goal-entry { grid-template-columns: 1fr; gap: $space-4; }
   .execution-map { grid-template-columns: 1fr; }
 }
@@ -318,7 +347,7 @@ const decisionSteps: { icon: PremiumIconName; title: string; description: string
 
 @media (max-width: $breakpoint-sm) {
   .hero { padding-top: 12px; }
-  .hero-shell { min-height: auto; gap: $space-6; padding: 38px 20px 24px; border-radius: $radius-lg; }
+  .hero-shell { min-height: auto; gap: $space-6; padding: 32px 0 24px; }
   .hero h1 { font-size: clamp(42px, 13vw, 58px); }
   .hero-copy > p { font-size: 16px; }
   .hero-actions { align-items: stretch; flex-direction: column; }
@@ -328,7 +357,8 @@ const decisionSteps: { icon: PremiumIconName; title: string; description: string
   .plan-preview { padding: 16px 12px; border-radius: $radius-md; }
   .week-strip { gap: 3px; }
   .week-strip li { padding: 8px 2px; }
-  .week-strip strong { font-size: 10px; }
+  .week-strip span { font-size: 11px; }
+  .week-strip strong { font-size: 11px; }
   .selected-day { padding: 12px; }
   .meal-list li { grid-template-columns: 7px 34px minmax(0, 1fr); }
   .meal-list small { display: none; }
@@ -337,10 +367,13 @@ const decisionSteps: { icon: PremiumIconName; title: string; description: string
   .plan-preview__footer strong { font-size: 14px; }
   .goal-entry { padding-top: $space-6; }
   .goal-options { grid-template-columns: 1fr 1fr; }
-  .goal-options button { min-height: 58px; padding: 8px; font-size: 12px; }
+  .goal-options button { min-height: 82px; grid-template-columns: minmax(0, 1fr) 44px; gap: 6px; padding: 10px 8px; }
   .goal-options button:nth-child(2) { border-right: 0; }
   .goal-options button:nth-child(-n + 2) { border-bottom: 1px solid $color-border; }
-  .goal-options button :deep(.premium-icon) { --icon-box-size: 34px; --icon-size: 17px; }
+  .goal-option__copy small { font-size: 11px; }
+  .goal-option__copy strong { font-size: 14px; }
+  .goal-signal,
+  .goal-signal svg { width: 44px; }
   .decision-section { padding-top: 88px; }
   .decision-intro h2 { font-size: 38px; }
   .decision-path li { grid-template-columns: 36px minmax(0, 1fr); gap: 12px; }

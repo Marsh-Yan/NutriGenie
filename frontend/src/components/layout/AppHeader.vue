@@ -197,15 +197,15 @@ async function handleAccountCommand(command: string) {
 
 .brand:hover { color: $color-text-primary; }
 .brand__icon {
-  --icon-color: #{$color-brand};
-  --icon-bg: #{$color-accent};
-  border-color: rgba($color-brand, .12);
+  --icon-color: #{$color-text-inverse};
+  --icon-bg: #{$color-brand};
+  border-color: $color-brand;
   border-radius: $radius-sm;
   box-shadow: none;
 }
 .brand__copy { display: grid; line-height: 1.05; }
 .brand__copy strong { font-size: 19px; font-weight: 850; letter-spacing: -.035em; }
-.brand__copy small { margin-top: 4px; color: $color-text-secondary; font-size: 11px; font-weight: 650; }
+.brand__copy small { margin-top: 4px; color: $color-text-secondary; font-size: 12px; font-weight: 650; }
 
 .desktop-navigation {
   display: flex;
@@ -255,7 +255,7 @@ async function handleAccountCommand(command: string) {
   background: transparent;
   color: $color-text-secondary;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 680;
 }
 .login-link { padding: 9px 12px; }
@@ -286,17 +286,17 @@ async function handleAccountCommand(command: string) {
   min-height: 44px;
   align-items: center;
   padding: 9px 18px;
-  border: 1px solid $color-accent-strong;
+  border: 1px solid $color-brand;
   border-radius: $radius-sm;
-  background: $color-accent;
+  background: $color-brand;
   box-shadow: none;
-  color: $color-brand;
-  font-size: 13px;
+  color: $color-text-inverse;
+  font-size: 14px;
   font-weight: 800;
   transition: background $motion-fast $ease-standard, border-color $motion-fast $ease-standard;
 }
 .header-cta:hover,
-.mobile-start:hover { border-color: $color-brand; background: $color-accent-strong; color: $color-brand; }
+.mobile-start:hover { border-color: $color-brand-hover; background: $color-brand-hover; color: $color-text-inverse; }
 
 .mobile-account,
 .admin-subnavigation { display: none; }
