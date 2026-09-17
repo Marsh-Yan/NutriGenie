@@ -175,8 +175,7 @@ async function handleAccountCommand(command: string) {
   top: 0;
   z-index: $layer-header;
   border-bottom: 1px solid rgba($color-brand, .13);
-  background: rgba($color-background, .96);
-  backdrop-filter: blur(16px) saturate(120%);
+  background: rgba($color-background, .98);
 }
 
 .header-inner {
@@ -201,7 +200,7 @@ async function handleAccountCommand(command: string) {
   --icon-color: #{$color-brand};
   --icon-bg: #{$color-accent};
   border-color: rgba($color-brand, .12);
-  border-radius: 50%;
+  border-radius: $radius-sm;
   box-shadow: none;
 }
 .brand__copy { display: grid; line-height: 1.05; }
@@ -222,7 +221,7 @@ async function handleAccountCommand(command: string) {
   min-height: 44px;
   align-items: center;
   padding: 9px 15px;
-  border-radius: $radius-round;
+  border-radius: $radius-sm;
   color: $color-text-secondary;
   font-size: 14px;
   font-weight: 680;
@@ -287,17 +286,17 @@ async function handleAccountCommand(command: string) {
   min-height: 44px;
   align-items: center;
   padding: 9px 18px;
-  border: 1px solid $leaf-600;
-  border-radius: $radius-round;
+  border: 1px solid $color-accent-strong;
+  border-radius: $radius-sm;
   background: $color-accent;
-  box-shadow: 0 7px 18px rgba($color-brand, .12);
+  box-shadow: none;
   color: $color-brand;
   font-size: 13px;
   font-weight: 800;
-  transition: background $motion-fast $ease-standard, transform $motion-fast $ease-standard;
+  transition: background $motion-fast $ease-standard, border-color $motion-fast $ease-standard;
 }
 .header-cta:hover,
-.mobile-start:hover { background: $color-accent-strong; color: $color-brand; transform: translateY(-1px); }
+.mobile-start:hover { border-color: $color-brand; background: $color-accent-strong; color: $color-brand; }
 
 .mobile-account,
 .admin-subnavigation { display: none; }

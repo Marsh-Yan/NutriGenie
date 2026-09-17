@@ -20,6 +20,9 @@
   --color-accent: #{$color-accent};
   --color-danger: #{$color-danger};
   --color-border: #{$color-border};
+  --color-nutrition-protein: #{$score-utilization};
+  --color-nutrition-fat: #{$score-preference};
+  --color-nutrition-carbs: #{$score-season};
   --header-height: #{$header-height};
 
   --el-color-primary: #{$color-brand};
@@ -67,11 +70,7 @@ body {
   min-height: 100dvh;
   overflow-x: hidden;
   color: $color-text-primary;
-  background:
-    linear-gradient(rgba($forest-900, .025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba($forest-900, .025) 1px, transparent 1px),
-    $color-background;
-  background-size: 32px 32px;
+  background: $color-background;
   font-family: $font-family;
   line-height: 1.65;
 }
@@ -158,10 +157,7 @@ p { text-wrap: pretty; }
   border-radius: $radius-lg;
   background: $color-surface;
   box-shadow: $shadow-xs;
-  transition:
-    border-color $motion-base $ease-standard,
-    box-shadow $motion-base $ease-standard,
-    transform $motion-base $ease-standard;
+  transition: border-color $motion-base $ease-standard, box-shadow $motion-base $ease-standard;
 }
 
 .gradient-text {
@@ -172,19 +168,12 @@ p { text-wrap: pretty; }
 .eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
   color: $color-brand;
   font-size: $text-sm;
-  font-weight: 750;
+  font-weight: 700;
 }
 
-.eyebrow::before {
-  width: 18px;
-  height: 3px;
-  border-radius: $radius-round;
-  background: $color-accent-strong;
-  content: '';
-}
+.eyebrow::before { display: none; }
 
 .sr-only {
   position: absolute !important;
@@ -201,17 +190,15 @@ p { text-wrap: pretty; }
 .el-button {
   min-height: 44px;
   padding-inline: 18px;
-  border-radius: $radius-round;
+  border-radius: $radius-sm;
   font-weight: 720;
   transition:
-    transform $motion-fast $ease-standard,
     box-shadow $motion-fast $ease-standard,
     background-color $motion-fast $ease-standard,
     border-color $motion-fast $ease-standard;
 }
 
-.el-button:hover:not(.is-disabled) { transform: translateY(-1px); }
-.el-button:active:not(.is-disabled) { transform: translateY(0); }
+.el-button.is-round { border-radius: $radius-sm; }
 
 .el-button--primary {
   border-color: $color-brand;

@@ -179,7 +179,7 @@ function switchMode() {
   background:
     radial-gradient(circle at 88% 12%, rgba($color-blue-soft, .9), transparent 18rem),
     radial-gradient(circle at 4% 92%, rgba($color-rose-light, .82), transparent 20rem),
-    linear-gradient(135deg, #D8E1DA 0%, #E3E6DE 55%, #ECE0DB 100%);
+    linear-gradient(135deg, $color-surface-muted 0%, $color-background 55%, $color-surface-warm 100%);
 }
 
 .auth-story::before {

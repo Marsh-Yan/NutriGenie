@@ -23,9 +23,9 @@ const reportValue = (value: number) => Number.isFinite(value) ? value : 0
 const asPercent = (value: number) => Math.min(100, Math.max(0, reportValue(value * 100)))
 
 const macroItems = [
-  { key: 'protein', label: '蛋白质', color: '#F06B5B', pct: 'protein_pct' },
-  { key: 'fat', label: '脂肪', color: '#7F7AEF', pct: 'fat_pct' },
-  { key: 'carbs', label: '碳水', color: '#E8B344', pct: 'carbs_pct' },
+  { key: 'protein', label: '蛋白质', color: 'var(--color-nutrition-protein)', pct: 'protein_pct' },
+  { key: 'fat', label: '脂肪', color: 'var(--color-nutrition-fat)', pct: 'fat_pct' },
+  { key: 'carbs', label: '碳水', color: 'var(--color-nutrition-carbs)', pct: 'carbs_pct' },
 ] as const
 </script>
 

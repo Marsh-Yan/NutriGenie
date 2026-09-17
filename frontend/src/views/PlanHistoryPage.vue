@@ -132,7 +132,7 @@ function formatDate(value: string) {
   background:
     radial-gradient(circle at 88% 12%, rgba($color-blue-soft, .9), transparent 18rem),
     radial-gradient(circle at 5% 100%, rgba($color-rose-light, .68), transparent 20rem),
-    linear-gradient(135deg, #DCE4DD 0%, #EDE4DE 100%);
+    linear-gradient(135deg, $color-surface-muted 0%, $color-surface-warm 100%);
   box-shadow: $shadow-lg;
   color: $color-text-primary;
 }
@@ -208,7 +208,7 @@ function formatDate(value: string) {
 .create-plan-btn.el-button {
   border-color: $color-sage-dark;
   background: $color-sage-dark;
-  box-shadow: 0 12px 28px rgba(79, 88, 82, .16);
+  box-shadow: 0 12px 28px rgba($color-brand, .14);
   color: $color-text-inverse;
 }
 
@@ -468,7 +468,7 @@ function formatDate(value: string) {
 .skeleton-meta i {
   display: block;
   border-radius: 999px;
-  background: linear-gradient(90deg, $color-surface-soft 20%, #F8FAF7 48%, $color-surface-soft 78%);
+  background: linear-gradient(90deg, $color-surface-soft 20%, $color-background 48%, $color-surface-soft 78%);
   background-size: 220% 100%;
   animation: skeleton-wave 1.5s ease-in-out infinite;
 }
