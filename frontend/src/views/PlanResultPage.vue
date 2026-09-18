@@ -10,6 +10,7 @@ import { Refresh } from '@element-plus/icons-vue'
 import PremiumIcon from '@/components/common/PremiumIcon.vue'
 import ProgressStepper from '@/components/plan/ProgressStepper.vue'
 import TodayMeals from '@/components/plan/TodayMeals.vue'
+import PlanEvidence from '@/components/plan/PlanEvidence.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useExecutionStore } from '@/stores/execution'
@@ -66,7 +67,6 @@ const overview = computed(() => {
 })
 
 const currentError = computed(() => store.lastRunError || store.error)
-const isV2Result = computed(() => store.result?.schema_version === 'ai_native_v2')
 const validationWarningGroups = computed(() => {
   const groups = new Map<string, number>()
   for (const warning of store.result?.validation?.warnings || []) {
@@ -280,18 +280,11 @@ async function restoreVersion(versionId: number) {
         />
       </section>
 
-      <section v-if="activeTab === 'analysis'" class="recommendation-status card">
-        <details>
-          <summary>查看 AI 生成依据</summary>
-          <p>菜谱由大模型生成，程序对硬性限制、营养汇总和预算进行校验。</p>
-          <el-tag :type="store.result.generation_meta.rag_used ? 'success' : 'info'" effect="light">
-            {{ store.result.generation_meta.rag_used ? '已参考知识库' : '纯 AI 生成' }}
-          </el-tag>
-          <el-tag :type="isV2Result ? 'success' : 'warning'" effect="light">
-            {{ isV2Result ? '营养与预算由食材目录核算' : '历史版本使用 AI 估算数据' }}
-          </el-tag>
-        </details>
-      </section>
+      <PlanEvidence
+        v-if="activeTab === 'analysis'"
+        :meta="store.result.generation_meta"
+        :validation="store.result.validation"
+      />
       <div v-if="activeTab === 'week' || activeTab === 'analysis'" class="plan-dashboard" :class="{ single: activeTab === 'week' }">
         <!-- 周计划：桌面端主视图 -->
         <section v-if="activeTab === 'week' && store.result.weekly_plan.length > 0" class="dashboard-panel schedule-panel card">
@@ -673,9 +666,6 @@ async function restoreVersion(versionId: number) {
   gap: 10px;
 }
 
-.recommendation-status { padding: 14px 18px; margin-bottom: 20px; border-radius: $radius-md; box-shadow: none; }
-.recommendation-status summary { color: $color-text-primary; cursor: pointer; font-weight: 600; }
-.recommendation-status p { margin: 10px 0; color: $color-text-secondary; font-size: 13px; }
 .plan-dashboard { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(330px, .85fr); gap: 20px; align-items: start; }
 .plan-dashboard.single { grid-template-columns: 1fr; }
 .dashboard-panel { padding: 26px; }
