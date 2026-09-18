@@ -1,14 +1,25 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, useId } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'
 import { useProfileStore } from '@/stores/profile'
+import { useAuthStore } from '@/stores/auth'
+import { useDashboardStore } from '@/stores/dashboard'
+import { usePantryStore } from '@/stores/pantry'
+import { usePlanIndexStore } from '@/stores/planIndex'
+import { usePreferenceStore } from '@/stores/preference'
 import { MagicStick, Right } from '@element-plus/icons-vue'
 
 const router = useRouter()
+const route = useRoute()
 const planStore = usePlanStore()
 const profileStore = useProfileStore()
+const authStore = useAuthStore()
+const dashboardStore = useDashboardStore()
+const pantryStore = usePantryStore()
+const planIndexStore = usePlanIndexStore()
+const preferenceStore = usePreferenceStore()
 
 const {
   draftInput: userInput,
@@ -21,6 +32,7 @@ const submitError = ref('')
 const profileLoadError = ref('')
 const inputId = useId()
 const budgetId = useId()
+const pantryInput = ref('')
 
 const examples = [
   { text: '减脂一周，预算300元，家里有鸡蛋和番茄', days: 7, budget: 300 },
@@ -30,8 +42,26 @@ const examples = [
 ]
 
 const profileExists = computed(() => profileStore.hasProfile)
+const profileSummary = computed(() => {
+  const profile = profileStore.profile
+  if (!profile) return []
+  const goalLabels: Record<string, string> = { fat_loss: '减脂', muscle_gain: '增肌', blood_sugar: '控糖', healthy: '保持健康' }
+  const dietLabels: Record<string, string> = { balanced: '均衡饮食', keto: '生酮饮食', high_protein: '高蛋白', gluten_free: '无麸质', vegan: '素食', healthy: '健康饮食' }
+  return [
+    { label: '目标', value: goalLabels[profile.health_goal] || profile.health_goal },
+    { label: '饮食方式', value: dietLabels[profile.diet_type] || profile.diet_type },
+    { label: '每日预算', value: profile.daily_budget ? `¥${profile.daily_budget}` : '未限制' },
+    { label: '过敏与忌口', value: profile.allergies?.length ? profile.allergies.join('、') : '未填写' },
+  ]
+})
 
 onMounted(async () => {
+  if (authStore.user?.user_id) {
+    pantryStore.hydrate(authStore.user.user_id)
+    preferenceStore.hydrate(authStore.user.user_id)
+    planIndexStore.hydrate(authStore.user.user_id)
+    dashboardStore.hydrate(authStore.user.user_id)
+  }
   if (!profileStore.profile) {
     try {
       await profileStore.fetchMyProfile()
@@ -40,6 +70,10 @@ onMounted(async () => {
     }
   }
 })
+
+function addPantryItem() {
+  if (pantryStore.add(pantryInput.value)) pantryInput.value = ''
+}
 
 function selectExample(i: number) {
   activeExample.value = i
@@ -72,14 +106,34 @@ async function submit() {
 
   submitting.value = true
   try {
+    const originalInput = userInput.value.trim()
+    const requestParts = [originalInput]
+    if (pantryStore.items.length) requestParts.push(`已有食材：${pantryStore.items.join('、')}。`)
+    if (preferenceStore.note.trim()) requestParts.push(`本地偏好备注：${preferenceStore.note.trim()}。`)
     const res = await planStore.create(
-      userInput.value.trim(),
+      requestParts.join('\n'),
       durationDays.value,
       totalBudget.value || 0,
       profileId,
     )
+    const now = new Date().toISOString()
+    planIndexStore.upsert({
+      planId: res.plan_id,
+      title: originalInput.length > 28 ? `${originalInput.slice(0, 28)}…` : originalInput,
+      userInput: originalInput,
+      durationDays: durationDays.value,
+      totalBudget: totalBudget.value || 0,
+      status: res.status,
+      createdAt: res.created_at || now,
+      completedAt: null,
+      lastOpenedAt: now,
+      sourcePlanId: Number.isInteger(Number(route.query.source)) && Number(route.query.source) > 0
+        ? Number(route.query.source)
+        : undefined,
+    })
+    dashboardStore.selectPlan(res.plan_id)
     planStore.clearDraft()
-    router.push(`/plan/${res.plan_id}`)
+    router.push({ path: `/plan/${res.plan_id}`, query: { tab: 'today' } })
   } catch (e: any) {
     submitError.value = e?.message || '创建失败，请检查网络后重试'
   } finally {
@@ -141,6 +195,13 @@ async function submit() {
           <span class="time-badge">约 30–90 秒</span>
         </header>
 
+        <section v-if="profileSummary.length" class="profile-summary" aria-label="当前健康画像摘要">
+          <div v-for="item in profileSummary" :key="item.label">
+            <span>{{ item.label }}</span><strong>{{ item.value }}</strong>
+          </div>
+          <button type="button" @click="router.push('/profile')">更新画像</button>
+        </section>
+
         <div class="input-area">
           <label class="section-label" :for="inputId"><span>01</span>描述你的需求</label>
           <el-input
@@ -184,9 +245,41 @@ async function submit() {
           </div>
         </section>
 
+        <section class="local-context" aria-labelledby="local-context-title">
+          <div class="controls-heading">
+            <span id="local-context-title" class="section-label"><span>03</span>补充家中食材与偏好</span>
+            <small>保存在当前设备，下次创建仍可使用</small>
+          </div>
+          <div class="pantry-entry">
+            <el-input
+              v-model="pantryInput"
+              maxlength="30"
+              placeholder="例如：鸡蛋"
+              @keydown.enter.prevent="addPantryItem"
+            />
+            <el-button type="primary" plain @click="addPantryItem">加入食材</el-button>
+          </div>
+          <div v-if="pantryStore.items.length" class="pantry-tags" aria-label="已有食材">
+            <button v-for="item in pantryStore.items" :key="item" type="button" @click="pantryStore.remove(item)">
+              {{ item }}<span aria-hidden="true">×</span>
+            </button>
+          </div>
+          <el-input
+            :model-value="preferenceStore.note"
+            type="textarea"
+            :rows="2"
+            maxlength="300"
+            show-word-limit
+            placeholder="可选：例如工作日晚餐希望 20 分钟内完成，口味清淡"
+            class="preference-input"
+            @update:model-value="preferenceStore.setNote(String($event))"
+          />
+          <p class="constraint-hint"><span aria-hidden="true">✦</span>提交时会明确写入“已有食材”和“本地偏好备注”，不会覆盖上方原始需求。</p>
+        </section>
+
         <section class="controls-panel" aria-labelledby="controls-title">
           <div class="controls-heading">
-            <span id="controls-title" class="section-label"><span>03</span>核对规划范围</span>
+            <span id="controls-title" class="section-label"><span>04</span>核对规划范围</span>
             <small>这些选项会和上方文字一起提交</small>
           </div>
           <div class="options-row">
@@ -452,6 +545,22 @@ async function submit() {
   font-weight: 750;
 }
 
+.profile-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  align-items: stretch;
+  gap: 8px;
+  margin: -8px 0 30px;
+  padding: 10px;
+  border: 1px solid rgba($color-sage, .13);
+  border-radius: $radius-md;
+  background: $color-surface-soft;
+}
+.profile-summary > div { display: grid; gap: 3px; min-width: 0; padding: 9px 10px; }
+.profile-summary span { color: $color-text-placeholder; font-size: 12px; font-weight: 700; }
+.profile-summary strong { overflow: hidden; color: $color-text-primary; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.profile-summary button { min-height: 44px; padding: 8px 12px; border: 0; border-radius: $radius-sm; background: $color-card; color: $color-sage-dark; cursor: pointer; font: inherit; font-size: 13px; font-weight: 750; }
+
 .section-label {
   display: inline-flex;
   align-items: center;
@@ -577,6 +686,32 @@ async function submit() {
 }
 
 .example-tag .el-icon { color: $color-sage; font-size: 15px; }
+
+.local-context {
+  margin-top: 34px;
+  padding: 20px;
+  border: 1px solid rgba($color-sage, .14);
+  border-radius: $radius-md;
+  background: linear-gradient(145deg, rgba($color-lime-soft, .55), rgba($color-surface-warm, .62));
+}
+
+.pantry-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.pantry-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pantry-tags button {
+  min-height: 38px;
+  padding: 7px 11px;
+  border: 1px solid rgba($color-sage, .24);
+  border-radius: $radius-round;
+  background: $color-card;
+  color: $color-sage-dark;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+.pantry-tags button span { margin-left: 7px; color: $color-text-placeholder; }
+.preference-input { margin-top: 13px; }
+.preference-input :deep(.el-textarea__inner) { border-radius: $radius-sm; background: rgba($color-card, .9); font-size: 14px; line-height: 1.65; }
 
 .controls-panel {
   margin-top: 34px;
@@ -744,6 +879,8 @@ async function submit() {
   .prompt-heading h2 { font-size: 29px; }
   .prompt-heading p { font-size: 13px; }
   .time-badge { align-self: flex-start; }
+  .profile-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0; }
+  .profile-summary button { grid-column: 1 / -1; }
 
   .plan-input :deep(.el-textarea__inner) {
     min-height: 180px !important;
@@ -770,5 +907,10 @@ async function submit() {
   }
 
   .submit-btn { width: 100%; min-width: 0; }
+}
+
+@media (max-width: $breakpoint-sm) {
+  .pantry-entry { grid-template-columns: 1fr; }
+  .pantry-entry .el-button { width: 100%; }
 }
 </style>

@@ -52,6 +52,7 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     ShoppingList: typeof import('./src/components/plan/ShoppingList.vue')['default']
     StatusBadge: typeof import('./src/components/common/StatusBadge.vue')['default']
+    TodayMeals: typeof import('./src/components/plan/TodayMeals.vue')['default']
     WeeklyTimeline: typeof import('./src/components/plan/WeeklyTimeline.vue')['default']
   }
   export interface GlobalDirectives {
