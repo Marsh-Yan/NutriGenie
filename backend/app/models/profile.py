@@ -18,6 +18,7 @@ class Profile(Base):
         String(20),
         nullable=False,
         default="moderate",
+        server_default="moderate",
         comment="sedentary|light|moderate|active|extra",
     )
     diet_type = Column(

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.schemas.plan import (
@@ -18,14 +21,17 @@ from app.api.schemas.plan import (
     ProgressInfo,
     StepInfo,
 )
+from app.api.schemas.v21 import ExecutionUpdate, MealReplaceRequest, PlanCloneRequest, PlanMetadataUpdate, PlanSummary
 from app.db.database import get_db
 from app.models.meal_plan import MealPlan
 from app.models.meal_plan_message import MealPlanMessage
 from app.models.meal_plan_run import MealPlanRun
 from app.models.meal_plan_version import MealPlanVersion
+from app.models.plan_execution_event import PlanExecutionEvent
 from app.models.profile import Profile
 from app.models.user import User
 from app.services.security import get_current_user
+from app.services.meal_replacement import replace_meal_in_snapshot
 from app.tasks.plan_task import STEPS, enqueue_edit, enqueue_initial_plan, retry_latest_run
 
 router = APIRouter(tags=["plans"])
@@ -85,25 +91,233 @@ def api_create_plan(
     )
 
 
-@router.get("/plans", response_model=list[PlanListItem])
-def api_list_plans(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """按时间倒序返回当前用户的历史方案。"""
+@router.get("/plans")
+def api_list_plans(
+    request: Request,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=50),
+    status: str | None = Query(None, pattern="^(pending|running|completed|failed)$"),
+    archived: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Paginated V2.1 index; bare legacy requests retain the old array contract."""
     query = db.query(MealPlan).join(Profile, Profile.profile_id == MealPlan.profile_id)
     if current_user.role != "admin":
         query = query.filter(Profile.user_id == current_user.user_id)
-    plans = query.order_by(MealPlan.created_at.desc(), MealPlan.plan_id.desc()).all()
-    return [
-        PlanListItem(
+    if not request.query_params:
+        plans = query.order_by(MealPlan.created_at.desc(), MealPlan.plan_id.desc()).all()
+        return [
+            PlanListItem(
+                plan_id=plan.plan_id,
+                status=plan.status,
+                user_input=plan.user_input,
+                duration_days=plan.duration_days or 7,
+                total_budget=float(plan.total_budget or 0),
+                created_at=plan.created_at,
+                completed_at=plan.completed_at,
+            )
+            for plan in plans
+        ]
+    query = query.filter(MealPlan.archived_at.is_not(None) if archived else MealPlan.archived_at.is_(None))
+    if status:
+        query = query.filter(MealPlan.status == status)
+    total = query.count()
+    plans = query.order_by(MealPlan.created_at.desc(), MealPlan.plan_id.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "items": [PlanSummary(
             plan_id=plan.plan_id,
+            title=plan.title or f"{plan.duration_days or 7} 天饮食计划",
             status=plan.status,
-            user_input=plan.user_input,
             duration_days=plan.duration_days or 7,
             total_budget=float(plan.total_budget or 0),
             created_at=plan.created_at,
             completed_at=plan.completed_at,
-        )
-        for plan in plans
-    ]
+            archived_at=plan.archived_at,
+            source_plan_id=plan.source_plan_id,
+        ).model_dump(mode="json") for plan in plans],
+    }
+
+
+@router.patch("/plans/{plan_id}", response_model=PlanSummary)
+def api_update_plan_metadata(
+    plan_id: int,
+    data: PlanMetadataUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    plan = _get_plan_or_404(db, plan_id, current_user)
+    if "title" in data.model_fields_set:
+        plan.title = data.title.strip()
+    if data.archived is not None:
+        plan.archived_at = datetime.now(timezone.utc) if data.archived else None
+    db.commit()
+    db.refresh(plan)
+    return PlanSummary(
+        plan_id=plan.plan_id,
+        title=plan.title or f"{plan.duration_days or 7} 天饮食计划",
+        status=plan.status,
+        duration_days=plan.duration_days or 7,
+        total_budget=float(plan.total_budget or 0),
+        created_at=plan.created_at,
+        completed_at=plan.completed_at,
+        archived_at=plan.archived_at,
+        source_plan_id=plan.source_plan_id,
+    )
+
+
+@router.post("/plans/{plan_id}/clone", response_model=PlanCreateResponse, status_code=202)
+def api_clone_plan(
+    plan_id: int,
+    data: PlanCloneRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    source = _get_plan_or_404(db, plan_id, current_user)
+    clone = MealPlan(
+        profile_id=source.profile_id,
+        user_input=source.user_input,
+        duration_days=source.duration_days,
+        total_budget=data.overrides.total_budget if data.overrides.total_budget is not None else source.total_budget,
+        title=data.title.strip() if data.title else source.title,
+        source_plan_id=source.plan_id,
+        status="pending",
+    )
+    db.add(clone)
+    db.commit()
+    db.refresh(clone)
+    run = enqueue_initial_plan(db, clone)
+    return PlanCreateResponse(
+        plan_id=clone.plan_id,
+        status=run.status if run.status in ("pending", "running") else clone.status,
+        created_at=clone.created_at,
+        links={
+            "status": f"/api/v1/plans/{clone.plan_id}/status",
+            "result": f"/api/v1/plans/{clone.plan_id}",
+            "run": f"/api/v1/plans/{clone.plan_id}/runs/{run.run_id}",
+        },
+    )
+
+
+def _execution_payload(db: Session, plan: MealPlan) -> dict:
+    events = db.query(PlanExecutionEvent).filter(PlanExecutionEvent.plan_id == plan.plan_id).order_by(
+        PlanExecutionEvent.day, PlanExecutionEvent.meal_slot,
+    ).all()
+    return {"plan_id": plan.plan_id, "events": [{
+        "day": event.day,
+        "meal_slot": event.meal_slot,
+        "status": event.status,
+        "note": event.note,
+        "updated_at": event.updated_at,
+    } for event in events]}
+
+
+@router.get("/plans/{plan_id}/execution")
+def api_get_execution(
+    plan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    plan = _get_plan_or_404(db, plan_id, current_user)
+    return _execution_payload(db, plan)
+
+
+@router.put("/plans/{plan_id}/execution")
+def api_put_execution(
+    plan_id: int,
+    data: ExecutionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    plan = _get_plan_or_404(db, plan_id, current_user)
+    if plan.status != "completed" or not plan.result_json:
+        raise HTTPException(status_code=409, detail="方案尚未完成，不能记录执行状态")
+    available = {(int(day.get("day", 0)), slot) for day in plan.result_json.get("weekly_plan", []) for slot in (day.get("meals") or {})}
+    for event in data.events:
+        if (event.day, event.meal_slot) not in available:
+            raise HTTPException(status_code=422, detail=f"第 {event.day} 天 {event.meal_slot} 不在当前方案中")
+    owner = db.get(Profile, plan.profile_id).user_id
+    for event in data.events:
+        existing = db.query(PlanExecutionEvent).filter(
+            PlanExecutionEvent.plan_id == plan_id,
+            PlanExecutionEvent.day == event.day,
+            PlanExecutionEvent.meal_slot == event.meal_slot,
+        ).with_for_update().first()
+        if existing:
+            existing.status = event.status
+            existing.note = event.note
+        else:
+            db.add(PlanExecutionEvent(
+                plan_id=plan_id, user_id=owner, day=event.day,
+                meal_slot=event.meal_slot, status=event.status, note=event.note,
+            ))
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="餐次状态已被并发更新，请重新读取后重试") from exc
+    return _execution_payload(db, plan)
+
+
+@router.post("/plans/{plan_id}/meals/{day}/{meal_slot}/replace")
+def api_replace_meal(
+    plan_id: int,
+    day: int,
+    meal_slot: str,
+    data: MealReplaceRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    plan = db.query(MealPlan).filter(MealPlan.plan_id == plan_id).with_for_update().first()
+    if not plan or not _can_access_plan(db, plan, current_user):
+        raise HTTPException(status_code=404, detail="规划任务不存在")
+    if day < 1 or day > (plan.duration_days or 7) or meal_slot not in ("breakfast", "lunch", "dinner"):
+        raise HTTPException(status_code=422, detail="无效的日期或餐次")
+    if plan.status != "completed" or not plan.current_version_id or not plan.result_json:
+        raise HTTPException(status_code=409, detail="方案尚未完成，不能替换餐食")
+    if db.query(MealPlanRun).filter(MealPlanRun.plan_id == plan_id, MealPlanRun.status.in_(("pending", "running"))).first():
+        raise HTTPException(status_code=409, detail="当前方案正在生成，暂不能替换餐食")
+    profile = db.get(Profile, plan.profile_id)
+    result = replace_meal_in_snapshot(
+        plan.result_json, day=day, slot=meal_slot, reason=data.reason,
+        excluded_ids=data.exclude_recipe_ids, excluded_keys=data.exclude_recipe_keys,
+        duration_days=plan.duration_days or 7,
+        profile_allergies=profile.allergies or [], profile_diet_type=profile.diet_type,
+        total_budget=float(plan.total_budget or 0),
+    )
+    if not result:
+        raise HTTPException(status_code=409, detail="当前没有满足过敏原、营养、预算和多样性约束的替代菜谱")
+    latest = db.query(MealPlanVersion).filter(MealPlanVersion.plan_id == plan_id).order_by(MealPlanVersion.version_no.desc()).first()
+    version = MealPlanVersion(
+        plan_id=plan_id,
+        version_no=(latest.version_no if latest else 0) + 1,
+        parent_version_id=plan.current_version_id,
+        result_json=result,
+        validation_json=result.get("validation"),
+        model_name="deterministic_replacement",
+        prompt_version=None,
+        rag_meta=result.get("generation_meta"),
+    )
+    db.add(version)
+    db.flush()
+    result = {**result, "version_id": version.version_id, "version_no": version.version_no}
+    version.result_json = result
+    plan.result_json = result
+    plan.current_version_id = version.version_id
+    db.commit()
+    day_result = next(item for item in result["weekly_plan"] if item["day"] == day)
+    return {
+        "plan_id": plan_id,
+        "version_id": version.version_id,
+        "meal": day_result["meals"][meal_slot],
+        "daily_nutrition": day_result["total_nutrition"],
+        "total_budget": float(plan.total_budget or 0),
+        "estimated_total_cost": result["shopping_list"]["total_cost"],
+        "plan_validation": result["validation"],
+    }
 
 
 @router.get("/plans/{plan_id}/status", response_model=PlanStatusResponse)
@@ -176,6 +390,9 @@ def api_get_plan(
         "plan_id": plan.plan_id,
         "status": plan.status,
         "profile_id": plan.profile_id,
+        "title": plan.title,
+        "source_plan_id": plan.source_plan_id,
+        "archived_at": plan.archived_at,
         "user_input": plan.user_input,
         "created_at": plan.created_at,
         "completed_at": plan.completed_at,
