@@ -42,6 +42,9 @@ def init_db():
         meal_plan_version,
         meal_plan_message,
         meal_plan_run,
+        plan_execution_event,
+        user_feedback,
+        pantry_item,
         user,
         knowledge,
     )

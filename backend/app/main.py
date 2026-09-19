@@ -58,7 +58,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # ─── 注册路由 ─────────────────────────────────────
 
-from app.api.routes import admin, auth, profiles, recipes, ingredients, plans, knowledge, rag_qa
+from app.api.routes import admin, auth, profiles, recipes, ingredients, plans, knowledge, rag_qa, feedback, pantry
 
 app.include_router(profiles.router, prefix="/api/v1")
 app.include_router(recipes.router, prefix="/api/v1")
@@ -68,6 +68,8 @@ app.include_router(auth.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 app.include_router(knowledge.router, prefix="/api/v1")
 app.include_router(rag_qa.router, prefix="/api/v1")
+app.include_router(feedback.router, prefix="/api/v1")
+app.include_router(pantry.router, prefix="/api/v1")
 
 
 @app.get("/")
