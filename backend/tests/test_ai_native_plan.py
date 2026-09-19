@@ -97,6 +97,30 @@ def test_allergen_is_hard_error():
     assert any(issue.code == "allergen_detected" for issue in result.issues)
 
 
+def test_gluten_free_rejects_uncertified_soy_sauce():
+    plan = sample_plan()
+    plan.recipes[0].ingredients[1].name = "酱油"
+    result = validate_plan(
+        plan,
+        {**constraints(), "diet_type": "gluten_free"},
+        duration_days=1,
+    )
+    assert result.passed is False
+    assert any(issue.code == "diet_violation" for issue in result.issues)
+
+
+def test_gluten_free_rejects_unlisted_sauce_in_steps():
+    plan = sample_plan()
+    plan.recipes[0].steps.append("淋上蒸鱼豉油")
+    result = validate_plan(
+        plan,
+        {**constraints(), "diet_type": "gluten_free"},
+        duration_days=1,
+    )
+    assert result.passed is False
+    assert any(issue.code == "diet_violation" for issue in result.issues)
+
+
 def test_aggregator_creates_generated_keys_and_shopping_list():
     plan = sample_plan()
     validation = validate_plan(plan, constraints(), duration_days=1)

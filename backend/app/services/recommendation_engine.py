@@ -39,6 +39,15 @@ HYBRID_WEIGHTS: Dict[str, float] = {
     "utilization": 0.10,
 }
 
+# 未记录无麸质认证的通用酱料按风险食材处理；不能从菜名推断具体品牌配方。
+GLUTEN_RISK_INGREDIENT_KEYWORDS = (
+    "面", "麦", "麸", "酱油", "生抽", "老抽", "蚝油", "豉油",
+)
+GLUTEN_RISK_STEP_KEYWORDS = (
+    "小麦", "面粉", "面条", "面包", "意面", "燕麦", "麸质", "面筋",
+    "酱油", "生抽", "老抽", "蚝油", "豉油",
+)
+
 # ─── 常见过敏原 → 食材名称关键词 ─────────────────
 
 ALLERGEN_KEYWORDS: Dict[str, List[str]] = {
@@ -47,7 +56,7 @@ ALLERGEN_KEYWORDS: Dict[str, List[str]] = {
     "牛奶": ["牛奶", "乳制品", "芝士", "黄油", "奶油"],
     "鸡蛋": ["鸡蛋", "蛋"],
     "大豆": ["大豆", "豆腐", "豆浆", "豆干", "豆皮"],
-    "麸质": ["面粉", "面条", "面包", "麦", "麸"],
+    "麸质": list(GLUTEN_RISK_INGREDIENT_KEYWORDS),
     "坚果": ["杏仁", "核桃", "腰果", "松子", "榛子"],
 }
 
@@ -72,6 +81,7 @@ class RecipeCandidate:
     ingredient_seasons: List[Optional[List[str]]]
     image_url: Optional[str]
     ingredient_names: List[str] = field(default_factory=list)
+    step_text: str = ""
 
 
 def build_candidate_pool(db: Session) -> List[RecipeCandidate]:
@@ -125,6 +135,10 @@ def build_candidate_pool(db: Session) -> List[RecipeCandidate]:
             ingredient_seasons=ing_seasons,
             image_url=recipe.image_url,
             ingredient_names=ing_names,
+            step_text=" ".join(
+                step.get("content", "") if isinstance(step, dict) else str(step)
+                for step in (recipe.steps or [])
+            ),
         ))
 
     return candidates
@@ -182,10 +196,14 @@ def exclude_diet_incompatible_recipes(
             if not (animal_categories & set(candidate.ingredient_categories))
         ]
     if diet_type == "gluten_free":
-        gluten_keywords = ("面", "麦", "燕麦", "面包", "意面")
         return [
             candidate for candidate in pool
-            if not any(keyword in name for name in candidate.ingredient_names for keyword in gluten_keywords)
+            if not any(
+                keyword in name
+                for name in candidate.ingredient_names
+                for keyword in GLUTEN_RISK_INGREDIENT_KEYWORDS
+            )
+            and not any(keyword in candidate.step_text for keyword in GLUTEN_RISK_STEP_KEYWORDS)
         ]
     if diet_type == "keto":
         return [
@@ -372,7 +390,8 @@ def rank_candidates_hybrid(
     semantic_scores = semantic_scores or {}
     semantic_ids = set(semantic_recipe_ids or semantic_scores.keys())
     owned_ids = owned_ingredient_ids or []
-    w = weights or HYBRID_WEIGHTS
+    # 没有语义信号时回到完整的结构化权重，避免 35% 的空语义分压低质量。
+    w = (weights or HYBRID_WEIGHTS) if semantic_scores else DEFAULT_WEIGHTS
 
     pool = build_candidate_pool(db)
     allergen_ids = resolve_allergen_ingredient_ids(db, constraints.allergen_names)
@@ -391,7 +410,7 @@ def rank_candidates_hybrid(
             w["health"] * scores["health"]
             + w["budget"] * scores["budget"]
             + w["preference"] * scores["preference"]
-            + w["semantic"] * scores["semantic"]
+            + w.get("semantic", 0.0) * scores["semantic"]
             + w["season"] * scores["season"]
             + w["variety"] * scores["variety"]
             + w["utilization"] * scores["utilization"]

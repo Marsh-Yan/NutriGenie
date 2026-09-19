@@ -17,7 +17,7 @@
   {"id":"inventory-01","query":"家里有鸡胸肉和西兰花，尽量少买东西","goal":"fat_loss","diet_type":"high_protein","budget":250,"expected_recipe_ids":[7,16,21],"forbidden_recipe_ids":[]},
   {"id":"inventory-02","query":"有番茄和鸡蛋，做点快手热菜","goal":"healthy","diet_type":"balanced","budget":200,"expected_recipe_ids":[1],"forbidden_recipe_ids":[]},
   {"id":"diet-01","query":"素食为主，想吃清淡健康的菜","goal":"healthy","diet_type":"vegan","budget":250,"expected_recipe_ids":[9,10,14,25,27,30],"forbidden_recipe_ids":[2,3,4,6,7,8,15,16,17,18,20,21,24,26,28,29]},
-  {"id":"diet-02","query":"无麸质饮食，想吃高蛋白晚餐","goal":"healthy","diet_type":"gluten_free","budget":350,"expected_recipe_ids":[3,7,17,20,21,24,28],"forbidden_recipe_ids":[12,13,19,25,26,30]},
+  {"id":"diet-02","query":"无麸质饮食，想吃高蛋白晚餐","goal":"healthy","diet_type":"gluten_free","budget":350,"expected_recipe_ids":[17,20,21,24,28],"forbidden_recipe_ids":[2,3,4,7,8,10,13,14,19,22,23,25,26,27]},
   {"id":"allergy-01","query":"海鲜过敏，减脂期想吃快手菜","goal":"fat_loss","diet_type":"balanced","budget":300,"expected_recipe_ids":[1,9,14,16,21,24],"forbidden_recipe_ids":[3,7,17,20,28]},
   {"id":"allergy-02","query":"鸡蛋过敏，想吃健康的晚餐","goal":"healthy","diet_type":"balanced","budget":300,"expected_recipe_ids":[3,6,7,16,17,20,21,28],"forbidden_recipe_ids":[1,11,12,15,22,24]},
   {"id":"scene-01","query":"朋友来家里吃饭，想做一道体面的主菜","goal":"healthy","diet_type":"balanced","budget":450,"expected_recipe_ids":[3,6,17,18,20],"forbidden_recipe_ids":[]},
