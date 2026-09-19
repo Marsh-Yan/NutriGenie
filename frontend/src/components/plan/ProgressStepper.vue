@@ -8,7 +8,6 @@ const props = defineProps<{
   progress: ProgressInfo | null
 }>()
 
-const fallbackLabels = ['意图分析', '约束构建', '食材知识', 'AI 创作候选', '食材标准化', '硬约束校验', '整周优化', '结果校验与汇总', '保存方案版本']
 const descriptionByLabel: Record<string, string> = {
   意图分析: '理解目标',
   约束构建: '计算边界',
@@ -20,18 +19,17 @@ const descriptionByLabel: Record<string, string> = {
   结果校验与汇总: '汇总结果',
   保存方案版本: '整理结果',
 }
-const stepLabels = computed(() => props.progress?.steps?.length
-  ? props.progress.steps.map(step => step.name)
-  : fallbackLabels)
+const stepLabels = computed(() => props.progress?.steps?.map(step => step.name) || [])
 
 const activeStep = computed(() => {
   if (props.status === 'completed') return stepLabels.value.length
-  return props.progress?.current_step || (props.status === 'pending' ? 0 : 1)
+  return props.progress?.current_step || 0
 })
 
 const progressPercent = computed(() => {
   if (props.status === 'completed') return 100
   if (props.status === 'pending') return 4
+  if (!stepLabels.value.length) return 8
   const completed = props.progress?.completed_steps ?? Math.max(activeStep.value - 1, 0)
   return Math.min(96, Math.max(8, Math.round(((completed + 0.42) / stepLabels.value.length) * 100)))
 })
@@ -53,7 +51,7 @@ const progressPercent = computed(() => {
         <div v-else class="status-badge failed">生成中断</div>
 
         <span class="step-hint">
-          {{ activeStep ? `第 ${activeStep} / ${stepLabels.length} 步` : '即将开始' }}
+          {{ activeStep && stepLabels.length ? `第 ${activeStep} / ${stepLabels.length} 步` : '等待服务端进度' }}
         </span>
       </div>
       <strong class="progress-value">{{ progressPercent }}%</strong>
@@ -72,7 +70,7 @@ const progressPercent = computed(() => {
       </div>
     </div>
 
-    <div class="steps-grid" role="list">
+    <div v-if="stepLabels.length" class="steps-grid" role="list">
       <div
         v-for="(label, i) in stepLabels"
         :key="label"
@@ -95,6 +93,7 @@ const progressPercent = computed(() => {
         <span v-if="activeStep === i + 1 && progressPercent < 100" class="active-wave" aria-hidden="true" />
       </div>
     </div>
+    <p v-else class="progress-empty">生成任务已经提交，服务端返回具体步骤后会在这里自动更新。</p>
   </div>
 </template>
 
@@ -227,6 +226,8 @@ const progressPercent = computed(() => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.progress-empty { margin-top: 17px; color: $color-text-secondary; font-size: 13px; line-height: 1.6; }
 
 .step-item {
   position: relative;

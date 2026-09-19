@@ -113,6 +113,8 @@ function legacyGenerationMeta(value: unknown, plan: WeeklyDay[]): GenerationMeta
     strategy: String(raw.strategy || 'legacy_database_recommendation'),
     rag_enabled: Boolean(raw.rag_enabled),
     rag_used: Boolean(raw.rag_used),
+    fallback_used: Boolean(raw.fallback_used),
+    weight_version: raw.weight_version ? String(raw.weight_version) : undefined,
     rag_sources: [],
     rag_error: null,
     repair_attempts: 0,

@@ -225,6 +225,8 @@ export interface GenerationMeta {
   strategy: string
   rag_enabled: boolean
   rag_used: boolean
+  fallback_used?: boolean
+  weight_version?: string
   rag_sources: { chunk_id: string; source_file?: string | null; section_title?: string | null; score: number }[]
   rag_error?: string | null
   repair_attempts: number

@@ -49,10 +49,16 @@ const router = createRouter({
       meta: { requiresAuth: true, title: '计划工作台' },
     },
     {
+      path: '/recipes',
+      name: 'recipe-library',
+      component: () => import('@/views/RecipeLibraryPage.vue'),
+      meta: { title: '菜谱库' },
+    },
+    {
       path: '/recipes/:id',
       name: 'recipe-detail',
       component: () => import('@/views/RecipeDetailPage.vue'),
-      meta: { requiresAuth: true, title: '菜谱详情' },
+      meta: { title: '菜谱详情' },
     },
     {
       path: '/plans',

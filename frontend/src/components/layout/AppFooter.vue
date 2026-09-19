@@ -8,11 +8,13 @@ const links = computed(() => auth.isLoggedIn
   ? [
       { to: '/dashboard', label: '今日计划' },
       { to: '/plans', label: '我的计划' },
+      { to: '/recipes', label: '菜谱库' },
       { to: '/plan/new', label: '创建计划' },
       { to: '/profile', label: '健康画像' },
     ]
   : [
       { to: '/demo', label: '方案示例' },
+      { to: '/recipes', label: '菜谱库' },
       { to: '/auth?mode=login', label: '登录' },
       { to: '/auth?mode=register&redirect=/profile', label: '开始规划' },
     ])

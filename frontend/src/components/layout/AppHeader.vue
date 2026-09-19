@@ -127,6 +127,7 @@ async function handleAccountCommand(command: string) {
 
       <nav v-else class="desktop-navigation public-navigation" aria-label="访客导航">
         <router-link to="/demo" class="navigation-link" :class="{ 'is-active': routeName === 'demo-plan' }">方案示例</router-link>
+        <router-link to="/recipes" class="navigation-link" :class="{ 'is-active': ['recipe-library', 'recipe-detail'].includes(routeName) }">菜谱库</router-link>
         <router-link :to="{ path: '/', hash: '#how-it-works' }" class="navigation-link">如何工作</router-link>
       </nav>
 
