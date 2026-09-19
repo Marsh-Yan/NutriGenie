@@ -16,6 +16,7 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useExecutionStore } from '@/stores/execution'
 import { usePlanIndexStore } from '@/stores/planIndex'
 import { useShoppingStateStore } from '@/stores/shoppingState'
+import ExecutionSyncNotice from '@/components/plan/ExecutionSyncNotice.vue'
 import type { MealExecutionStatus } from '@/types/localState'
 
 const route = useRoute()
@@ -104,6 +105,7 @@ watch([() => route.params.id, () => auth.user?.user_id], ([value, currentUserId]
     planIndexStore.hydrate(currentUserId)
     dashboardStore.hydrate(currentUserId)
     executionStore.hydrate(currentUserId, planId)
+    void executionStore.loadServer()
     shoppingStateStore.hydrate(currentUserId, planId)
     dashboardStore.selectPlan(planId)
     planIndexStore.touch(planId)
@@ -256,7 +258,8 @@ async function restoreVersion(versionId: number) {
           <el-button type="primary" round @click="router.push('/plan/new')">重新规划</el-button>
         </div>
       </section>
-      <p class="local-data-notice">本地进度仅保存在本设备，并按当前账号隔离。</p>
+      <p class="local-data-notice">餐食执行状态保存在账户中；采购勾选仅保存在本设备。</p>
+      <ExecutionSyncNotice />
       <nav class="workspace-tabs" role="tablist" aria-label="计划工作台">
         <button
           v-for="tab in workspaceTabs"
@@ -275,6 +278,7 @@ async function restoreVersion(versionId: number) {
         <TodayMeals
           :day="todayPlan"
           :status-for="executionStore.statusFor"
+          :status-disabled="!executionStore.ready || executionStore.saving"
           @status="setMealStatus"
           @recipe="openRecipe"
         />

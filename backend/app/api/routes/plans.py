@@ -262,6 +262,41 @@ def api_put_execution(
     return _execution_payload(db, plan)
 
 
+@router.post("/plans/{plan_id}/execution/import")
+def api_import_execution(
+    plan_id: int,
+    data: ExecutionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Import legacy local events without replacing any server-owned slot."""
+    plan = _get_plan_or_404(db, plan_id, current_user)
+    if plan.status != "completed" or not plan.result_json:
+        raise HTTPException(status_code=409, detail="方案尚未完成，不能导入执行状态")
+    available = {(int(day.get("day", 0)), slot) for day in plan.result_json.get("weekly_plan", []) for slot in (day.get("meals") or {})}
+    for event in data.events:
+        if (event.day, event.meal_slot) not in available:
+            raise HTTPException(status_code=422, detail=f"第 {event.day} 天 {event.meal_slot} 不在当前方案中")
+    existing = {
+        (row.day, row.meal_slot) for row in db.query(PlanExecutionEvent).filter(
+            PlanExecutionEvent.plan_id == plan_id,
+        ).with_for_update().all()
+    }
+    owner = db.get(Profile, plan.profile_id).user_id
+    for event in data.events:
+        if (event.day, event.meal_slot) not in existing:
+            db.add(PlanExecutionEvent(
+                plan_id=plan_id, user_id=owner, day=event.day,
+                meal_slot=event.meal_slot, status=event.status, note=event.note,
+            ))
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="服务端餐次已变化，请重新同步后再导入") from exc
+    return _execution_payload(db, plan)
+
+
 @router.post("/plans/{plan_id}/meals/{day}/{meal_slot}/replace")
 def api_replace_meal(
     plan_id: int,

@@ -52,7 +52,7 @@ async def add_process_time_header(request: Request, call_next):
 async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
-        content={"detail": f"服务器内部错误: {str(exc)}"},
+        content={"detail": "服务器内部错误，请稍后重试"},
     )
 
 

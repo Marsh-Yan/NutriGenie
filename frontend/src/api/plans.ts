@@ -10,6 +10,10 @@ import type {
   PlanMessageRequest,
   PlanRun,
   PlanVersionSummary,
+  PlanPage,
+  PlanSummary,
+  PlanExecution,
+  ServerExecutionStatus,
 } from '@/types'
 
 export async function createPlan(data: PlanCreateRequest): Promise<PlanCreateResponse> {
@@ -53,5 +57,41 @@ export async function restorePlanVersion(planId: number, versionId: number): Pro
 
 export async function getPlans(): Promise<PlanListItem[]> {
   const { data } = await api.get('/plans')
+  return data
+}
+
+export async function getPlanPage(page = 1, archived = false, pageSize = 20): Promise<PlanPage> {
+  const { data } = await api.get('/plans', { params: { page, page_size: pageSize, archived } })
+  return data
+}
+
+export async function updatePlanMetadata(planId: number, patch: { title?: string; archived?: boolean }): Promise<PlanSummary> {
+  const { data } = await api.patch(`/plans/${planId}`, patch)
+  return data
+}
+
+export async function clonePlan(planId: number, title?: string): Promise<PlanCreateResponse> {
+  const { data } = await api.post(`/plans/${planId}/clone`, title ? { title } : {})
+  return data
+}
+
+export async function getPlanExecution(planId: number): Promise<PlanExecution> {
+  const { data } = await api.get(`/plans/${planId}/execution`)
+  return data
+}
+
+export async function putPlanExecution(
+  planId: number,
+  events: { day: number; meal_slot: 'breakfast' | 'lunch' | 'dinner'; status: ServerExecutionStatus; note: string | null }[],
+): Promise<PlanExecution> {
+  const { data } = await api.put(`/plans/${planId}/execution`, { events })
+  return data
+}
+
+export async function importPlanExecution(
+  planId: number,
+  events: { day: number; meal_slot: 'breakfast' | 'lunch' | 'dinner'; status: ServerExecutionStatus; note: string | null }[],
+): Promise<PlanExecution> {
+  const { data } = await api.post(`/plans/${planId}/execution/import`, { events })
   return data
 }

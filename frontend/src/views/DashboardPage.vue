@@ -11,6 +11,7 @@ import { useExecutionStore } from '@/stores/execution'
 import { usePlanIndexStore } from '@/stores/planIndex'
 import { usePlanStore } from '@/stores/plan'
 import { useShoppingStateStore } from '@/stores/shoppingState'
+import ExecutionSyncNotice from '@/components/plan/ExecutionSyncNotice.vue'
 import type { MealExecutionStatus } from '@/types/localState'
 
 const router = useRouter()
@@ -40,6 +41,7 @@ onMounted(() => {
     return
   }
   executionStore.hydrate(userId, planId)
+  void executionStore.loadServer()
   shoppingStateStore.hydrate(userId, planId)
   planStore.load(planId)
 })
@@ -74,7 +76,7 @@ function openRecipe(recipeId: string) {
     <PageHeader
       kicker="今日安排"
       :title="`${displayName}，从下一餐继续。`"
-      description="执行状态和购物勾选会保存在当前设备，刷新后仍可继续。"
+      description="餐食执行状态保存在账户中，购物勾选保存在当前设备。"
     >
       <template #actions>
         <el-button type="primary" @click="router.push('/plan/new')">创建计划</el-button>
@@ -85,10 +87,10 @@ function openRecipe(recipeId: string) {
       v-if="!currentPlan"
       icon="timeline"
       title="本设备还没有当前计划"
-      description="创建一份新计划，或从本地计划记录中选择一份继续执行。"
+      description="创建一份新计划，或从账户计划列表中选择一份继续执行。"
     >
       <template #actions>
-        <el-button type="primary" @click="router.push('/plans')">查看本地计划</el-button>
+        <el-button type="primary" @click="router.push('/plans')">查看我的计划</el-button>
         <el-button @click="router.push('/plan/new')">创建新计划</el-button>
       </template>
     </EmptyState>
@@ -98,7 +100,7 @@ function openRecipe(recipeId: string) {
         <div>
           <span>当前计划 · {{ currentPlan.durationDays }} 天</span>
           <h2>{{ currentPlan.title }}</h2>
-          <p>{{ currentPlan.userInput }}</p>
+          <p v-if="currentPlan.userInput">{{ currentPlan.userInput }}</p>
         </div>
         <el-button type="primary" @click="openCurrent()">打开完整计划</el-button>
       </section>
@@ -112,21 +114,23 @@ function openRecipe(recipeId: string) {
         <el-button @click="planStore.refreshResult()">重新获取</el-button>
       </section>
 
+      <ExecutionSyncNotice v-if="planStore.result" />
       <div v-if="planStore.result && todayPlan" class="dashboard-grid">
         <section class="today-card card">
           <TodayMeals
             :day="todayPlan"
             :status-for="executionStore.statusFor"
+            :status-disabled="!executionStore.ready || executionStore.saving"
             @status="setMealStatus"
             @recipe="openRecipe"
           />
         </section>
         <aside class="progress-card card">
-          <span class="eyebrow">本地进度</span>
+          <span class="eyebrow">执行进度</span>
           <h2>今天完成到哪里了？</h2>
           <div class="progress-stat"><strong>{{ executionStore.handledCount }}</strong><span>餐已记录状态</span></div>
           <div class="progress-stat"><strong>{{ shoppingStateStore.checkedKeys.length }}/{{ shoppingTotal }}</strong><span>项食材已备齐</span></div>
-          <p>本地进度仅保存在本设备，并按当前账号隔离。</p>
+          <p>餐食状态已同步到账户；购物勾选仍仅保存在本设备。</p>
           <el-button plain @click="openCurrent('shopping')">继续采购</el-button>
         </aside>
       </div>

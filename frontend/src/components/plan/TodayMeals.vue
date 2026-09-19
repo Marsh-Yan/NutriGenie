@@ -5,6 +5,7 @@ import type { MealExecutionStatus } from '@/types/localState'
 defineProps<{
   day: WeeklyDay
   statusFor: (day: number, slot: string) => MealExecutionStatus
+  statusDisabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -59,6 +60,7 @@ function recipeId(meal: WeeklyDay['meals'][string]) {
             type="button"
             :class="{ active: statusFor(day.day, slot) === option.value }"
             :aria-pressed="statusFor(day.day, slot) === option.value"
+            :disabled="statusDisabled"
             @click="emit('status', day.day, slot, statusFor(day.day, slot) === option.value ? 'pending' : option.value)"
           >
             {{ option.label }}
@@ -97,7 +99,7 @@ function recipeId(meal: WeeklyDay['meals'][string]) {
 .meal-copy small, .meal-empty { color: $color-text-secondary; font-size: 13px; }
 .execution-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
 .execution-actions button {
-  min-height: 42px;
+  min-height: 44px;
   padding: 8px 12px;
   border: 1px solid $color-border;
   border-radius: $radius-round;
@@ -110,6 +112,7 @@ function recipeId(meal: WeeklyDay['meals'][string]) {
 }
 .execution-actions button:hover { border-color: rgba($color-sage, .5); color: $color-sage-dark; }
 .execution-actions button.active { border-color: $color-sage-dark; background: $color-sage-dark; color: $color-text-inverse; }
+.execution-actions button:disabled { cursor: not-allowed; opacity: .5; }
 
 @media (max-width: $breakpoint-sm) {
   .meal-card { grid-template-columns: 1fr; gap: 14px; }
