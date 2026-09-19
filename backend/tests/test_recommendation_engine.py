@@ -22,6 +22,7 @@ from app.services.recommendation_engine import (
     rank_candidates,
     rank_candidates_hybrid,
     DEFAULT_WEIGHTS,
+    HYBRID_WEIGHTS,
 )
 from app.services.constraint_analyzer import build_constraints
 
@@ -264,9 +265,13 @@ class TestExcludeRecipes:
         pool = [
             RecipeCandidate(1, "燕麦碗", "light_meal", "western", "easy", 1, 1, 1, [], 100, 5, [], [], [], None, ["燕麦"]),
             RecipeCandidate(2, "番茄沙拉", "light_meal", "western", "easy", 1, 1, 1, [], 100, 5, [], [], [], None, ["番茄"]),
+            RecipeCandidate(3, "蛋炒饭", "main", "chinese", "easy", 1, 1, 1, [], 100, 5, [], [], [], None, ["大米", "鸡蛋"]),
+            RecipeCandidate(4, "鸡肉炒饭", "main", "chinese", "easy", 1, 1, 1, [], 100, 5, [], [], [], None, ["大米", "酱油"]),
+            RecipeCandidate(5, "蚝油西兰花", "main", "chinese", "easy", 1, 1, 1, [], 100, 5, [], [], [], None, ["西兰花", "蚝油"]),
+            RecipeCandidate(6, "清蒸鱼", "main", "chinese", "easy", 1, 1, 1, [], 100, 5, [], [], [], None, ["鲈鱼", "盐"], "淋上蒸鱼豉油"),
         ]
         result = exclude_diet_incompatible_recipes(pool, "gluten_free")
-        assert [candidate.recipe_id for candidate in result] == [2]
+        assert [candidate.recipe_id for candidate in result] == [2, 3]
 
 
 # ═══════════════════════════════════════════════════
@@ -405,6 +410,16 @@ class TestHybridRankCandidates:
         assert tomato_egg.scores["semantic"] == 1.0
         assert tomato_egg.evidence["retrieval_sources"] == ["structured", "semantic"]
         assert tomato_egg.evidence["objective_evidence"]
+
+    def test_without_semantic_signal_matches_baseline(self, seed_data, fat_loss_constraints):
+        baseline = rank_candidates(seed_data, fat_loss_constraints, top_n=5)
+        hybrid = rank_candidates_hybrid(
+            seed_data, fat_loss_constraints, semantic_scores={}, top_n=5,
+            weights=HYBRID_WEIGHTS,
+        )
+        assert [item.recipe_id for item in hybrid] == [item.recipe_id for item in baseline]
+        assert [item.total_score for item in hybrid] == [item.total_score for item in baseline]
+        assert all(item.evidence["retrieval_sources"] == ["structured"] for item in hybrid)
 
     def test_semantic_candidate_cannot_bypass_allergen_filter(self, seed_data, fat_loss_constraints):
         ranked = rank_candidates_hybrid(

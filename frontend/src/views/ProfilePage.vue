@@ -121,7 +121,7 @@ async function submitForm() {
 
     <aside class="local-data-note" aria-label="数据保存说明">
       <strong>数据保存说明</strong>
-      <span>健康画像保存在你的账户中；计划入口、执行状态、购物勾选、已有食材和偏好备注仅保存在本设备。</span>
+      <span>健康画像、计划和餐食执行状态保存在账户中；购物勾选、已有食材名称和偏好备注仅保存在本设备。旧本机执行记录需在计划页手动导入。</span>
     </aside>
 
     <p v-if="store.loading && !submitting" class="status-message" aria-live="polite"><i /> 正在加载已有画像…</p>

@@ -114,6 +114,28 @@ def test_execution_upsert_and_invalid_slot(api):
     assert client.put(url, json=payload).status_code == 404
 
 
+def test_execution_import_preserves_remote_slots(api):
+    client, current, ids, session_factory = api
+    url = f"/api/v1/plans/{ids[2]}/execution"
+    import_url = f"{url}/import"
+    remote = {"events": [{"day": 1, "meal_slot": "breakfast", "status": "completed"}]}
+    assert client.put(url, json=remote).status_code == 200
+    legacy = {"events": [
+        {"day": 1, "meal_slot": "breakfast", "status": "skipped"},
+        {"day": 1, "meal_slot": "lunch", "status": "adjusted"},
+    ]}
+    imported = client.post(import_url, json=legacy)
+    assert imported.status_code == 200
+    statuses = {event["meal_slot"]: event["status"] for event in imported.json()["events"]}
+    assert statuses == {"breakfast": "completed", "lunch": "adjusted"}
+    assert client.post(import_url, json=legacy).status_code == 200
+    with session_factory() as db:
+        from app.models.plan_execution_event import PlanExecutionEvent
+        assert db.query(PlanExecutionEvent).count() == 2
+    current["id"] = ids[1]
+    assert client.post(import_url, json=legacy).status_code == 404
+
+
 def test_feedback_and_pantry_are_owned(api):
     client, current, ids, _ = api
     assert client.post("/api/v1/feedback", json={"plan_id": ids[2], "feedback_type": "too_slow", "rating": 2}).status_code == 201

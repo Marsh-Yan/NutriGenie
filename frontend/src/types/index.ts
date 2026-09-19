@@ -115,6 +115,40 @@ export interface PlanListItem {
   completed_at: string | null
 }
 
+export interface PlanSummary {
+  plan_id: number
+  title: string
+  status: PlanStatus
+  duration_days: number
+  total_budget: number
+  created_at: string
+  completed_at: string | null
+  archived_at: string | null
+  source_plan_id: number | null
+}
+
+export interface PlanPage {
+  total: number
+  page: number
+  page_size: number
+  items: PlanSummary[]
+}
+
+export type ServerExecutionStatus = 'planned' | 'completed' | 'adjusted' | 'skipped'
+
+export interface PlanExecutionEvent {
+  day: number
+  meal_slot: 'breakfast' | 'lunch' | 'dinner'
+  status: ServerExecutionStatus
+  note: string | null
+  updated_at: string
+}
+
+export interface PlanExecution {
+  plan_id: number
+  events: PlanExecutionEvent[]
+}
+
 export type PlanStatus = 'pending' | 'running' | 'completed' | 'failed'
 
 export interface PlanStatusResponse {
