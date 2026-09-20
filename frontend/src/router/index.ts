@@ -6,7 +6,10 @@ const router = createRouter({
   history: createWebHistory(),
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) return savedPosition
-    if (to.hash) return { el: to.hash, top: 92, behavior: 'smooth' }
+    if (to.hash) {
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      return { el: to.hash, top: 92, behavior: reducedMotion ? 'instant' : 'smooth' }
+    }
     if (to.path === from.path) return false
     return { top: 0, behavior: 'auto' }
   },

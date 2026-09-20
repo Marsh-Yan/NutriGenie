@@ -30,6 +30,8 @@ const shoppingStateStore = useShoppingStateStore()
 const messageInput = ref('')
 const ingredientInput = ref('')
 const sendingMessage = ref(false)
+const retrying = ref(false)
+const retryError = ref('')
 const showVersions = ref(false)
 const showAllValidationWarnings = ref(false)
 
@@ -100,6 +102,7 @@ const todayPlan = computed(() => {
 
 watch([() => route.params.id, () => auth.user?.user_id], ([value, currentUserId]) => {
   showAllValidationWarnings.value = false
+  retryError.value = ''
   const planId = Number(value)
   if (Number.isInteger(planId) && planId > 0 && currentUserId) {
     planIndexStore.hydrate(currentUserId)
@@ -143,6 +146,19 @@ function setMealStatus(day: number, slot: string, status: MealExecutionStatus) {
 
 function openRecipe(recipeId: string) {
   router.push({ name: 'recipe-detail', params: { id: recipeId }, query: { plan: route.params.id } })
+}
+
+async function retryFailedPlan() {
+  if (retrying.value) return
+  retrying.value = true
+  retryError.value = ''
+  try {
+    await store.retry()
+  } catch (error: unknown) {
+    retryError.value = error instanceof Error ? error.message : '重新生成失败，请稍后重试'
+  } finally {
+    retrying.value = false
+  }
 }
 
 async function submitMessage(action?: Record<string, any>) {
@@ -232,9 +248,10 @@ async function restoreVersion(versionId: number) {
         <p class="error-desc">{{ currentError || '请重试' }}</p>
         <el-button type="primary" round @click="$router.push('/plan/new')">
           <el-icon><Refresh /></el-icon>
-          重新尝试
+          重新填写需求
         </el-button>
-        <el-button round @click="store.retry()">继续获取结果</el-button>
+        <el-button round :loading="retrying" @click="retryFailedPlan">按原需求重新生成</el-button>
+        <p v-if="retryError" class="error-desc" role="alert">{{ retryError }}</p>
       </div>
     </div>
 

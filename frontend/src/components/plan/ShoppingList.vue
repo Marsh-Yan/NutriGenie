@@ -239,7 +239,7 @@ async function copyList() {
 // 物品列表
 
 .collapse-enter-active, .collapse-leave-active {
-  transition: all 0.2s ease;
+  transition: max-height 0.2s ease, opacity 0.2s ease;
 }
 
 .collapse-enter-from, .collapse-leave-to {
