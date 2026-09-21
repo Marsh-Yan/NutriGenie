@@ -296,6 +296,7 @@ async function restoreVersion(versionId: number) {
           :day="todayPlan"
           :status-for="executionStore.statusFor"
           :status-disabled="!executionStore.ready || executionStore.saving"
+          :status-busy="executionStore.saving"
           @status="setMealStatus"
           @recipe="openRecipe"
         />

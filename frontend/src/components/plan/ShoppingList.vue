@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import type { ShoppingList as ShoppingListType } from '@/types'
 import { ArrowDown } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import PremiumIcon from '@/components/common/PremiumIcon.vue'
 
 const props = defineProps<{
@@ -37,6 +38,20 @@ function toggleItem(key: string) {
   emit('toggle', key)
 }
 
+async function requestReset() {
+  try {
+    await ElMessageBox.confirm(
+      '所有食材会恢复为“未准备”状态，本设备上的采购进度将被清空。',
+      '重置采购进度？',
+      { type: 'warning', confirmButtonText: '确认重置', cancelButtonText: '保留进度' },
+    )
+    emit('reset')
+    ElMessage.success('采购进度已重置')
+  } catch (reason) {
+    if (reason !== 'cancel' && reason !== 'close') ElMessage.error('暂时无法重置，请稍后重试')
+  }
+}
+
 function printList() {
   window.print()
 }
@@ -61,13 +76,17 @@ async function copyList() {
     <div class="section-heading">
       <h3 class="section-title"><PremiumIcon name="shopping" class="section-icon" :size="16" :box-size="32" />采购清单</h3>
       <div class="title-actions">
-        <span class="shopping-progress">已备 {{ checkedCount }}/{{ totalItems }}</span>
-        <button v-if="checkedCount" type="button" class="copy-button" @click="emit('reset')">全部重置</button>
-        <button type="button" class="copy-button" @click="copyList">
-          <span aria-live="polite">{{ copyFeedback }}</span>
-        </button>
-        <button type="button" class="copy-button" @click="printList">打印</button>
-        <span class="total-cost"><small>预计</small> ¥{{ shoppingList.total_cost.toFixed(1) }}</span>
+        <div class="shopping-summary">
+          <span class="shopping-progress" aria-live="polite" aria-atomic="true">已备 {{ checkedCount }}/{{ totalItems }}</span>
+          <span class="total-cost"><small>预计</small> ¥{{ shoppingList.total_cost.toFixed(1) }}</span>
+        </div>
+        <div class="shopping-controls">
+          <button v-if="checkedCount" type="button" class="copy-button" @click="requestReset">全部重置</button>
+          <button type="button" class="copy-button" @click="copyList">
+            <span aria-live="polite">{{ copyFeedback }}</span>
+          </button>
+          <button type="button" class="copy-button" @click="printList">打印</button>
+        </div>
       </div>
     </div>
 
@@ -145,10 +164,12 @@ async function copyList() {
 
   small { color: $color-text-secondary; font-size: 12px; font-weight: 650; }
 }
-.title-actions { display: inline-flex; align-items: center; gap: 10px; }
+.title-actions,
+.shopping-summary,
+.shopping-controls { display: inline-flex; align-items: center; gap: 10px; }
 .shopping-progress { color: $color-text-secondary; font-size: 13px; font-weight: 700; }
 .copy-button {
-  min-height: 32px;
+  min-height: 44px;
   padding: 5px 11px;
   border: 1px solid rgba($color-sage, .22);
   border-radius: 999px;
@@ -159,6 +180,7 @@ async function copyList() {
   font: inherit;
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
   transition: border-color .2s ease, background-color .2s ease, transform .2s ease;
 
   &:hover { border-color: rgba($color-sage, .5); background: $color-surface-soft; transform: translateY(-1px); }
@@ -270,6 +292,7 @@ async function copyList() {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 44px;
   font-size: 14px;
   color: $color-text-primary;
 
@@ -299,7 +322,10 @@ async function copyList() {
 
 @media (max-width: $breakpoint-sm) {
   .section-heading { align-items: flex-start; flex-direction: column; gap: 10px; }
-  .title-actions { width: 100%; justify-content: space-between; }
+  .title-actions { display: grid; width: 100%; gap: 8px; }
+  .shopping-summary { justify-content: space-between; }
+  .shopping-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 8px; }
+  .copy-button { width: 100%; min-width: 0; }
 
   .item-row {
     display: grid;
@@ -316,5 +342,15 @@ async function copyList() {
 @media print {
   .copy-button { display: none; }
   .shopping-list { color: #111; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-button,
+  .category-group,
+  .category-header,
+  .cat-arrow,
+  .collapse-enter-active,
+  .collapse-leave-active,
+  .item-row { transition: none; }
 }
 </style>

@@ -6,6 +6,7 @@ defineProps<{
   day: WeeklyDay
   statusFor: (day: number, slot: string) => MealExecutionStatus
   statusDisabled?: boolean
+  statusBusy?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -35,6 +36,10 @@ function recipeId(meal: WeeklyDay['meals'][string]) {
       </div>
       <strong>{{ day.total_nutrition.calories.toFixed(0) }} <small>kcal</small></strong>
     </header>
+
+    <p v-if="statusBusy" class="execution-feedback" role="status" aria-live="polite">
+      正在保存餐食状态…
+    </p>
 
     <div class="meal-list">
       <article v-for="(meal, slot) in day.meals" :key="slot" class="meal-card">
@@ -79,6 +84,7 @@ function recipeId(meal: WeeklyDay['meals'][string]) {
 .today-heading h2 { font-size: clamp(25px, 3vw, 34px); letter-spacing: -.04em; }
 .today-heading > strong { color: $color-text-primary; font-size: 24px; font-variant-numeric: tabular-nums; }
 .today-heading > strong small { color: $color-text-secondary; font-size: 12px; }
+.execution-feedback { color: $color-sage-dark; font-size: 13px; font-weight: 700; }
 .meal-list { display: grid; gap: 12px; }
 .meal-card {
   display: grid;
