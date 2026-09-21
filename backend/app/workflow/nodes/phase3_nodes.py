@@ -27,6 +27,17 @@ from app.workflow.state import WorkflowState
 logger = logging.getLogger(__name__)
 
 
+HEALTH_GOAL_SIGNALS = (
+    "减脂", "减肥", "减重", "瘦身", "增肌", "增重", "长肌肉", "控糖", "血糖",
+    "健康饮食", "保持健康", "fat_loss", "muscle_gain", "blood_sugar", "healthy",
+)
+
+DIET_TYPE_SIGNALS = (
+    "均衡饮食", "均衡膳食", "生酮", "高蛋白", "无麸质", "素食", "纯素", "健康饮食",
+    "balanced", "keto", "high_protein", "gluten_free", "vegan", "healthy",
+)
+
+
 def _get_db() -> Session:
     """获取数据库会话"""
     return SessionLocal()
@@ -64,6 +75,36 @@ def _intent_allergens(intent: dict) -> list[str]:
     return [item.strip() for item in re.split(r"[、,，/]|(?:和)|(?:以及)", raw) if item.strip()]
 
 
+def _effective_profile_values(
+    user_input: str,
+    intent: dict,
+    *,
+    profile_diet_type: str,
+    profile_health_goal: str,
+) -> tuple[str, str]:
+    """Only explicit request text may override persisted profile constraints.
+
+    Both the LLM and rule fallback return generic defaults for omitted fields.
+    Treating those defaults as user intent would silently turn, for example, a
+    fat-loss profile into a generic healthy/balanced plan when the request only
+    says "安排一周家常菜".
+    """
+    normalized = (user_input or "").strip().lower()
+    has_explicit_goal = any(token in normalized for token in HEALTH_GOAL_SIGNALS)
+    has_explicit_diet = any(token in normalized for token in DIET_TYPE_SIGNALS)
+    effective_goal = (
+        str(intent.get("health_goal") or profile_health_goal)
+        if has_explicit_goal
+        else profile_health_goal
+    )
+    effective_diet = (
+        str(intent.get("diet_type") or profile_diet_type)
+        if has_explicit_diet
+        else profile_diet_type
+    )
+    return effective_diet, effective_goal
+
+
 def constraint_node(state: WorkflowState) -> WorkflowState:
     """约束分析节点
 
@@ -86,10 +127,15 @@ def constraint_node(state: WorkflowState) -> WorkflowState:
             state.errors.append(state.constraint_error)
             return state
 
-        # 如果 intent_analysis 中有自定义参数，覆盖 profile
+        # Only constraints explicitly stated in this request override the
+        # persisted profile. Parsed defaults must not silently replace it.
         intent = state.intent_analysis or {}
-        effective_diet = intent.get("diet_type") or profile.diet_type
-        effective_goal = intent.get("health_goal") or profile.health_goal
+        effective_diet, effective_goal = _effective_profile_values(
+            state.user_input,
+            intent,
+            profile_diet_type=profile.diet_type,
+            profile_health_goal=profile.health_goal,
+        )
 
         # 临时修改 profile 属性
         original_diet = profile.diet_type

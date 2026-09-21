@@ -12,6 +12,7 @@ from app.workflow.nodes.ai_native_nodes import (
     route_after_optimization,
     route_after_repair,
 )
+from app.workflow.nodes.phase3_nodes import _effective_profile_values
 from app.workflow.state import WorkflowState
 
 
@@ -65,6 +66,54 @@ def test_failed_repair_does_not_reuse_the_old_invalid_plan():
 
     state.generation_error = None
     assert route_after_repair(state) == "normalization"
+
+
+def test_generic_intent_defaults_do_not_override_profile_constraints():
+    diet_type, health_goal = _effective_profile_values(
+        "帮我安排一周家常菜，晚餐尽量快手",
+        {"diet_type": "balanced", "health_goal": "healthy"},
+        profile_diet_type="gluten_free",
+        profile_health_goal="fat_loss",
+    )
+
+    assert diet_type == "gluten_free"
+    assert health_goal == "fat_loss"
+
+
+def test_explicit_request_constraints_override_profile_constraints():
+    diet_type, health_goal = _effective_profile_values(
+        "这周改成增肌高蛋白饮食",
+        {"diet_type": "high_protein", "health_goal": "muscle_gain"},
+        profile_diet_type="balanced",
+        profile_health_goal="fat_loss",
+    )
+
+    assert diet_type == "high_protein"
+    assert health_goal == "muscle_gain"
+
+
+def test_goal_and_diet_overrides_are_independent():
+    diet_type, health_goal = _effective_profile_values(
+        "这周想吃高蛋白饮食",
+        {"diet_type": "high_protein", "health_goal": "healthy"},
+        profile_diet_type="balanced",
+        profile_health_goal="fat_loss",
+    )
+
+    assert diet_type == "high_protein"
+    assert health_goal == "fat_loss"
+
+
+def test_explicit_healthy_balanced_request_can_replace_profile_constraints():
+    diet_type, health_goal = _effective_profile_values(
+        "This week I want a healthy, balanced plan",
+        {"diet_type": "balanced", "health_goal": "healthy"},
+        profile_diet_type="gluten_free",
+        profile_health_goal="fat_loss",
+    )
+
+    assert diet_type == "balanced"
+    assert health_goal == "healthy"
 
 
 def test_compiled_v2_graph_runs_candidate_to_snapshot_without_recipe_db(monkeypatch):
