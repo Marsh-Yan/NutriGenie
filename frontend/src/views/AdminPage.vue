@@ -1,25 +1,43 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { getOverview, type AdminOverview } from '@/api/admin'
 
 const overview = ref<AdminOverview | null>(null)
 const loading = ref(true)
 const error = ref('')
-onMounted(async () => {
+const stats = computed(() => [
+  ['注册用户', overview.value?.users],
+  ['用户画像', overview.value?.profiles],
+  ['菜谱', overview.value?.recipes],
+  ['食材', overview.value?.ingredients],
+  ['生成方案', overview.value?.plans],
+])
+
+async function loadOverview() {
+  loading.value = true
+  error.value = ''
   try { overview.value = await getOverview() }
   catch (e: any) { error.value = e.message || '无法加载管理数据' }
   finally { loading.value = false }
-})
+}
+
+onMounted(loadOverview)
 </script>
 
 <template>
   <div class="admin-page page-container">
     <div class="heading"><h1>管理后台</h1><p>NutriGenie 本地运营概览</p></div>
-    <el-alert v-if="error" :title="error" type="error" :closable="false" />
+    <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon>
+      <template #default><el-button link type="primary" @click="loadOverview">重新加载</el-button></template>
+    </el-alert>
     <div v-else v-loading="loading" class="stats-grid">
-      <div v-for="item in [['注册用户', overview?.users], ['用户画像', overview?.profiles], ['菜谱', overview?.recipes], ['食材', overview?.ingredients], ['生成方案', overview?.plans]]" :key="item[0]" class="stat-card card"><span>{{ item[0] }}</span><strong>{{ item[1] ?? '-' }}</strong></div>
+      <div v-for="item in stats" :key="item[0]" class="stat-card card"><span>{{ item[0] }}</span><strong>{{ item[1] ?? '-' }}</strong></div>
     </div>
-    <div class="actions"><router-link to="/admin/ingredients"><el-button type="primary">食材库</el-button></router-link><router-link to="/admin/recipes"><el-button>菜谱库</el-button></router-link><router-link to="/admin/knowledge"><el-button>知识库</el-button></router-link></div>
+    <nav class="actions" aria-label="管理功能">
+      <router-link to="/admin/ingredients">维护食材库</router-link>
+      <router-link to="/admin/recipes">维护菜谱库</router-link>
+      <router-link to="/admin/knowledge">知识库工具</router-link>
+    </nav>
   </div>
 </template>
 
@@ -36,6 +54,10 @@ h1 { margin: 0 0 7px; color: $color-text-primary; font-size: clamp(30px,4vw,44px
 .stat-card span { color: $color-text-secondary; font-size: 13px; font-weight: 650; }
 .stat-card strong { color: $color-text-primary; font-size: clamp(30px,3vw,40px); letter-spacing: -.04em; }
 .actions { display: flex; gap: 10px; margin-top: 20px; padding: 16px; border: 1px solid rgba($color-sage-dark,.1); border-radius: $radius-lg; background: rgba(255,255,255,.72); }
+.actions a { display: inline-flex; min-height: 44px; align-items: center; padding: 9px 16px; border: 1px solid $color-border; border-radius: $radius-sm; background: $color-surface; color: $color-brand; font-size: 14px; font-weight: 750; }
+.actions a:first-child { border-color: $color-brand; background: $color-brand; color: $color-text-inverse; }
+.actions a:hover { border-color: $color-sage; background: $color-surface-soft; color: $color-brand; }
+.actions a:first-child:hover { border-color: $color-brand-hover; background: $color-brand-hover; color: $color-text-inverse; }
 @media (max-width: $breakpoint-lg) { .stats-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: $breakpoint-sm) {
   .admin-page { padding-top: 24px; }
@@ -43,6 +65,6 @@ h1 { margin: 0 0 7px; color: $color-text-primary; font-size: clamp(30px,4vw,44px
   .stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .stat-card { padding: 18px; }
   .actions { align-items: stretch; flex-direction: column; }
-  .actions :deep(.el-button) { width: 100%; margin: 0; }
+  .actions a { width: 100%; justify-content: center; }
 }
 </style>
