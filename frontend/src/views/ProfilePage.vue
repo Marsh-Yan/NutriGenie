@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProfileStore } from '@/stores/profile'
 import { Check, Right } from '@element-plus/icons-vue'
@@ -13,6 +13,7 @@ const form = ref({ ...store.defaultForm })
 const submitting = ref(false)
 const submitError = ref('')
 const initialError = ref('')
+const formCard = ref<HTMLElement | null>(null)
 
 onMounted(async () => {
   try {
@@ -73,12 +74,23 @@ const activityLabels: Record<string, string> = {
   sedentary: '久坐', light: '轻度活动', moderate: '中度活动', active: '高强度活动', extra: '极高强度活动',
 }
 
-function nextStep() {
-  if (currentStep.value < steps.length - 1) currentStep.value++
+async function focusCurrentStep() {
+  await nextTick()
+  formCard.value?.querySelectorAll<HTMLElement>('.panel-title')[currentStep.value]?.focus()
 }
 
-function prevStep() {
-  if (currentStep.value > 0) currentStep.value--
+async function nextStep() {
+  if (currentStep.value < steps.length - 1) {
+    currentStep.value++
+    await focusCurrentStep()
+  }
+}
+
+async function prevStep() {
+  if (currentStep.value > 0) {
+    currentStep.value--
+    await focusCurrentStep()
+  }
 }
 
 async function submitForm() {
@@ -86,6 +98,7 @@ async function submitForm() {
   if (!form.value.age || !form.value.gender || !form.value.height || !form.value.weight) {
     submitError.value = '请补全年龄、性别、身高和体重'
     currentStep.value = 0
+    await focusCurrentStep()
     return
   }
   submitting.value = true
@@ -177,10 +190,10 @@ async function submitForm() {
         </div>
       </aside>
 
-      <main class="form-card card">
+      <section ref="formCard" class="form-card card" aria-label="健康画像表单">
         <div v-show="currentStep === 0" class="step-panel">
           <span class="panel-step-label">STEP 01 · BODY BASICS</span>
-          <h2 class="panel-title">基本信息</h2>
+          <h2 class="panel-title" tabindex="-1">基本信息</h2>
           <p class="panel-desc">这些数据用于估算基础代谢与每日能量消耗。</p>
           <el-form label-position="top" class="profile-form">
             <el-row :gutter="20">
@@ -234,7 +247,7 @@ async function submitForm() {
 
         <div v-show="currentStep === 1" class="step-panel">
           <span class="panel-step-label">STEP 02 · YOUR GOAL</span>
-          <h2 class="panel-title">你最想改善什么？</h2>
+          <h2 class="panel-title" tabindex="-1">你最想改善什么？</h2>
           <p class="panel-desc">选择当前最重要的目标，我们会据此调整能量和营养比例。</p>
           <el-radio-group v-model="form.health_goal" class="goal-group">
             <el-radio value="fat_loss" class="goal-card">
@@ -272,7 +285,7 @@ async function submitForm() {
 
         <div v-show="currentStep === 2" class="step-panel">
           <span class="panel-step-label">STEP 03 · FOOD PREFERENCES</span>
-          <h2 class="panel-title">尊重你的饮食习惯</h2>
+          <h2 class="panel-title" tabindex="-1">尊重你的饮食习惯</h2>
           <p class="panel-desc">告诉我们常用的饮食方式，以及必须避开的食物。</p>
           <el-form label-position="top" class="panel-form">
             <el-form-item label="饮食类型">
@@ -309,7 +322,7 @@ async function submitForm() {
 
         <div v-show="currentStep === 3" class="step-panel">
           <span class="panel-step-label">STEP 04 · BUDGET & REVIEW</span>
-          <h2 class="panel-title">让计划也符合日常预算</h2>
+          <h2 class="panel-title" tabindex="-1">让计划也符合日常预算</h2>
           <p class="panel-desc">设定每日预算后，系统会优先选择价格和营养更合适的组合。</p>
           <el-form label-position="top" class="panel-form">
             <div class="budget-control">
@@ -348,7 +361,7 @@ async function submitForm() {
           </div>
           <p v-if="submitError" class="submit-error" role="alert">{{ submitError }}</p>
         </div>
-      </main>
+      </section>
     </div>
   </div>
 </template>
@@ -632,6 +645,12 @@ async function submitForm() {
   line-height: 1.18;
 }
 
+.panel-title:focus-visible {
+  outline: 3px solid $color-focus-ring;
+  outline-offset: 5px;
+  border-radius: 3px;
+}
+
 .panel-desc {
   max-width: 620px;
   margin-top: 10px;
@@ -764,7 +783,7 @@ async function submitForm() {
   border-radius: 50%;
   background: $color-card;
   color: transparent;
-  transition: all .2s ease;
+  transition: border-color .2s ease, background-color .2s ease, color .2s ease;
 }
 
 .goal-card.is-checked .goal-check { border-color: $color-sage-dark; background: $color-sage-dark; color: #fff; }

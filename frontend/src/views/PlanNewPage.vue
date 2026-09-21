@@ -29,9 +29,12 @@ const {
 } = storeToRefs(planStore)
 const submitting = ref(false)
 const submitError = ref('')
+const inputError = ref('')
 const profileLoadError = ref('')
 const inputId = useId()
 const budgetId = useId()
+const pantryId = useId()
+const preferenceId = useId()
 const pantryInput = ref('')
 
 const examples = [
@@ -84,12 +87,15 @@ function selectExample(i: number) {
 
 async function submit() {
   submitError.value = ''
+  inputError.value = ''
   if (!userInput.value.trim()) {
-    submitError.value = '请先描述你的饮食目标或限制'
+    inputError.value = '请先描述你的饮食目标或限制'
+    document.getElementById(inputId)?.focus()
     return
   }
   if (userInput.value.trim().length < 6) {
-    submitError.value = '描述再具体一点，例如目标、预算或忌口'
+    inputError.value = '描述再具体一点，例如目标、预算或忌口'
+    document.getElementById(inputId)?.focus()
     return
   }
   if (submitting.value) return
@@ -213,13 +219,15 @@ async function submit() {
             maxlength="500"
             show-word-limit
             class="plan-input"
-            :aria-invalid="Boolean(submitError)"
-            :aria-describedby="`${inputId}-hint`"
+            :aria-invalid="Boolean(inputError)"
+            :aria-describedby="inputError ? `${inputId}-hint ${inputId}-error` : `${inputId}-hint`"
+            @update:model-value="inputError = ''"
           />
           <p :id="`${inputId}-hint`" class="constraint-hint">
             <span aria-hidden="true">✦</span>
             文本中明确写出的天数、预算和忌口会优先生效；下方选项用于最后核对。
           </p>
+          <p v-if="inputError" :id="`${inputId}-error`" class="submit-error" role="alert">{{ inputError }}</p>
         </div>
 
         <section class="examples" aria-labelledby="example-title">
@@ -251,7 +259,9 @@ async function submit() {
             <small>保存在当前设备，下次创建仍可使用</small>
           </div>
           <div class="pantry-entry">
+            <label class="field-label" :for="pantryId">家中已有食材</label>
             <el-input
+              :id="pantryId"
               v-model="pantryInput"
               maxlength="30"
               placeholder="例如：鸡蛋"
@@ -264,7 +274,9 @@ async function submit() {
               {{ item }}<span aria-hidden="true">×</span>
             </button>
           </div>
+          <label class="field-label" :for="preferenceId">偏好备注（选填）</label>
           <el-input
+            :id="preferenceId"
             :model-value="preferenceStore.note"
             type="textarea"
             :rows="2"
@@ -308,6 +320,22 @@ async function submit() {
               <span>填写 0 代表本次不限制预算</span>
             </div>
           </div>
+        </section>
+
+        <section class="request-review" aria-labelledby="request-review-title">
+          <div class="controls-heading">
+            <h3 id="request-review-title" class="section-label"><span>05</span>生成前确认</h3>
+            <small>请核对本次描述与画像中的硬性限制</small>
+          </div>
+          <dl class="review-grid">
+            <div class="review-request"><dt>本次需求</dt><dd>{{ userInput.trim() || '请先填写需求' }}</dd></div>
+            <div><dt>规划周期</dt><dd>{{ durationDays }} 天</dd></div>
+            <div><dt>本次总预算</dt><dd>{{ totalBudget ? `¥${totalBudget}` : '未限制' }}</dd></div>
+            <div v-for="item in profileSummary" :key="item.label"><dt>画像{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+            <div><dt>家中已有食材</dt><dd>{{ pantryStore.items.join('、') || '未填写' }}</dd></div>
+            <div v-if="preferenceStore.note.trim()" class="review-request"><dt>偏好备注</dt><dd>{{ preferenceStore.note.trim() }}</dd></div>
+          </dl>
+          <p class="review-note">若本次描述中写明了天数、预算或忌口，将优先按描述解析；过敏原仍以画像中的硬性排除为准。</p>
         </section>
 
         <div v-if="submitError || profileLoadError" class="error-stack">
@@ -696,6 +724,9 @@ async function submit() {
 }
 
 .pantry-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.field-label { display: block; color: $color-text-primary; font-size: 14px; font-weight: 700; }
+.pantry-entry .field-label { grid-column: 1 / -1; }
+.local-context > .field-label { margin-top: 17px; }
 .pantry-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .pantry-tags button {
   min-height: 38px;
@@ -710,7 +741,7 @@ async function submit() {
   font-weight: 700;
 }
 .pantry-tags button span { margin-left: 7px; color: $color-text-placeholder; }
-.preference-input { margin-top: 13px; }
+.preference-input { margin-top: 8px; }
 .preference-input :deep(.el-textarea__inner) { border-radius: $radius-sm; background: rgba($color-card, .9); font-size: 14px; line-height: 1.65; }
 
 .controls-panel {
@@ -761,6 +792,22 @@ async function submit() {
 
 .budget-input { width: 100%; }
 .budget-input :deep(.el-input__wrapper) { background: transparent; }
+
+.request-review {
+  margin-top: 26px;
+  padding: 20px;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-surface-soft;
+}
+
+.request-review h3 { margin: 0; }
+.review-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 18px 0 0; }
+.review-grid > div { min-width: 0; padding: 12px 14px; border-radius: $radius-sm; background: $color-card; }
+.review-grid .review-request { grid-column: 1 / -1; }
+.review-grid dt { margin-bottom: 5px; color: $color-text-secondary; font-size: 12px; }
+.review-grid dd { margin: 0; overflow-wrap: anywhere; color: $color-text-primary; font-size: 14px; font-weight: 650; line-height: 1.6; }
+.review-note { margin: 14px 0 0; color: $color-text-secondary; font-size: 13px; line-height: 1.65; }
 
 .error-stack {
   display: grid;
@@ -899,6 +946,8 @@ async function submit() {
 
   .controls-panel { padding: 15px; }
   .option-item { padding: 13px; }
+  .request-review { padding: 15px; }
+  .review-grid { grid-template-columns: 1fr; }
 
   .submit-row {
     align-items: stretch;

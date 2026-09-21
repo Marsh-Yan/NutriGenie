@@ -56,6 +56,11 @@ watch(
   scroll-margin-top: calc(#{$header-height} + 20px);
 }
 
+.main-content:focus-visible {
+  outline: 3px solid $color-focus-ring;
+  outline-offset: -3px;
+}
+
 .skip-link {
   position: fixed;
   top: 10px;
