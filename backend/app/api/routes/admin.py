@@ -115,8 +115,9 @@ def delete_ingredient(ingredient_id: int, db: Session = Depends(get_db), _: User
         raise HTTPException(status_code=404, detail="Ingredient not found")
     if db.query(RecipeIngredient).filter_by(ingredient_id=ingredient_id).first():
         raise HTTPException(status_code=409, detail="Ingredient is still used by a recipe")
-    nutrition = db.query(IngredientNutrition).filter_by(ingredient_id=ingredient_id).first()
-    if nutrition: db.delete(nutrition)
+    # ingredient_nutrition is removed by the database FK cascade. Deleting it
+    # explicitly as well causes a double-delete warning on SQLite and can hide
+    # inconsistent FK configuration in other environments.
     db.delete(ingredient); db.commit()
 
 

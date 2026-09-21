@@ -46,16 +46,72 @@ export async function deleteIngredient(id: number): Promise<void> {
 }
 
 export interface AdminRecipeInput {
-  name: string; description?: string | null; category: string; cuisine_type: string; difficulty: 'easy' | 'medium' | 'hard'
-  prep_time: number; cook_time: number; servings: number; steps: { step: number; content: string }[]; image_url?: string | null
+  name: string
+  description?: string | null
+  category: string
+  cuisine_type: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  prep_time: number
+  cook_time: number
+  servings: number
+  steps: { step: number; content: string }[]
+  image_url?: string | null
   nutrition: { calories: number; protein: number; fat: number; carbs: number; fiber: number }
-  tags?: string[] | null; ingredients: { ingredient_id: number; quantity: number; unit: string; is_optional: boolean }[]
+  tags?: string[] | null
+  ingredients: { ingredient_id: number; quantity: number; unit: string; is_optional: boolean }[]
 }
-export async function createRecipe(input: AdminRecipeInput): Promise<{ recipe_id: number }> { const { data } = await api.post('/admin/recipes', input); return data }
-export async function updateRecipe(id: number, input: AdminRecipeInput): Promise<{ recipe_id: number }> { const { data } = await api.put(`/admin/recipes/${id}`, input); return data }
-export async function deleteRecipe(id: number): Promise<void> { await api.delete(`/admin/recipes/${id}`) }
-export async function listRecipes(): Promise<{ items: any[] }> { const { data } = await api.get('/recipes', { params: { page_size: 50 } }); return data }
-export async function getRecipeDetail(id: number): Promise<any> { const { data } = await api.get(`/recipes/${id}`); return data }
+
+export interface AdminRecipeSummary {
+  recipe_id: number
+  name: string
+  category: string
+  cuisine_type: string
+  difficulty: AdminRecipeInput['difficulty']
+  prep_time: number
+  cook_time: number
+  total_calories: number
+  tags: string[] | null
+}
+
+export interface AdminRecipeDetail extends AdminRecipeSummary {
+  description: string | null
+  servings: number
+  steps: AdminRecipeInput['steps']
+  image_url: string | null
+  nutrition: AdminRecipeInput['nutrition']
+  ingredients: Array<AdminRecipeInput['ingredients'][number] & { name: string }>
+}
+
+export interface AdminRecipePage {
+  total: number
+  page: number
+  page_size: number
+  items: AdminRecipeSummary[]
+}
+
+export async function createRecipe(input: AdminRecipeInput): Promise<{ recipe_id: number }> {
+  const { data } = await api.post('/admin/recipes', input)
+  return data
+}
+
+export async function updateRecipe(id: number, input: AdminRecipeInput): Promise<{ recipe_id: number }> {
+  const { data } = await api.put(`/admin/recipes/${id}`, input)
+  return data
+}
+
+export async function deleteRecipe(id: number): Promise<void> {
+  await api.delete(`/admin/recipes/${id}`)
+}
+
+export async function listRecipes(page = 1, pageSize = 50): Promise<AdminRecipePage> {
+  const { data } = await api.get('/recipes', { params: { page, page_size: pageSize } })
+  return data
+}
+
+export async function getRecipeDetail(id: number): Promise<AdminRecipeDetail> {
+  const { data } = await api.get(`/recipes/${id}`)
+  return data
+}
 
 export interface KnowledgeDocument { recipe_id: number; source_file: string; content_hash: string; preview: string }
 export async function listKnowledgeDocuments(): Promise<KnowledgeDocument[]> { const { data } = await api.get('/admin/knowledge/documents'); return data }
