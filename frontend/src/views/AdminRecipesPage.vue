@@ -307,7 +307,7 @@ onMounted(() => Promise.all([loadRecipes(), loadIngredientOptions()]))
       <div class="table-heading">
         <div><h2 id="recipe-table-title">已收录菜谱</h2><p>共 {{ total }} 道标准菜谱</p></div>
       </div>
-      <el-table v-loading="loading" :data="recipes" empty-text="还没有菜谱，请先新增一条">
+      <el-table class="desktop-table" v-loading="loading" :data="recipes" empty-text="还没有菜谱，请先新增一条">
         <el-table-column prop="name" label="菜谱" min-width="180" />
         <el-table-column label="类型" width="110">
           <template #default="{ row }">{{ categoryOptions.find((item) => item.value === row.category)?.label || row.category }}</template>
@@ -327,6 +327,21 @@ onMounted(() => Promise.all([loadRecipes(), loadIngredientOptions()]))
           </template>
         </el-table-column>
       </el-table>
+      <ul v-loading="loading" class="mobile-data-list" aria-label="菜谱数据">
+        <li v-for="recipe in recipes" :key="recipe.recipe_id" class="mobile-data-card">
+          <header><strong>{{ recipe.name }}</strong><span>#{{ recipe.recipe_id }}</span></header>
+          <dl>
+            <div><dt>类型</dt><dd>{{ categoryOptions.find((item) => item.value === recipe.category)?.label || recipe.category }}</dd></div>
+            <div><dt>难度</dt><dd>{{ difficultyOptions.find((item) => item.value === recipe.difficulty)?.label || recipe.difficulty }}</dd></div>
+            <div><dt>耗时</dt><dd>{{ recipe.prep_time + recipe.cook_time }} 分钟</dd></div>
+          </dl>
+          <div class="mobile-card-actions">
+            <el-button plain type="primary" :loading="detailLoadingId === recipe.recipe_id" @click="openEdit(recipe)">编辑</el-button>
+            <el-button plain type="danger" @click="remove(recipe)">删除</el-button>
+          </div>
+        </li>
+        <li v-if="!loading && !recipes.length" class="mobile-empty">还没有菜谱，请先新增一条</li>
+      </ul>
       <el-pagination
         v-if="total > pageSize"
         class="pagination"
@@ -455,6 +470,7 @@ onMounted(() => Promise.all([loadRecipes(), loadIngredientOptions()]))
 :deep(.el-table td.el-table__cell) { height: 58px; }
 .row-actions { display: flex; gap: 4px; }
 .row-actions :deep(.el-button) { min-width: 48px; min-height: 40px; margin: 0; }
+.mobile-data-list { display: none; }
 .pagination { justify-content: flex-end; padding: 18px 24px 22px; }
 
 .form-section { padding: 4px 0 24px; }
@@ -504,8 +520,19 @@ onMounted(() => Promise.all([loadRecipes(), loadIngredientOptions()]))
   .recipe-admin { padding-top: 24px; }
   .top { align-items: stretch; flex-direction: column; padding: 24px 20px; }
   .top :deep(.el-button) { width: 100%; }
-  .table-shell { overflow-x: auto; }
-  .table-shell :deep(.el-table) { min-width: 720px; }
+  .desktop-table { display: none; }
+  .mobile-data-list { display: grid; gap: 12px; padding: 6px 14px 16px; list-style: none; }
+  .mobile-data-card { display: grid; gap: 14px; padding: 16px; border: 1px solid $color-border; border-radius: $radius-md; background: $color-surface; }
+  .mobile-data-card header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .mobile-data-card header strong { min-width: 0; overflow-wrap: anywhere; font-size: 16px; }
+  .mobile-data-card header span { flex: 0 0 auto; color: $color-text-secondary; font-family: $font-numeric; font-size: 12px; }
+  .mobile-data-card dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; }
+  .mobile-data-card dl div { min-width: 0; }
+  .mobile-data-card dt { color: $color-text-secondary; font-size: 12px; }
+  .mobile-data-card dd { margin: 3px 0 0; overflow-wrap: anywhere; color: $color-text-primary; font-size: 13px; font-weight: 700; }
+  .mobile-card-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .mobile-card-actions :deep(.el-button) { width: 100%; min-height: 44px; margin: 0; }
+  .mobile-empty { padding: 32px 16px; color: $color-text-secondary; text-align: center; }
   .form-grid--three,
   .nutrition-grid,
   .ingredient-row { grid-template-columns: 1fr; }
@@ -514,6 +541,10 @@ onMounted(() => Promise.all([loadRecipes(), loadIngredientOptions()]))
   .step-row { grid-template-columns: 34px minmax(0, 1fr); align-items: start; }
   .step-row .remove-button { grid-column: 2; justify-self: start; }
   :global(.recipe-editor-dialog .el-dialog__body) { padding-inline: 16px; }
+}
+
+@media (max-width: 420px) {
+  .mobile-data-card dl { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

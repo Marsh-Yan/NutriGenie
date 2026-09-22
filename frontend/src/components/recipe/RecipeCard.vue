@@ -80,6 +80,8 @@ watch(displayImage, () => {
           class="recipe-image"
           :src="displayImage"
           alt=""
+          width="108"
+          height="81"
           loading="lazy"
           decoding="async"
           @error="imageFailed = true"

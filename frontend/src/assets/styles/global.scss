@@ -206,11 +206,19 @@ p { text-wrap: pretty; }
   box-shadow: 0 8px 20px rgba($color-brand, .16);
 }
 
+.el-button--primary.is-plain {
+  border-color: rgba($color-brand, .3);
+  background: $color-surface-soft;
+  box-shadow: none;
+  color: $color-brand;
+}
+
 .el-button--primary:hover:not(.is-disabled),
 .el-button--primary:focus-visible {
   border-color: $color-brand-hover;
   background: $color-brand-hover;
   box-shadow: 0 11px 24px rgba($color-brand, .22);
+  color: $color-text-inverse;
 }
 
 .el-button--large { min-height: 50px; padding-inline: 24px; }
@@ -263,9 +271,11 @@ p { text-wrap: pretty; }
   *,
   *::before,
   *::after {
+    animation-delay: 0s !important;
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
+    transition-delay: 0s !important;
     transition-duration: .01ms !important;
   }
 }

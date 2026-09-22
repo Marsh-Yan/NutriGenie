@@ -157,7 +157,7 @@ onMounted(load)
       <div class="table-heading">
         <div><h2 id="ingredient-table-title">已收录食材</h2><p>共 {{ items.length }} 项标准食材</p></div>
       </div>
-      <el-table v-loading="loading" :data="pagedItems" empty-text="还没有食材，请先新增一项">
+      <el-table class="desktop-table" v-loading="loading" :data="pagedItems" empty-text="还没有食材，请先新增一项">
         <el-table-column prop="ingredient_id" label="编号" width="80" />
         <el-table-column prop="name" label="食材" min-width="140" />
         <el-table-column label="分类" width="110">
@@ -174,6 +174,21 @@ onMounted(load)
           </template>
         </el-table-column>
       </el-table>
+      <ul v-loading="loading" class="mobile-data-list" aria-label="食材数据">
+        <li v-for="item in pagedItems" :key="item.ingredient_id" class="mobile-data-card">
+          <header><strong>{{ item.name }}</strong><span>#{{ item.ingredient_id }}</span></header>
+          <dl>
+            <div><dt>分类</dt><dd>{{ categoryOptions.find((option) => option.value === item.category)?.label || item.category }}</dd></div>
+            <div><dt>采购价格</dt><dd>¥{{ item.unit_price }}/{{ item.unit }}</dd></div>
+            <div><dt>热量</dt><dd>{{ item.nutrition.calories }} kcal / 100g</dd></div>
+          </dl>
+          <div class="mobile-card-actions">
+            <el-button plain type="primary" @click="openEdit(item)">编辑</el-button>
+            <el-button plain type="danger" @click="remove(item)">删除</el-button>
+          </div>
+        </li>
+        <li v-if="!loading && !pagedItems.length" class="mobile-empty">还没有食材，请先新增一项</li>
+      </ul>
       <el-pagination
         v-if="items.length > pageSize"
         class="pagination"
@@ -255,6 +270,7 @@ onMounted(load)
 :deep(.el-table td.el-table__cell) { height: 58px; }
 .row-actions { display: flex; gap: 4px; }
 .row-actions :deep(.el-button) { min-width: 48px; min-height: 40px; margin: 0; }
+.mobile-data-list { display: none; }
 .pagination { justify-content: flex-end; padding: 18px 24px 22px; }
 .form-section { padding: 4px 0 24px; }
 .form-section + .form-section { padding-top: 24px; border-top: 1px solid $color-border; }
@@ -275,11 +291,26 @@ onMounted(load)
   .admin-ingredients { padding-top: 24px; }
   .top { align-items: stretch; flex-direction: column; padding: 24px 20px; }
   .top :deep(.el-button) { width: 100%; }
-  .table-shell { overflow-x: auto; }
-  .table-shell :deep(.el-table) { min-width: 760px; }
+  .desktop-table { display: none; }
+  .mobile-data-list { display: grid; gap: 12px; padding: 6px 14px 16px; list-style: none; }
+  .mobile-data-card { display: grid; gap: 14px; padding: 16px; border: 1px solid $color-border; border-radius: $radius-md; background: $color-surface; }
+  .mobile-data-card header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .mobile-data-card header strong { min-width: 0; overflow-wrap: anywhere; font-size: 16px; }
+  .mobile-data-card header span { flex: 0 0 auto; color: $color-text-secondary; font-family: $font-numeric; font-size: 12px; }
+  .mobile-data-card dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; }
+  .mobile-data-card dl div { min-width: 0; }
+  .mobile-data-card dt { color: $color-text-secondary; font-size: 12px; }
+  .mobile-data-card dd { margin: 3px 0 0; overflow-wrap: anywhere; color: $color-text-primary; font-size: 13px; font-weight: 700; }
+  .mobile-card-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .mobile-card-actions :deep(.el-button) { width: 100%; min-height: 44px; margin: 0; }
+  .mobile-empty { padding: 32px 16px; color: $color-text-secondary; text-align: center; }
   .form-grid,
   .nutrition-grid { grid-template-columns: 1fr; }
   :global(.ingredient-editor-dialog .el-dialog__body) { padding-inline: 16px; }
+}
+
+@media (max-width: 420px) {
+  .mobile-data-card dl { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
