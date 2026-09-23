@@ -63,11 +63,12 @@ def api_create_plan(
     current_user: User = Depends(get_current_user),
 ):
     from app.services.profile_service import get_profile
-    from app.workflow.nodes.intent_analyzer import explicit_duration_days
+    from app.workflow.nodes.intent_analyzer import explicit_budget, explicit_duration_days
 
     requested_days = explicit_duration_days(data.user_input)
     if requested_days is not None and not 1 <= requested_days <= 7:
         raise HTTPException(status_code=422, detail="当前仅支持生成 1-7 天餐单")
+    requested_budget = explicit_budget(data.user_input)
 
     profile = get_profile(db, data.profile_id)
     if not profile or (current_user.role != "admin" and profile.user_id != current_user.user_id):
@@ -77,7 +78,7 @@ def api_create_plan(
         profile_id=data.profile_id,
         user_input=data.user_input,
         duration_days=data.duration_days,
-        total_budget=data.total_budget,
+        total_budget=requested_budget if requested_budget is not None else data.total_budget,
         status="pending",
     )
     db.add(plan)

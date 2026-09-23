@@ -18,7 +18,6 @@ export const useProfileStore = defineStore('profile', () => {
     diet_type: 'balanced',
     health_goal: 'healthy',
     allergies: [],
-    daily_budget: null,
   }
 
   async function fetchProfile(id: number) {

@@ -80,6 +80,26 @@ def test_plan_index_metadata_and_ownership(api):
     assert client.post(f"/api/v1/plans/{plan_id}/meals/1/lunch/replace", json={}).status_code == 404
 
 
+def test_create_plan_stores_the_budget_used_by_intent_analysis(api, monkeypatch):
+    client, _, _, session_factory = api
+    from app.api.routes import plans as plan_routes
+
+    monkeypatch.setattr(plan_routes, "enqueue_initial_plan", lambda db, plan: type("Run", (), {"status": "pending", "run_id": 1})())
+    with session_factory() as db:
+        profile_id = db.query(Profile.profile_id).first()[0]
+
+    response = client.post("/api/v1/plans", json={
+        "profile_id": profile_id,
+        "user_input": "减脂一周，预算300元，预算改为200元",
+        "duration_days": 7,
+        "total_budget": 300,
+    })
+    assert response.status_code == 202
+    with session_factory() as db:
+        plan = db.get(MealPlan, response.json()["plan_id"])
+        assert float(plan.total_budget) == 200
+
+
 def test_clone_is_new_run_without_copying_result(api, monkeypatch):
     client, _, ids, session_factory = api
     def fake_enqueue(db, clone):

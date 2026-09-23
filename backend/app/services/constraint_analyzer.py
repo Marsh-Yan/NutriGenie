@@ -182,10 +182,7 @@ def build_constraints(
     target_protein = round(weight * protein_factor, 1)
 
     # 4. 预算分解
-    profile_daily_budget = float(getattr(profile, "daily_budget", 0) or 0)
     effective_total_budget = float(total_budget or 0)
-    if effective_total_budget <= 0 and profile_daily_budget > 0:
-        effective_total_budget = round(profile_daily_budget * duration_days, 2)
     daily_budget = (
         round(effective_total_budget / duration_days, 2)
         if duration_days > 0 else effective_total_budget
