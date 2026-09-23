@@ -67,7 +67,7 @@ function switchMode() {
         <div class="story-copy">
           <span class="story-eyebrow">NutriGenie · AI Nutrition</span>
           <h1>把每一餐，变成更懂你的选择。</h1>
-          <p>从身体数据、饮食偏好到每日预算，把复杂的营养规划整理成一份真正能执行的生活方案。</p>
+          <p>结合身体数据、饮食偏好和每次方案的预算，把复杂的营养规划整理成一份真正能执行的生活方案。</p>
 
           <div class="benefit-list" aria-label="产品特点">
             <div>

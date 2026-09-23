@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, useId } from 'vue'
+import { ref, computed, onMounted, useId, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'
@@ -10,6 +10,7 @@ import { usePantryStore } from '@/stores/pantry'
 import { usePlanIndexStore } from '@/stores/planIndex'
 import { usePreferenceStore } from '@/stores/preference'
 import { MagicStick, Right } from '@element-plus/icons-vue'
+import { explicitBudget as parseExplicitBudget } from '@/utils/planBudget'
 
 const router = useRouter()
 const route = useRoute()
@@ -45,6 +46,12 @@ const examples = [
 ]
 
 const profileExists = computed(() => profileStore.hasProfile)
+const explicitBudget = computed(() => parseExplicitBudget(userInput.value))
+const effectiveBudget = computed(() => explicitBudget.value ?? totalBudget.value ?? 0)
+
+watch(explicitBudget, (budget) => {
+  if (budget !== null) totalBudget.value = budget
+})
 const profileSummary = computed(() => {
   const profile = profileStore.profile
   if (!profile) return []
@@ -53,7 +60,6 @@ const profileSummary = computed(() => {
   return [
     { label: '目标', value: goalLabels[profile.health_goal] || profile.health_goal },
     { label: '饮食方式', value: dietLabels[profile.diet_type] || profile.diet_type },
-    { label: '每日预算', value: profile.daily_budget ? `¥${profile.daily_budget}` : '未限制' },
     { label: '过敏与忌口', value: profile.allergies?.length ? profile.allergies.join('、') : '未填写' },
   ]
 })
@@ -116,10 +122,11 @@ async function submit() {
     const requestParts = [originalInput]
     if (pantryStore.items.length) requestParts.push(`已有食材：${pantryStore.items.join('、')}。`)
     if (preferenceStore.note.trim()) requestParts.push(`本地偏好备注：${preferenceStore.note.trim()}。`)
+    const budget = effectiveBudget.value
     const res = await planStore.create(
       requestParts.join('\n'),
       durationDays.value,
-      totalBudget.value || 0,
+      budget,
       profileId,
     )
     const now = new Date().toISOString()
@@ -128,7 +135,7 @@ async function submit() {
       title: originalInput.length > 28 ? `${originalInput.slice(0, 28)}…` : originalInput,
       userInput: originalInput,
       durationDays: durationDays.value,
-      totalBudget: totalBudget.value || 0,
+      totalBudget: budget,
       status: res.status,
       createdAt: res.created_at || now,
       completedAt: null,
@@ -225,7 +232,7 @@ async function submit() {
           />
           <p :id="`${inputId}-hint`" class="constraint-hint">
             <span aria-hidden="true">✦</span>
-            文本中明确写出的天数、预算和忌口会优先生效；下方选项用于最后核对。
+            描述中写明的预算会自动用于本次方案，无需在下方重复填写；天数和忌口也会优先按描述解析。
           </p>
           <p v-if="inputError" :id="`${inputId}-error`" class="submit-error" role="alert">{{ inputError }}</p>
         </div>
@@ -292,21 +299,25 @@ async function submit() {
         <section class="controls-panel" aria-labelledby="controls-title">
           <div class="controls-heading">
             <span id="controls-title" class="section-label"><span>04</span>核对规划范围</span>
-            <small>这些选项会和上方文字一起提交</small>
+            <small>已写明的预算自动同步，无需重复填写</small>
           </div>
           <div class="options-row">
-            <fieldset class="option-item days-option">
-              <legend>规划天数</legend>
-              <el-radio-group v-model="durationDays" size="small">
+            <div class="option-item days-option" role="group" aria-labelledby="duration-label">
+              <span id="duration-label" class="option-label">规划天数</span>
+              <el-radio-group v-model="durationDays" size="small" aria-labelledby="duration-label">
                 <el-radio-button :value="3">3 天</el-radio-button>
                 <el-radio-button :value="5">5 天</el-radio-button>
                 <el-radio-button :value="7">7 天</el-radio-button>
               </el-radio-group>
               <span>适合短期尝试或完整一周安排</span>
-            </fieldset>
+            </div>
             <div class="option-item budget-option">
-              <label :for="budgetId">总预算（元）</label>
+              <label :for="explicitBudget === null ? budgetId : undefined" class="option-label">总预算（元）</label>
+              <div v-if="explicitBudget !== null" class="budget-derived" role="status">
+                {{ explicitBudget ? `¥${explicitBudget}` : '未限制' }}
+              </div>
               <el-input-number
+                v-else
                 :id="budgetId"
                 v-model="totalBudget"
                 :min="0"
@@ -317,7 +328,7 @@ async function submit() {
                 class="budget-input"
                 placeholder="不限制"
               />
-              <span>填写 0 代表本次不限制预算</span>
+              <span>{{ explicitBudget !== null ? '已从上方描述读取；修改预算请直接修改描述' : '描述未写预算时在此填写；0 代表不限制' }}</span>
             </div>
           </div>
         </section>
@@ -330,12 +341,12 @@ async function submit() {
           <dl class="review-grid">
             <div class="review-request"><dt>本次需求</dt><dd>{{ userInput.trim() || '请先填写需求' }}</dd></div>
             <div><dt>规划周期</dt><dd>{{ durationDays }} 天</dd></div>
-            <div><dt>本次总预算</dt><dd>{{ totalBudget ? `¥${totalBudget}` : '未限制' }}</dd></div>
+            <div><dt>本次总预算</dt><dd>{{ effectiveBudget ? `¥${effectiveBudget}` : '未限制' }}</dd></div>
             <div v-for="item in profileSummary" :key="item.label"><dt>画像{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
             <div><dt>家中已有食材</dt><dd>{{ pantryStore.items.join('、') || '未填写' }}</dd></div>
             <div v-if="preferenceStore.note.trim()" class="review-request"><dt>偏好备注</dt><dd>{{ preferenceStore.note.trim() }}</dd></div>
           </dl>
-          <p class="review-note">若本次描述中写明了天数、预算或忌口，将优先按描述解析；过敏原仍以画像中的硬性排除为准。</p>
+          <p class="review-note">本次预算与上方有效金额一致；若描述中写明天数或忌口，将优先按描述解析。过敏原仍以画像中的硬性排除为准。</p>
         </section>
 
         <div v-if="submitError || profileLoadError" class="error-stack">
@@ -575,7 +586,7 @@ async function submit() {
 
 .profile-summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   align-items: stretch;
   gap: 8px;
   margin: -8px 0 30px;
@@ -760,17 +771,17 @@ async function submit() {
 
 .option-item {
   display: grid;
-  align-content: start;
+  align-content: center;
   gap: 8px;
   min-width: 0;
+  min-height: 144px;
   padding: 15px;
   border: 0;
   border-radius: $radius-sm;
   background: rgba($color-card, .86);
 }
 
-.option-item legend,
-.option-item > label {
+.option-item > .option-label {
   color: $color-text-primary;
   font-size: 12px;
   font-weight: 750;
@@ -792,6 +803,17 @@ async function submit() {
 
 .budget-input { width: 100%; }
 .budget-input :deep(.el-input__wrapper) { background: transparent; }
+.budget-derived {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 12px;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  color: $color-text-primary;
+  font-size: 14px;
+  font-weight: 700;
+}
 
 .request-review {
   margin-top: 26px;
@@ -945,7 +967,7 @@ async function submit() {
   .example-tag { min-height: 56px; }
 
   .controls-panel { padding: 15px; }
-  .option-item { padding: 13px; }
+  .option-item { min-height: 132px; padding: 13px; }
   .request-review { padding: 15px; }
   .review-grid { grid-template-columns: 1fr; }
 

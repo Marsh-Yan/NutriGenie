@@ -6,6 +6,7 @@ from app.workflow.nodes.intent_analyzer import (
     _sync_explicit_constraints_to_state,
     _merge_edit_intent,
     analyze_intent,
+    explicit_budget,
 )
 import asyncio
 from app.workflow.state import WorkflowState
@@ -52,6 +53,9 @@ class TestRuleBasedParse:
     def test_budget_without_currency_and_latest_edit(self):
         assert _rule_based_parse("增肌三天，预算200，高蛋白饮食")["total_budget"] == 200
         assert _rule_based_parse("预算300元，本次预算改为200元")["total_budget"] == 200
+
+    def test_appended_local_note_cannot_override_the_main_budget(self):
+        assert explicit_budget("预算300元\n已有食材：鸡蛋。\n本地偏好备注：上次预算500元。") == 300
 
     def test_owned_ingredients(self):
         result = _rule_based_parse("家里有鸡蛋和番茄，预算200")
@@ -141,6 +145,12 @@ class TestExplicitIntentOverrides:
         _sync_explicit_constraints_to_state(state, parsed)
         assert state.duration_days == 3
         assert state.total_budget == 180
+
+    def test_numeric_budget_remains_authoritative_when_text_omits_it(self):
+        state = WorkflowState(user_input="减脂三天", total_budget=300)
+        parsed = {"total_budget": 0}
+        _sync_explicit_constraints_to_state(state, parsed)
+        assert parsed["total_budget"] == 300
 
 
 class TestStateCreation:

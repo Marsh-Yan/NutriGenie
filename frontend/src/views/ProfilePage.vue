@@ -23,7 +23,7 @@ onMounted(async () => {
         age: existing.age, gender: existing.gender, height: existing.height, weight: existing.weight,
         activity_level: existing.activity_level || 'moderate',
         diet_type: existing.diet_type, health_goal: existing.health_goal,
-        allergies: existing.allergies || [], daily_budget: existing.daily_budget,
+        allergies: existing.allergies || [],
       }
     }
   } catch (e: unknown) {
@@ -51,7 +51,6 @@ const steps = [
   { title: '基本信息', desc: '年龄、性别、身体数据' },
   { title: '健康目标', desc: '你想达成什么效果？' },
   { title: '饮食偏好', desc: '饮食习惯与限制' },
-  { title: '预算确认', desc: '每日预算与完成' },
 ]
 
 const healthGoalLabels: Record<string, string> = {
@@ -103,12 +102,8 @@ async function submitForm() {
   }
   submitting.value = true
   try {
-    const payload = {
-      ...form.value,
-      daily_budget: form.value.daily_budget ?? 0,
-    }
-    if (store.profile) await store.updateProfile(store.profile.profile_id, payload as any)
-    else await store.saveProfile(payload as any)
+    if (store.profile) await store.updateProfile(store.profile.profile_id, form.value)
+    else await store.saveProfile(form.value)
     router.push('/plan/new')
   } catch (e: unknown) {
     submitError.value = e instanceof Error ? e.message : '画像保存失败，请稍后重试'
@@ -127,7 +122,7 @@ async function submitForm() {
         <p>用几项基础信息建立营养边界，让每一次推荐都更贴近你的身体、偏好与生活节奏。</p>
       </div>
       <div class="heading-meta" aria-label="填写说明">
-        <span><strong>4</strong> 个简单步骤</span>
+        <span><strong>3</strong> 个简单步骤</span>
         <span><strong>≈ 2</strong> 分钟完成</span>
       </div>
     </header>
@@ -312,31 +307,6 @@ async function submitForm() {
               <p class="safety-hint"><strong>安全提示</strong>严重食物过敏请同时核对配料与交叉污染风险；本工具不能替代医生或营养师建议。</p>
             </el-form-item>
           </el-form>
-          <div class="step-actions">
-            <el-button round @click="prevStep">上一步</el-button>
-            <el-button type="primary" round @click="nextStep">
-              最后确认预算 <el-icon><Right /></el-icon>
-            </el-button>
-          </div>
-        </div>
-
-        <div v-show="currentStep === 3" class="step-panel">
-          <span class="panel-step-label">STEP 04 · BUDGET & REVIEW</span>
-          <h2 class="panel-title" tabindex="-1">让计划也符合日常预算</h2>
-          <p class="panel-desc">设定每日预算后，系统会优先选择价格和营养更合适的组合。</p>
-          <el-form label-position="top" class="panel-form">
-            <div class="budget-control">
-              <div>
-                <strong>每日预算</strong>
-                <span>选填，设为 0 表示不限制</span>
-              </div>
-              <el-form-item label="金额（元）">
-                <el-input-number v-model="form.daily_budget" :min="0" :max="500" :step="10"
-                  controls-position="right" style="width: 100%" placeholder="不设置则无限" />
-              </el-form-item>
-            </div>
-          </el-form>
-
           <div class="summary-card">
             <div class="summary-heading">
               <div><span>PROFILE SUMMARY</span><h4>你的画像概览</h4></div>
@@ -359,6 +329,7 @@ async function submitForm() {
               保存并开始规划 <el-icon><Check /></el-icon>
             </el-button>
           </div>
+          <p class="budget-handoff">本次方案的预算在下一页设置，仅用于这次方案。</p>
           <p v-if="submitError" class="submit-error" role="alert">{{ submitError }}</p>
         </div>
       </section>
@@ -804,23 +775,6 @@ async function submitForm() {
 
 .safety-hint strong { color: $color-warning; font-size: 13px; }
 
-.budget-control {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
-  align-items: end;
-  gap: 28px;
-  margin-bottom: 24px;
-  padding: 22px;
-  border: 1px solid rgba($color-sage, .13);
-  border-radius: $radius-md;
-  background: $color-surface-soft;
-}
-
-.budget-control > div { display: grid; gap: 4px; align-self: center; }
-.budget-control > div strong { color: $color-text-primary; font-size: 15px; }
-.budget-control > div span { color: $color-text-secondary; font-size: 13px; }
-.budget-control :deep(.el-form-item) { margin-bottom: 0; }
-
 .summary-card {
   margin-top: 8px;
   padding: 22px;
@@ -872,6 +826,7 @@ async function submitForm() {
 
 .step-actions .el-button { min-width: 112px; }
 .step-actions .el-button--primary { min-width: 170px; }
+.budget-handoff { margin-top: 12px; color: $color-text-secondary; font-size: 12px; text-align: right; }
 
 .step-panel > .submit-error { margin-top: 16px; margin-bottom: 0; }
 
@@ -919,7 +874,6 @@ async function submitForm() {
   .goal-card :deep(.el-radio__label) { min-height: 144px; padding: 18px; }
   .goal-icon { margin-bottom: 12px; }
   .goal-check { top: 16px; right: 16px; }
-  .budget-control { grid-template-columns: 1fr; gap: 16px; padding: 18px; }
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .step-actions { align-items: stretch; }
   .step-actions .el-button { min-height: 46px; min-width: 0; }

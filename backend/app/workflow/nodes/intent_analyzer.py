@@ -25,8 +25,9 @@ BUDGET_PATTERN = re.compile(
 
 
 def explicit_budget(text: str) -> float | None:
-    """Return the latest stated budget, including amounts without a currency suffix."""
-    matches = list(BUDGET_PATTERN.finditer(text or ""))
+    """Return the latest budget in the main request, excluding appended local context."""
+    main_request = re.split(r"\n(?:已有食材|本地偏好备注)：", text or "", maxsplit=1)[0]
+    matches = list(BUDGET_PATTERN.finditer(main_request))
     return float(matches[-1].group(1)) if matches else None
 
 
@@ -240,6 +241,8 @@ def _sync_explicit_constraints_to_state(
         state.duration_days = max(1, min(int(intent_data.get("duration_days", state.duration_days)), 30))
     if explicit_budget(state.user_input) is not None:
         state.total_budget = max(0.0, float(intent_data.get("total_budget", state.total_budget) or 0))
+    if not state.is_edit:
+        intent_data["total_budget"] = state.total_budget
 
 
 async def analyze_intent(state: WorkflowState) -> WorkflowState:

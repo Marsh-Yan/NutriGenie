@@ -108,10 +108,10 @@ class TestBuildConstraints:
         c = build_constraints(healthy_profile, duration_days=1, total_budget=50)
         assert c.daily_budget == 50.0
 
-    def test_profile_daily_budget_used_when_request_has_no_budget(self, healthy_profile):
+    def test_old_profile_budget_does_not_override_unlimited_request(self, healthy_profile):
         c = build_constraints(healthy_profile, duration_days=5, total_budget=0)
-        assert c.daily_budget == 60.0
-        assert c.total_budget == 300.0
+        assert c.daily_budget == 0
+        assert c.total_budget == 0
 
     def test_allergen_names(self, fat_loss_profile):
         """应提取过敏原名"""

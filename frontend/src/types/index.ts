@@ -38,7 +38,6 @@ export interface ProfileFormData {
   diet_type: DietType
   health_goal: HealthGoal
   allergies: string[]
-  daily_budget: number | null
 }
 
 // ── 菜谱 ─────────────────────────────────
