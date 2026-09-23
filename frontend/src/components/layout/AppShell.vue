@@ -57,8 +57,7 @@ watch(
 }
 
 .main-content:focus-visible {
-  outline: 3px solid $color-focus-ring;
-  outline-offset: -3px;
+  outline: none;
 }
 
 .skip-link {

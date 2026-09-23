@@ -30,8 +30,8 @@ defineProps<{
 }
 
 .page-heading__copy { max-width: 720px; }
-.page-heading__kicker { color: $color-brand; font-size: $text-sm; font-weight: 760; }
-.page-heading h1 { margin-top: $space-2; font-size: $text-2xl; letter-spacing: -.035em; }
+.page-heading__kicker { color: $color-text-secondary; font-size: $text-sm; font-weight: 650; }
+.page-heading h1 { margin-top: $space-2; font-size: $text-2xl; letter-spacing: -.045em; }
 .page-heading p { max-width: 65ch; margin-top: $space-3; color: $color-text-secondary; }
 .page-heading__actions { display: flex; flex: 0 0 auto; gap: $space-3; }
 

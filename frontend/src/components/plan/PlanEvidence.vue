@@ -11,6 +11,16 @@ const props = defineProps<{
 const ragSources = computed(() => props.meta.rag_sources || [])
 const unresolvedIngredients = computed(() => props.meta.unresolved_ingredients || [])
 const validationWarnings = computed(() => props.validation.warnings || [])
+const sourceLabels: Record<string, string> = {
+  ingredient_catalog_v1: '标准食材目录核算',
+  legacy_estimate: '历史方案估算',
+}
+const estimateLabel = computed(() => {
+  const nutrition = props.meta.nutrition_source || props.meta.estimate_source
+  const cost = props.meta.cost_source || props.meta.estimate_source
+  const label = (source: string) => sourceLabels[source] || '来源未记录'
+  return nutrition === cost ? label(nutrition) : `营养：${label(nutrition)}；成本：${label(cost)}`
+})
 
 const strategyLabel = computed(() => {
   const labels: Record<string, string> = {
@@ -48,7 +58,7 @@ const validationLabel = computed(() => {
     <div class="evidence-grid">
       <div><span>生成策略</span><strong>{{ strategyLabel }}</strong></div>
       <div><span>候选菜谱</span><strong>{{ meta.candidate_count || '未记录' }}</strong></div>
-      <div><span>营养与成本</span><strong>{{ meta.estimate_source || '历史估算' }}</strong></div>
+      <div><span>营养与成本依据</span><strong>{{ estimateLabel }}</strong></div>
       <div><span>确定性校验</span><strong>{{ validationLabel }}</strong></div>
     </div>
 

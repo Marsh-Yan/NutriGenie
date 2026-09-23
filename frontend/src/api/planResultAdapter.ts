@@ -76,6 +76,34 @@ function nutritionReport(value: unknown): NutritionReport {
   }
 }
 
+function dailyNutritionReport(value: unknown, plan: WeeklyDay[]): NutritionReport {
+  const report = nutritionReport(value)
+  if (!plan.length || !plan.some(day => day.total_nutrition.calories > 0)) return report
+
+  const total = plan.reduce((sum, day) => ({
+    calories: sum.calories + day.total_nutrition.calories,
+    protein: sum.protein + day.total_nutrition.protein_g,
+    fat: sum.fat + day.total_nutrition.fat_g,
+    carbs: sum.carbs + day.total_nutrition.carbs_g,
+    fiber: sum.fiber + day.total_nutrition.fiber_g,
+  }), { calories: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 })
+  const macroCalories = total.protein * 4 + total.fat * 9 + total.carbs * 4
+  const round = (amount: number, digits: number) => Number(amount.toFixed(digits))
+
+  return {
+    ...report,
+    avg_daily_calories: round(total.calories / plan.length, 1),
+    total_calories: round(total.calories, 1),
+    protein_g: round(total.protein / plan.length, 1),
+    fat_g: round(total.fat / plan.length, 1),
+    carbs_g: round(total.carbs / plan.length, 1),
+    fiber_g: round(total.fiber / plan.length, 1),
+    protein_pct: macroCalories ? round(total.protein * 4 / macroCalories, 3) : 0,
+    fat_pct: macroCalories ? round(total.fat * 9 / macroCalories, 3) : 0,
+    carbs_pct: macroCalories ? round(total.carbs * 4 / macroCalories, 3) : 0,
+  }
+}
+
 function shoppingList(value: unknown): ShoppingList {
   const shopping = object(value)
   return {
@@ -130,7 +158,11 @@ export function normalizePlanResult(value: unknown): PlanResult | null {
   const raw = object(value)
   if (!Object.keys(raw).length) return null
   if (raw.schema_version === 'ai_native_v2' && Array.isArray(raw.recipes)) {
-    return raw as PlanResult
+    const plan = weeklyPlan(raw.weekly_plan)
+    return {
+      ...raw,
+      nutrition_report: dailyNutritionReport(raw.nutrition_report, plan),
+    } as PlanResult
   }
 
   const plan = weeklyPlan(raw.weekly_plan)

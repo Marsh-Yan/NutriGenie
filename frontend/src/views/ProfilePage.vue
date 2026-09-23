@@ -339,7 +339,6 @@ async function submitForm() {
 
 <style scoped lang="scss">
 .profile-page {
-  max-width: 1220px;
   padding-top: clamp(38px, 5vw, 68px);
   padding-bottom: clamp(60px, 7vw, 96px);
 }
@@ -365,6 +364,8 @@ async function submitForm() {
   justify-content: space-between;
   gap: 48px;
   margin-bottom: 36px;
+  padding: clamp(24px, 3vw, 48px);
+  border-radius: 32px;
 }
 
 .heading-copy { max-width: 720px; }
@@ -599,7 +600,7 @@ async function submitForm() {
   content: '';
 }
 
-.step-panel { max-width: 760px; }
+.step-panel { max-width: 920px; margin-inline: auto; }
 
 .panel-step-label {
   color: $color-sage;
@@ -860,6 +861,7 @@ async function submitForm() {
 
 @media (max-width: $breakpoint-sm) {
   .profile-page { padding-top: 28px; padding-bottom: 46px; }
+  .profile-heading { padding: 24px 20px; border-radius: 24px; }
   .heading-copy h1 { margin-top: 10px; font-size: 32px; }
   .heading-copy p { margin-top: 11px; font-size: 13px; line-height: 1.75; }
   .heading-meta > span { padding: 8px 11px; }

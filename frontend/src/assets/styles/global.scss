@@ -26,11 +26,11 @@
   --header-height: #{$header-height};
 
   --el-color-primary: #{$color-brand};
-  --el-color-primary-light-3: #{$leaf-600};
-  --el-color-primary-light-5: #{$leaf-500};
-  --el-color-primary-light-7: #{$leaf-200};
-  --el-color-primary-light-8: #{$leaf-100};
-  --el-color-primary-light-9: #{$porcelain-50};
+  --el-color-primary-light-3: #{$ink-700};
+  --el-color-primary-light-5: #{$ink-600};
+  --el-color-primary-light-7: #{$stone-300};
+  --el-color-primary-light-8: #{$stone-200};
+  --el-color-primary-light-9: #{$stone-100};
   --el-color-primary-dark-2: #{$forest-800};
   --el-color-success: #{$color-success};
   --el-color-warning: #{$color-warning};
@@ -203,7 +203,7 @@ p { text-wrap: pretty; }
 .el-button--primary {
   border-color: $color-brand;
   background: $color-brand;
-  box-shadow: 0 8px 20px rgba($color-brand, .16);
+  box-shadow: none;
 }
 
 .el-button--primary.is-plain {
@@ -217,7 +217,7 @@ p { text-wrap: pretty; }
 .el-button--primary:focus-visible {
   border-color: $color-brand-hover;
   background: $color-brand-hover;
-  box-shadow: 0 11px 24px rgba($color-brand, .22);
+  box-shadow: none;
   color: $color-text-inverse;
 }
 
@@ -255,10 +255,12 @@ p { text-wrap: pretty; }
   font-weight: 700;
 }
 
-.el-radio-button__inner {
+.app-shell .el-radio-button__inner {
   display: inline-flex;
   min-height: 44px;
   align-items: center;
+  justify-content: center;
+  line-height: 1.2;
 }
 
 @media (max-width: $breakpoint-sm) {

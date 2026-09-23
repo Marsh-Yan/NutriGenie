@@ -371,7 +371,7 @@ async function restoreVersion(versionId: number) {
         </div>
       </section>
 
-      <div v-if="activeTab === 'shopping' || (activeTab === 'analysis' && store.result.summary)" class="result-lower-grid" :class="{ single: activeTab === 'shopping' || !store.result.summary }">
+      <div v-if="activeTab === 'shopping' || (activeTab === 'analysis' && store.result.summary)" class="result-lower-grid" :class="{ single: activeTab === 'shopping' || activeTab === 'analysis' }">
         <section v-if="activeTab === 'shopping'" class="dashboard-panel shopping-panel card">
           <ShoppingList
             :shopping-list="store.result.shopping_list"
@@ -688,7 +688,7 @@ async function restoreVersion(versionId: number) {
   gap: 10px;
 }
 
-.plan-dashboard { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(330px, .85fr); gap: 20px; align-items: start; }
+.plan-dashboard { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
 .plan-dashboard.single { grid-template-columns: 1fr; }
 .dashboard-panel { padding: 26px; }
 .schedule-panel,
@@ -731,8 +731,6 @@ async function restoreVersion(versionId: number) {
 // ── 总结 ─────────────────────────────────
 
 .summary-card {
-  position: sticky;
-  top: 106px;
   padding: 28px;
   border-color: rgba($color-rose-dark,.1);
   background: $color-surface-warm;
@@ -835,7 +833,7 @@ async function restoreVersion(versionId: number) {
 
 @media (max-width: 1050px) {
   .plan-dashboard { grid-template-columns: 1fr; }
-  .insights-column { grid-template-columns: 1fr 1fr; }
+  .insights-column { grid-template-columns: 1fr; }
   .result-lower-grid { grid-template-columns: 1fr; }
   .summary-card { position: static; }
 }
