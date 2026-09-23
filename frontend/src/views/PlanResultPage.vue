@@ -328,7 +328,7 @@ async function restoreVersion(versionId: number) {
             </div>
             <div class="validation-metrics">
               <p><strong>{{ (store.result.validation.derived.avg_daily_calories || store.result.nutrition_report.avg_daily_calories).toFixed(0) }}</strong><span>日均 kcal</span></p>
-              <p><strong>¥{{ store.result.shopping_list.total_cost.toFixed(1) }}</strong><span>预计采购</span></p>
+              <p><strong>¥{{ store.result.shopping_list.total_cost.toFixed(1) }}</strong><span>{{ store.result.shopping_list.estimated_total_cost_is_lower_bound ? '已知费用至少' : '预计采购' }}</span></p>
             </div>
             <div
               v-if="visibleValidationWarningGroups.length"

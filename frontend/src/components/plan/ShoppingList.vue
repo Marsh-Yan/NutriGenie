@@ -62,7 +62,10 @@ async function copyList() {
     ...items.map(item => `- ${item.name} ${item.quantity}${item.unit}（约 ¥${item.estimated_cost.toFixed(1)}）`),
   ])
   try {
-    await navigator.clipboard.writeText(`NutriGenie 采购清单\n${lines.join('\n')}\n预计 ¥${props.shoppingList.total_cost.toFixed(1)}`)
+    const costNote = props.shoppingList.estimated_total_cost_is_lower_bound
+      ? `已知费用至少 ¥${props.shoppingList.total_cost.toFixed(1)}；${(props.shoppingList.unknown_price_ingredients || []).join('、')}尚无价格`
+      : `预计 ¥${props.shoppingList.total_cost.toFixed(1)}`
+    await navigator.clipboard.writeText(`NutriGenie 采购清单\n${lines.join('\n')}\n${costNote}`)
     copyFeedback.value = '已复制'
     window.setTimeout(() => { copyFeedback.value = '复制清单' }, 1600)
   } catch {
@@ -78,7 +81,7 @@ async function copyList() {
       <div class="title-actions">
         <div class="shopping-summary">
           <span class="shopping-progress" aria-live="polite" aria-atomic="true">已备 {{ checkedCount }}/{{ totalItems }}</span>
-          <span class="total-cost"><small>预计</small> ¥{{ shoppingList.total_cost.toFixed(1) }}</span>
+          <span class="total-cost"><small>{{ shoppingList.estimated_total_cost_is_lower_bound ? '至少' : '预计' }}</small> ¥{{ shoppingList.total_cost.toFixed(1) }}</span>
         </div>
         <div class="shopping-controls">
           <button v-if="checkedCount" type="button" class="copy-button" @click="requestReset">全部重置</button>
@@ -89,6 +92,10 @@ async function copyList() {
         </div>
       </div>
     </div>
+
+    <p v-if="shoppingList.estimated_total_cost_is_lower_bound" class="price-coverage-note" role="status">
+      {{ (shoppingList.unknown_price_ingredients || []).join('、') }}暂无价格，金额仅包含已知费用，实际采购可能超出预算。
+    </p>
 
     <div v-if="Object.keys(shoppingList.by_category || {}).length === 0" class="empty-state">
       暂无采购清单数据
@@ -125,6 +132,13 @@ async function copyList() {
 <style scoped lang="scss">
 .shopping-list {
   width: 100%;
+}
+
+.price-coverage-note {
+  margin: 0 0 16px;
+  color: $color-text-secondary;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .section-heading {

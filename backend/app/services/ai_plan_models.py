@@ -37,6 +37,7 @@ class GeneratedIngredient(BaseModel):
     estimated_grams: Optional[float] = Field(default=None, ge=0)
     resolution_source: Optional[Literal["exact", "alias", "normalized"]] = None
     data_source: Optional[str] = None
+    price_known: Optional[bool] = None
 
 
 class GeneratedRecipe(BaseModel):

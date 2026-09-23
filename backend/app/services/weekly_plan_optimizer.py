@@ -88,6 +88,13 @@ def _scaled_nutrition(value, factor: float):
     )
 
 
+def _expected_portion_factor(recipe: GeneratedRecipe, calorie_target: float) -> float:
+    nutrition = recipe.nutrition_estimate
+    if nutrition is None or nutrition.calories <= 0:
+        return 1.0
+    return max(0.5, min(calorie_target / nutrition.calories, 2.5))
+
+
 def _calibrate_selected_portions(
     plan: GeneratedPlan,
     meals: list[GeneratedMeal],
@@ -145,6 +152,7 @@ def _candidate_score(
     slot_weight: float,
     daily_calorie_target: float,
     daily_protein_target: float,
+    protein_needed: float,
     per_meal_budget: float,
     usage: int,
     cuisine_usage: Counter[str],
@@ -154,25 +162,183 @@ def _candidate_score(
     nutrition = recipe.nutrition_estimate
     if nutrition is None or recipe.cost_estimate is None:
         return -1_000.0
-    calorie_score = _closeness(nutrition.calories, daily_calorie_target * slot_weight)
-    protein_score = _closeness(nutrition.protein_g, daily_protein_target * slot_weight)
-    budget_score = _closeness(recipe.cost_estimate, per_meal_budget) if per_meal_budget else 0.5
+    slot_calorie_target = daily_calorie_target * slot_weight
+    projected_factor = _expected_portion_factor(recipe, slot_calorie_target)
+    calorie_score = _closeness(nutrition.calories * projected_factor, slot_calorie_target)
+    projected_protein = nutrition.protein_g * projected_factor
+    protein_score = min(1.0, projected_protein / protein_needed) if protein_needed > 0 else 0.5
+    projected_cost = recipe.cost_estimate * projected_factor
+    budget_score = min(1.0, per_meal_budget / max(projected_cost, 0.01)) if per_meal_budget else 0.5
+    over_budget_penalty = (
+        max(0.0, projected_cost / per_meal_budget - 1.0) * 1.2
+        if per_meal_budget else 0.0
+    )
     cuisine_score = 1 / (1 + cuisine_usage[recipe.cuisine_type])
     protein = _primary_protein(recipe)
     protein_score_diversity = 1 / (1 + protein_usage[protein])
     total_time = recipe.prep_time_min + recipe.cook_time_min
     time_score = 1.0 if not cooking_time_limit or total_time <= cooking_time_limit else max(0.0, cooking_time_limit / total_time)
-    unused_bonus = 0.6 if usage == 0 else 0.0
+    unused_bonus = 0.35 if usage == 0 else 0.0
     return (
-        0.35 * calorie_score
-        + 0.20 * protein_score
-        + 0.15 * budget_score
-        + 0.15 * cuisine_score
-        + 0.10 * protein_score_diversity
+        0.20 * calorie_score
+        + 0.40 * protein_score
+        + 0.25 * budget_score
+        + 0.10 * cuisine_score
+        + 0.05 * protein_score_diversity
         + 0.05 * time_score
         + unused_bonus
         - usage * 0.30
+        - over_budget_penalty
     )
+
+
+def _rebalance_daily_protein(
+    plan: GeneratedPlan,
+    meals: list[GeneratedMeal],
+    *,
+    daily_calorie_target: float,
+    slot_weights: dict[str, float],
+    daily_protein_target: float,
+) -> None:
+    """Redistribute selected dishes across days without changing the recipe pool."""
+    if daily_protein_target <= 0 or not meals:
+        return
+
+    def projected_protein(meal: GeneratedMeal) -> float:
+        recipe = plan.recipes[meal.recipe_index]
+        nutrition = recipe.nutrition_estimate
+        if nutrition is None:
+            return 0.0
+        factor = _expected_portion_factor(recipe, daily_calorie_target * slot_weights[meal.slot])
+        return nutrition.protein_g * factor
+
+    threshold = daily_protein_target * 0.85
+    totals: dict[int, float] = {}
+    for meal in meals:
+        totals[meal.day] = totals.get(meal.day, 0.0) + projected_protein(meal)
+
+    def deficit_score() -> float:
+        return sum(max(0.0, threshold - value) ** 2 for value in totals.values())
+
+    for _ in range(len(meals) * 2):
+        current_score = deficit_score()
+        best: tuple[float, int, int] | None = None
+        for left in range(len(meals)):
+            for right in range(left + 1, len(meals)):
+                first, second = meals[left], meals[right]
+                if first.day == second.day or first.slot != second.slot:
+                    continue
+                left_protein, right_protein = projected_protein(first), projected_protein(second)
+                next_left = totals[first.day] - left_protein + right_protein
+                next_right = totals[second.day] - right_protein + left_protein
+                new_score = (
+                    current_score
+                    - max(0.0, threshold - totals[first.day]) ** 2
+                    - max(0.0, threshold - totals[second.day]) ** 2
+                    + max(0.0, threshold - next_left) ** 2
+                    + max(0.0, threshold - next_right) ** 2
+                )
+                if new_score >= current_score - 1e-6:
+                    continue
+                sequence = [meal.recipe_index for meal in meals]
+                sequence[left], sequence[right] = sequence[right], sequence[left]
+                if any(a == b for a, b in zip(sequence, sequence[1:])):
+                    continue
+                if best is None or new_score < best[0]:
+                    best = (new_score, left, right)
+        if best is None:
+            break
+        _, left, right = best
+        first, second = meals[left], meals[right]
+        left_protein, right_protein = projected_protein(first), projected_protein(second)
+        totals[first.day] += right_protein - left_protein
+        totals[second.day] += left_protein - right_protein
+        first.recipe_index, second.recipe_index = second.recipe_index, first.recipe_index
+
+
+def _refine_quality_targets(
+    plan: GeneratedPlan,
+    meals: list[GeneratedMeal],
+    eligible_indexes: list[int],
+    *,
+    daily_calorie_target: float,
+    daily_protein_target: float,
+    total_budget: float,
+    required_unique: int,
+    max_repeat: int,
+    slot_weights: dict[str, float],
+) -> None:
+    """Replace selected candidates when the whole-week targets are still missed."""
+    if not meals:
+        return
+
+    def contribution(index: int, slot: str) -> tuple[float, float, float]:
+        recipe = plan.recipes[index]
+        nutrition = recipe.nutrition_estimate
+        if nutrition is None:
+            return (0.0, 0.0, 0.0)
+        factor = _expected_portion_factor(recipe, daily_calorie_target * slot_weights[slot])
+        return (
+            nutrition.calories * factor,
+            nutrition.protein_g * factor,
+            float(recipe.cost_estimate or 0) * factor,
+        )
+
+    def objective(sequence: list[int]) -> float:
+        daily: dict[int, list[float]] = {}
+        cost = 0.0
+        for meal, index in zip(meals, sequence):
+            calories, protein, meal_cost = contribution(index, meal.slot)
+            totals = daily.setdefault(meal.day, [0.0, 0.0])
+            totals[0] += calories
+            totals[1] += protein
+            cost += meal_cost
+        score = 0.0
+        if len(slot_weights) == 3 and daily_calorie_target > 0:
+            tolerance = settings.PLAN_CALORIE_TOLERANCE
+            for calories, _ in daily.values():
+                excess = max(0.0, abs(calories / daily_calorie_target - 1.0) - tolerance)
+                score += excess * excess
+        if len(slot_weights) == 3 and daily_protein_target > 0:
+            for _, protein in daily.values():
+                shortfall = max(0.0, 0.85 - protein / daily_protein_target)
+                score += shortfall * shortfall
+        if total_budget > 0:
+            over = max(0.0, cost / total_budget - 1.0 - settings.PLAN_BUDGET_TOLERANCE)
+            score += over * over
+        return score
+
+    selected = [meal.recipe_index for meal in meals]
+    for _ in range(min(30, len(meals) * 2)):
+        baseline = objective(selected)
+        if baseline < 1e-8:
+            break
+        usage = Counter(selected)
+        best: tuple[float, int, int] | None = None
+        for position, meal in enumerate(meals):
+            old_index = selected[position]
+            for index in eligible_indexes:
+                if index == old_index or usage[index] >= max_repeat:
+                    continue
+                recipe = plan.recipes[index]
+                if recipe.meal_slots and meal.slot not in recipe.meal_slots:
+                    continue
+                if usage[old_index] == 1 and usage[index] > 0 and len(usage) <= required_unique:
+                    continue
+                if (position > 0 and selected[position - 1] == index) or (
+                    position + 1 < len(selected) and selected[position + 1] == index
+                ):
+                    continue
+                selected[position] = index
+                score = objective(selected)
+                selected[position] = old_index
+                if score < baseline - 1e-8 and (best is None or score < best[0]):
+                    best = (score, position, index)
+        if best is None:
+            break
+        _, position, index = best
+        selected[position] = index
+        meals[position].recipe_index = index
 
 
 def optimize_weekly_plan(
@@ -238,11 +404,17 @@ def optimize_weekly_plan(
     last_index: int | None = None
 
     for day in range(1, duration_days + 1):
-        for slot in slots:
+        day_protein_estimate = 0.0
+        for slot_index, slot in enumerate(slots):
             available = []
             remaining_slots = total_meals - len(selected)
             still_needed_unique = max(0, required_unique - len(set(selected)))
             force_unused = still_needed_unique >= remaining_slots
+            remaining_day_slots = len(slots) - slot_index
+            protein_needed = max(
+                daily_protein_target * weights[slot],
+                (daily_protein_target - day_protein_estimate) / remaining_day_slots,
+            )
             for index in eligible_indexes:
                 recipe = plan.recipes[index]
                 if usage[index] >= max_repeat or index == last_index:
@@ -257,6 +429,7 @@ def optimize_weekly_plan(
                     slot_weight=weights[slot],
                     daily_calorie_target=daily_calorie_target,
                     daily_protein_target=daily_protein_target,
+                    protein_needed=protein_needed,
                     per_meal_budget=per_meal_budget,
                     usage=usage[index],
                     cuisine_usage=cuisine_usage,
@@ -284,6 +457,9 @@ def optimize_weekly_plan(
             usage[chosen] += 1
             cuisine_usage[recipe.cuisine_type] += 1
             protein_usage[_primary_protein(recipe)] += 1
+            if recipe.nutrition_estimate is not None:
+                factor = _expected_portion_factor(recipe, daily_calorie_target * weights[slot])
+                day_protein_estimate += recipe.nutrition_estimate.protein_g * factor
             last_index = chosen
 
     unique_count = len(set(selected))
@@ -297,6 +473,29 @@ def optimize_weekly_plan(
             },
         )
 
+    _refine_quality_targets(
+        plan,
+        meals,
+        eligible_indexes,
+        daily_calorie_target=daily_calorie_target,
+        daily_protein_target=daily_protein_target,
+        total_budget=total_budget,
+        required_unique=required_unique,
+        max_repeat=max_repeat,
+        slot_weights=weights,
+    )
+    _rebalance_daily_protein(
+        plan,
+        meals,
+        daily_calorie_target=daily_calorie_target,
+        slot_weights=weights,
+        daily_protein_target=daily_protein_target,
+    )
+    selected = [meal.recipe_index for meal in meals]
+    usage = Counter(selected)
+    unique_count = len(usage)
+    cuisine_usage = Counter(plan.recipes[index].cuisine_type for index in selected)
+    protein_usage = Counter(_primary_protein(plan.recipes[index]) for index in selected)
     optimized = plan.model_copy(deep=True)
     optimized.meals = meals
     portion_scales = _calibrate_selected_portions(

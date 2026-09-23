@@ -8,7 +8,7 @@ from app.models.meal_plan import MealPlan
 from app.models.meal_plan_version import MealPlanVersion
 from app.models.meal_plan_message import MealPlanMessage
 from app.models.meal_plan_run import MealPlanRun
-from app.models.plan_execution_event import PlanExecutionEvent
+from app.models.plan_execution_event import PlanExecutionEvent, PlanExecutionArchive
 from app.models.user_feedback import UserFeedback
 from app.models.pantry_item import PantryItem
 from app.models.user import User
@@ -25,6 +25,7 @@ __all__ = [
     "MealPlanMessage",
     "MealPlanRun",
     "PlanExecutionEvent",
+    "PlanExecutionArchive",
     "UserFeedback",
     "PantryItem",
     "User",

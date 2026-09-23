@@ -130,11 +130,12 @@ def constraint_node(state: WorkflowState) -> WorkflowState:
         # Only constraints explicitly stated in this request override the
         # persisted profile. Parsed defaults must not silently replace it.
         intent = state.intent_analysis or {}
+        previous = state.constraints or {}
         effective_diet, effective_goal = _effective_profile_values(
             state.user_input,
             intent,
-            profile_diet_type=profile.diet_type,
-            profile_health_goal=profile.health_goal,
+            profile_diet_type=previous.get("diet_type") or profile.diet_type,
+            profile_health_goal=previous.get("health_goal") or profile.health_goal,
         )
 
         # 临时修改 profile 属性
@@ -148,7 +149,9 @@ def constraint_node(state: WorkflowState) -> WorkflowState:
                 profile=profile,
                 duration_days=state.duration_days,
                 total_budget=state.total_budget,
-                additional_allergens=_intent_allergens(intent),
+                additional_allergens=list(dict.fromkeys(
+                    list(previous.get("allergen_names") or []) + _intent_allergens(intent)
+                )),
             )
         finally:
             profile.diet_type = original_diet
