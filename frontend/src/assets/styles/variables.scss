@@ -2,31 +2,31 @@
 
 // Primitive palette. Botanical greens communicate health without the glare of
 // high-saturation wellness palettes; mineral neutrals keep planning calm.
-$navy-900: #1f493c;
-$navy-800: #2b5e4e;
-$teal-700: #4b7361;
-$teal-500: #7a9c8b;
-$teal-200: #c7d8ce;
-$teal-100: #e7eee8;
-$apricot-500: #b8784f;
-$apricot-200: #f0e0d2;
-$coral-500: #ce6550;
-$coral-100: #f7dfda;
-$oat-50: #f4f6f1;
+$navy-900: #09090b;
+$navy-800: #18181b;
+$teal-700: #3f3f46;
+$teal-500: #52525b;
+$teal-200: #d4d4d8;
+$teal-100: #f4f4f5;
+$apricot-500: #ff5a00;
+$apricot-200: #fff0e7;
+$coral-500: #b42318;
+$coral-100: #fff1f0;
+$oat-50: #f4f4f5;
 $white: #ffffff;
-$ink-900: #1f2f29;
-$ink-700: #3b4d46;
-$ink-600: #53645d;
-$ink-500: #6d7b75;
-$stone-300: #c8d2cc;
-$stone-200: #d9e1dc;
-$stone-100: #e8edea;
-$blue-600: #55798a;
-$blue-100: #e3ebee;
-$amber-700: #7c571b;
-$amber-100: #f3e7cf;
-$plum-600: #6b5a7d;
-$plum-100: #ece6f0;
+$ink-900: #09090b;
+$ink-700: #18181b;
+$ink-600: #52525b;
+$ink-500: #71717a;
+$stone-300: #d4d4d8;
+$stone-200: #ececee;
+$stone-100: #f4f4f5;
+$blue-600: #3f3f46;
+$blue-100: #f4f4f5;
+$amber-700: #8a4200;
+$amber-100: #fff0e7;
+$plum-600: #52525b;
+$plum-100: #f4f4f5;
 
 // Compatibility names retained while feature pages migrate to the new palette.
 $forest-900: $navy-900;
@@ -35,8 +35,8 @@ $leaf-600: $teal-700;
 $leaf-500: $teal-500;
 $leaf-200: $teal-200;
 $leaf-100: $teal-100;
-$citrus-400: $apricot-500;
-$citrus-200: $apricot-200;
+$citrus-400: #a1a1aa;
+$citrus-200: #f4f4f5;
 $tomato-500: $coral-500;
 $tomato-100: $coral-100;
 $porcelain-50: $oat-50;
@@ -44,8 +44,8 @@ $porcelain-50: $oat-50;
 // Semantic colors.
 $color-background: $porcelain-50;
 $color-surface: $white;
-$color-surface-muted: $leaf-100;
-$color-surface-accent: #e0eae2;
+$color-surface-muted: #fafafa;
+$color-surface-accent: #f4f4f5;
 $color-surface-danger: $tomato-100;
 $color-text-primary: $ink-900;
 $color-text-secondary: $ink-600;
@@ -53,37 +53,36 @@ $color-text-placeholder: $ink-500;
 $color-text-inverse: $white;
 $color-brand: $forest-900;
 $color-brand-hover: $forest-800;
-$color-accent: #b8cfbe;
-$color-accent-strong: #668771;
-$color-border: $stone-300;
+$color-accent: #ff5a00;
+$color-accent-strong: #ff5a00;
+$color-border: $stone-200;
 $color-divider: $stone-200;
-$color-focus-ring: #39705c;
-$color-success: #366b55;
+$color-focus-ring: #ff5a00;
+$color-success: #276749;
 $color-warning: $amber-700;
-$color-danger: #a74837;
+$color-danger: #b42318;
 $color-info: $blue-600;
 
 // Nutrition and data semantics. Never rely on these colors alone.
-$score-health: $leaf-600;
-$score-budget: $amber-700;
-$score-preference: $plum-600;
-$score-season: #985c25;
-$score-variety: $blue-600;
-$score-utilization: $tomato-500;
+$score-health: $ink-700;
+$score-budget: $ink-600;
+$score-preference: $ink-500;
+$score-season: $ink-600;
+$score-variety: $ink-600;
+$score-utilization: $ink-500;
 
 // Typography. Font files are intentionally not fetched remotely; the product
 // falls back to licensed system CJK fonts when MiSans/Manrope are unavailable.
-$font-family: 'MiSans', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system,
-  BlinkMacSystemFont, 'Segoe UI', sans-serif;
-$font-display: 'MiSans', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
-$font-numeric: 'Manrope', 'DIN Alternate', 'Segoe UI', sans-serif;
+$font-family: 'DM Sans', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif;
+$font-display: $font-family;
+$font-numeric: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
 $text-xs: 0.75rem;
 $text-sm: 0.875rem;
 $text-base: 1rem;
 $text-lg: 1.125rem;
 $text-xl: 1.375rem;
-$text-2xl: clamp(1.75rem, 3vw, 2.5rem);
-$text-display: clamp(2.75rem, 6vw, 5.75rem);
+$text-2xl: clamp(2rem, 3.6vw, 3rem);
+$text-display: clamp(2.75rem, 6vw, 4rem);
 
 // Spacing and shape.
 $space-1: 4px;
@@ -94,18 +93,18 @@ $space-5: 24px;
 $space-6: 32px;
 $space-7: 48px;
 $space-8: 64px;
-$radius-xs: 4px;
-$radius-sm: 8px;
-$radius-md: 12px;
-$radius-lg: 16px;
-$radius-xl: 20px;
+$radius-xs: 12px;
+$radius-sm: 14px;
+$radius-md: 20px;
+$radius-lg: 28px;
+$radius-xl: 36px;
 $radius-round: 999px;
 
 // Elevation is deliberately restrained: structure comes from borders and space.
-$shadow-xs: 0 1px 2px rgba($forest-900, .05);
-$shadow-sm: 0 6px 16px rgba($forest-900, .07);
-$shadow-md: 0 14px 32px rgba($forest-900, .09);
-$shadow-lg: 0 20px 48px rgba($forest-900, .12);
+$shadow-xs: none;
+$shadow-sm: none;
+$shadow-md: none;
+$shadow-lg: none;
 
 // Motion and layers.
 $motion-fast: 140ms;
@@ -117,7 +116,7 @@ $layer-mobile-nav: 120;
 $layer-skip-link: 1000;
 
 // Layout.
-$content-width: 1280px;
+$content-width: 1680px;
 $header-height: 72px;
 $breakpoint-sm: 640px;
 $breakpoint-md: 768px;
@@ -129,16 +128,16 @@ $breakpoint-xl: 1280px;
 $color-sage: $teal-700;
 $color-sage-light: $leaf-200;
 $color-sage-dark: $forest-900;
-$color-rose: $tomato-500;
-$color-rose-light: $tomato-100;
-$color-rose-dark: $color-danger;
+$color-rose: $ink-600;
+$color-rose-light: $stone-100;
+$color-rose-dark: $ink-700;
 $color-lime: $citrus-400;
 $color-lime-soft: $citrus-200;
-$color-peach: #e7b18a;
-$color-butter: #e4c889;
+$color-peach: #ececee;
+$color-butter: #ececee;
 $color-blue: $blue-600;
 $color-blue-soft: $blue-100;
 $color-bg: $color-background;
 $color-card: $color-surface;
 $color-surface-soft: $color-surface-muted;
-$color-surface-warm: #f4e6dc;
+$color-surface-warm: #fafafa;

@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
-import PremiumIcon from '@/components/common/PremiumIcon.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePlanStore } from '@/stores/plan'
 import { useProfileStore } from '@/stores/profile'
@@ -12,6 +11,7 @@ import { usePantryStore } from '@/stores/pantry'
 import { usePlanIndexStore } from '@/stores/planIndex'
 import { usePreferenceStore } from '@/stores/preference'
 import { useShoppingStateStore } from '@/stores/shoppingState'
+import BrandLogo from '@/components/common/BrandLogo.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -91,13 +91,7 @@ async function handleAccountCommand(command: string) {
         <el-icon><ArrowLeft /></el-icon>
       </button>
 
-      <router-link :to="auth.isLoggedIn ? '/dashboard' : '/'" class="brand" aria-label="NutriGenie 首页">
-        <PremiumIcon name="salad" class="brand__icon" :size="22" :box-size="42" />
-        <span class="brand__copy">
-          <strong>NutriGenie</strong>
-          <small>营养计划工作台</small>
-        </span>
-      </router-link>
+      <BrandLogo class="header-brand" />
 
       <nav v-if="isAdminRoute" class="desktop-navigation" aria-label="管理后台导航">
         <router-link
@@ -193,8 +187,8 @@ async function handleAccountCommand(command: string) {
   position: sticky;
   top: 0;
   z-index: $layer-header;
-  border-bottom: 1px solid rgba($color-brand, .13);
-  background: rgba($color-background, .98);
+  border-bottom: 1px solid $color-border;
+  background: rgba(255,255,255,.96);
 }
 
 .header-inner {
@@ -205,26 +199,6 @@ async function handleAccountCommand(command: string) {
 }
 
 .back-button { display: none; }
-
-.brand {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 11px;
-  color: $color-text-primary;
-}
-
-.brand:hover { color: $color-text-primary; }
-.brand__icon {
-  --icon-color: #{$color-text-inverse};
-  --icon-bg: #{$color-brand};
-  border-color: $color-brand;
-  border-radius: $radius-sm;
-  box-shadow: none;
-}
-.brand__copy { display: grid; line-height: 1.05; }
-.brand__copy strong { font-size: 19px; font-weight: 850; letter-spacing: -.035em; }
-.brand__copy small { margin-top: 4px; color: $color-text-secondary; font-size: 12px; font-weight: 650; }
 
 .desktop-navigation {
   display: flex;
@@ -251,9 +225,9 @@ async function handleAccountCommand(command: string) {
   right: 15px;
   bottom: 5px;
   left: 15px;
-  height: 3px;
+  height: 2px;
   border-radius: $radius-round;
-  background: $color-accent-strong;
+  background: $color-brand;
   content: '';
   opacity: 0;
   transform: scaleX(.45);
@@ -324,10 +298,7 @@ async function handleAccountCommand(command: string) {
   .header-inner { min-height: 64px; gap: 10px; }
   .desktop-navigation,
   .desktop-account { display: none; }
-  .brand { margin-right: auto; }
-  .brand__copy small { display: none; }
-  .brand__copy strong { font-size: 18px; }
-  .brand__icon { --icon-box-size: 38px; --icon-size: 20px; }
+  .header-brand { margin-right: auto; }
   .mobile-account { display: flex; align-items: center; gap: 6px; }
   .mobile-login { display: grid; min-width: 44px; min-height: 44px; place-items: center; font-size: 13px; font-weight: 730; }
   .mobile-start { min-height: 40px; padding-inline: 14px; }

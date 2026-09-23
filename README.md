@@ -21,23 +21,24 @@ NutriGenie creates personalized weekly meal plans from a user's health goals, bo
 
 ## Interface Preview
 
-| Home | Plan Workspace |
-| --- | --- |
-| ![NutriGenie home page](screenshots/home.png) | ![NutriGenie plan workspace](screenshots/plan-result.png) |
+The redesigned frontend uses a shared NutriGenie identity, a wider desktop layout, food photography, and responsive cards. The public plan preview shows representative data; personal plans require an account.
 
-### Sign Up and Sign In
+![NutriGenie home page on desktop](screenshots/home-desktop.png)
 
-![NutriGenie authentication page](screenshots/auth.png)
+| Plan preview | Recipe library | Create an account |
+| --- | --- | --- |
+| ![Read-only plan preview on mobile](screenshots/demo-mobile.jpg) | ![Recipe library on mobile](screenshots/recipes-mobile.jpg) | ![Registration page on mobile](screenshots/auth-mobile.jpg) |
 
 ## Features
 
-- **Accounts and nutrition profiles** — Sign up, sign in, and manage body metrics, activity level, health goals, diet type, budget, allergies, and food restrictions.
+- **Accounts and nutrition profiles** — Sign up, sign in, and manage body metrics, activity level, health goals, diet type, allergies, and food restrictions. Set a budget for each new plan.
 - **Natural-language planning** — Describe requirements in everyday language and convert them into structured constraints for personalized meal generation.
 - **Deterministic fact calculation** — Map every ingredient to a standard catalog and recalculate nutrition and cost instead of trusting model estimates.
 - **Hard-constraint validation and repair** — Check allergies, restrictions, diet type, ingredient resolution, and output structure, with a limited number of targeted repair attempts.
 - **Weekly plan optimization** — Control recipe repetition, adjacent duplicates, and overall variety while calibrating trusted ingredient portions against plan targets.
 - **Iterative updates and version history** — Refine an existing plan in natural language. Every successful update creates a separate version, while failed updates leave the last valid version intact.
 - **Execution and shopping support** — Track today's meals and completion state, review nutrition and budget summaries, and use an ingredient-level shopping list.
+- **Explore before signing up** — Browse the recipe library and a read-only seven-day plan preview without an account.
 - **Administration** — Manage the standard ingredient catalog, nutrition facts, and recipes through role-protected admin pages.
 - **Responsive and accessible UX** — Support desktop and mobile layouts, keyboard navigation, visible focus, 200% zoom reflow, and reduced-motion preferences.
 

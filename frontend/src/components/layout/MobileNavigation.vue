@@ -52,9 +52,9 @@ function isActive(item: NavigationItem) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     min-height: 76px;
     padding: 5px 8px calc(5px + env(safe-area-inset-bottom));
-    border-top: 1px solid rgba($color-brand, .16);
+    border-top: 1px solid $color-border;
     background: rgba($color-surface, .97);
-    box-shadow: 0 -12px 30px rgba($color-brand, .1);
+    box-shadow: none;
     backdrop-filter: blur(18px) saturate(125%);
   }
 
@@ -79,7 +79,7 @@ function isActive(item: NavigationItem) {
     width: 22px;
     height: 3px;
     border-radius: $radius-round;
-    background: $color-accent-strong;
+    background: $color-brand;
     content: '';
     opacity: 0;
     transform: scaleX(.45);

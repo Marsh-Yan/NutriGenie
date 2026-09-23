@@ -1,388 +1,102 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import PremiumIcon from '@/components/common/PremiumIcon.vue'
-import type { PremiumIconName } from '@/components/common/PremiumIcon.vue'
-import StatusBadge from '@/components/common/StatusBadge.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePlanStore } from '@/stores/plan'
+import heroImage from '@/assets/editorial/meal-bowl.webp'
+import avocadoImage from '@/assets/editorial/avocado.jpg'
+import fruitImage from '@/assets/editorial/fruit.jpg'
+import adjustmentImage from '@/assets/editorial/adjustment-food.webp'
+import bannerImage from '@/assets/editorial/final-banner.webp'
 
 const router = useRouter()
 const auth = useAuthStore()
-const planStore = usePlanStore()
-function viewExample() {
-  router.push('/demo')
-}
+const plan = usePlanStore()
 
-function startUsing() {
+function start(prompt?: string) {
+  if (prompt) {
+    plan.draftInput = prompt
+    plan.draftExampleIndex = -1
+  }
   if (auth.isLoggedIn) router.push('/plan/new')
   else router.push({ name: 'auth', query: { mode: 'register', redirect: '/profile' } })
 }
 
-function startWithGoal(prompt: string) {
-  planStore.draftInput = prompt
-  planStore.draftExampleIndex = -1
-  startUsing()
-}
-
-const goals: { signal: 'energy' | 'protein' | 'glucose' | 'balance'; label: string; meta: string; prompt: string }[] = [
-  { signal: 'energy', label: '轻松减脂', meta: '能量管理', prompt: '我想制定一周减脂饮食计划，兼顾饱腹感与日常预算' },
-  { signal: 'protein', label: '科学增肌', meta: '蛋白质优先', prompt: '我想制定高蛋白增肌饮食计划，菜谱要简单易执行' },
-  { signal: 'glucose', label: '平稳控糖', meta: '餐后波动', prompt: '我想制定一周控糖饮食计划，减少精制碳水并保证营养均衡' },
-  { signal: 'balance', label: '均衡饮食', meta: '饮食结构', prompt: '我想制定一周均衡饮食计划，食材丰富、做法家常' },
-]
-
-const weekDays = [
-  { day: '一', kcal: '1,820' },
-  { day: '二', kcal: '1,790' },
-  { day: '三', kcal: '1,860', active: true },
-  { day: '四', kcal: '1,805' },
-  { day: '五', kcal: '1,835' },
-  { day: '六', kcal: '1,910' },
-  { day: '日', kcal: '1,875' },
-]
-
-const meals = [
-  { slot: '早餐', name: '南瓜燕麦蛋奶杯', meta: '520 kcal · 15 分钟', tone: 'citrus' },
-  { slot: '午餐', name: '香煎鸡胸藜麦碗', meta: '710 kcal · ¥18', tone: 'leaf' },
-  { slot: '晚餐', name: '番茄豆腐菌菇煲', meta: '630 kcal · 25 分钟', tone: 'tomato' },
-]
-
-const decisionSteps: { icon: PremiumIconName; title: string; description: string; evidence: string }[] = [
-  {
-    icon: 'profile',
-    title: '先确认不能妥协的条件',
-    description: '画像、预算、过敏原、饮食类型和已有食材被整理成清晰约束。',
-    evidence: '过敏原作为硬约束',
-  },
-  {
-    icon: 'plan',
-    title: '再组合一周的推荐方案',
-    description: '结构化候选与语义理解共同工作，营养、预算和偏好由程序确定性核算。',
-    evidence: '推荐依据可追溯',
-  },
-  {
-    icon: 'shopping',
-    title: '最后变成每天能执行的动作',
-    description: '餐单、菜谱步骤与采购清单放在同一条路径里，减少来回整理。',
-    evidence: '计划与采购同步查看',
-  },
+const goals = [
+  { title: '轻松减脂', detail: '让热量控制融入日常三餐', prompt: '我想制定一周减脂饮食计划，兼顾饱腹感与日常预算' },
+  { title: '科学增肌', detail: '重视蛋白质，也照顾做饭时间', prompt: '我想制定高蛋白增肌饮食计划，菜谱要简单易执行' },
+  { title: '平稳控糖', detail: '留意碳水搭配与用餐节奏', prompt: '我想制定一周控糖饮食计划，减少精制碳水并保证营养均衡' },
+  { title: '吃得均衡', detail: '让一周食材更丰富、采购更清楚', prompt: '我想制定一周均衡饮食计划，食材丰富、做法家常' },
 ]
 </script>
 
 <template>
-  <div class="home-page">
-    <section class="hero page-container" aria-labelledby="home-title">
-      <div class="hero-shell">
-        <div class="hero-copy">
-          <h1 id="home-title">
-            <span>把一周三餐，</span>
-            <span>安排得更像</span>
-            <span>你的生活。</span>
-          </h1>
-          <p>
-            NutriGenie 把健康目标、预算、忌口和现有食材放进同一份计划，给出看得懂、买得到、做得出的每日安排。
-          </p>
-          <div class="hero-actions">
-            <el-button class="hero-primary-action" size="large" @click="startUsing">创建我的计划</el-button>
-            <button class="hero-secondary-action" type="button" @click="viewExample">
-              查看完整示例
-            </button>
-          </div>
-          <ul class="trust-list" aria-label="产品保障">
-            <li><PremiumIcon name="check" :size="15" :box-size="24" />硬约束优先</li>
-            <li><PremiumIcon name="check" :size="15" :box-size="24" />营养与预算可解释</li>
-            <li><PremiumIcon name="check" :size="15" :box-size="24" />失败路径可恢复</li>
-          </ul>
+  <div class="editorial-home">
+    <section class="home-hero page-container" aria-labelledby="home-title">
+      <div class="home-hero__copy">
+        <span class="home-chip">一周三餐，从这里开始</span>
+        <h1 id="home-title">吃得好，<br>也安排得好。</h1>
+        <p>把健康目标、预算、忌口和已有食材告诉 NutriGenie。得到一份看得懂、买得到、做得出的饮食计划。</p>
+        <div class="home-actions">
+          <button class="home-primary" type="button" @click="start()">创建我的计划 <span aria-hidden="true">↗</span></button>
+          <router-link class="home-secondary" to="/demo">看看方案示例</router-link>
         </div>
-
-        <div class="plan-preview" aria-label="七天饮食计划示例">
-          <div class="plan-preview__header">
-            <div>
-              <span>本周计划</span>
-              <strong>均衡减脂 · 7 天</strong>
-            </div>
-            <StatusBadge label="校验通过" tone="success" />
-          </div>
-
-          <ol class="week-strip" aria-label="每日能量预览">
-            <li v-for="item in weekDays" :key="item.day" :class="{ 'is-active': item.active }">
-              <span>周{{ item.day }}</span>
-              <strong>{{ item.kcal }}</strong>
-              <small>kcal</small>
-            </li>
-          </ol>
-
-          <div class="selected-day">
-            <div class="selected-day__heading">
-              <div><span>星期三</span><strong>三餐安排</strong></div>
-              <small>目标 1,850 kcal</small>
-            </div>
-            <ol class="meal-list">
-              <li v-for="meal in meals" :key="meal.slot">
-                <i :class="'tone-' + meal.tone" aria-hidden="true" />
-                <span>{{ meal.slot }}</span>
-                <strong>{{ meal.name }}</strong>
-                <small>{{ meal.meta }}</small>
-              </li>
-            </ol>
-          </div>
-
-          <div class="plan-preview__footer">
-            <div><span>本周采购</span><strong>¥286</strong><small>预算 ¥300</small></div>
-            <div><span>蛋白质达成</span><strong>96%</strong><small>每日平均</small></div>
-            <div><span>食材利用</span><strong>8 项</strong><small>优先消耗</small></div>
-          </div>
-        </div>
+        <div class="home-hero__foot"><span>目标与约束一起考虑</span><span>营养与预算清晰可见</span></div>
+      </div>
+      <div class="home-hero__visual">
+        <img :src="heroImage" alt="水果、米饭、鸡蛋和蔬菜组成的餐食" width="1018" height="628" fetchpriority="high">
+        <div class="visual-caption"><span>从想法，到今天的每一餐</span><strong>让计划真正落在餐桌上</strong></div>
       </div>
     </section>
 
-    <section class="goal-entry page-container" aria-labelledby="goal-title">
-      <div class="goal-entry__heading">
-        <h2 id="goal-title">你最想先解决哪件事？</h2>
+    <section class="home-section page-container" aria-labelledby="goal-title">
+      <div class="section-intro">
+        <div><span class="section-marker">你的目标</span><h2 id="goal-title">从你想改变的事开始</h2></div>
+        <p>选一个方向作为起点。进入规划页后，你仍可以补充自己的预算、食材和饮食限制。</p>
       </div>
-      <div class="goal-options">
-        <button v-for="goal in goals" :key="goal.label" type="button" @click="startWithGoal(goal.prompt)">
-          <span class="goal-option__copy">
-            <small>{{ goal.meta }}</small>
-            <strong>{{ goal.label }}</strong>
-          </span>
-          <span class="goal-signal" :class="`goal-signal--${goal.signal}`" aria-hidden="true">
-            <svg viewBox="0 0 64 36" fill="none">
-              <template v-if="goal.signal === 'energy'">
-                <path d="M7 7v22M18 11v18M29 15v14M40 19v10M51 23v6" />
-                <path d="m6 8 11 4 11 4 11 4 13 4" />
-              </template>
-              <template v-else-if="goal.signal === 'protein'">
-                <path d="M7 26V18M18 26V14M29 26V10M40 26V6M51 26V3" />
-                <path d="M5 29h50" />
-              </template>
-              <template v-else-if="goal.signal === 'glucose'">
-                <path d="M4 20c6-1 7-8 13-8s7 11 13 11 7-8 13-8 7 5 17 3" />
-                <path d="M4 27h56" opacity=".32" />
-              </template>
-              <template v-else>
-                <circle cx="18" cy="18" r="8" />
-                <circle cx="32" cy="12" r="8" />
-                <circle cx="46" cy="18" r="8" />
-                <path d="M24 27h16" />
-              </template>
-            </svg>
-          </span>
+      <div class="goal-grid">
+        <button v-for="(goal, index) in goals" :key="goal.title" class="goal-card" type="button" @click="start(goal.prompt)">
+          <span class="goal-card__top"><span>{{ String(index + 1).padStart(2, '0') }}</span><span aria-hidden="true">↗</span></span>
+          <span class="goal-card__bottom"><strong>{{ goal.title }}</strong><small>{{ goal.detail }}</small></span>
         </button>
       </div>
     </section>
 
-    <section id="how-it-works" class="decision-section page-container" aria-labelledby="decision-title">
-      <div class="decision-intro">
-        <h2 id="decision-title">先守住约束，再谈推荐，最后帮助执行。</h2>
-        <p>系统不会用“猜你喜欢”覆盖过敏原、预算和营养边界，也不会把一份报告当作终点。</p>
-        <router-link to="/demo" class="inline-link">查看一份完整方案</router-link>
-      </div>
-
-      <ol class="decision-path">
-        <li v-for="(step, index) in decisionSteps" :key="step.title">
-          <div class="decision-path__index" aria-hidden="true">{{ index + 1 }}</div>
-          <PremiumIcon :name="step.icon" :size="25" :box-size="50" />
-          <div class="decision-path__copy">
-            <h3>{{ step.title }}</h3>
-            <p>{{ step.description }}</p>
-          </div>
-          <span class="decision-path__evidence">{{ step.evidence }}</span>
-        </li>
-      </ol>
-    </section>
-
-    <section class="execution-section page-container" aria-labelledby="execution-title">
-      <div class="execution-map">
-        <div class="execution-map__copy">
-          <h2 id="execution-title">计划不是终点，下一餐才是。</h2>
-          <p>产品围绕“今日、计划、创建、我的”四个入口组织，让查看安排、回顾方案和更新画像都有清晰去处。</p>
-          <el-button type="primary" size="large" @click="startUsing">开始建立计划</el-button>
-        </div>
-        <div class="execution-map__route" aria-label="产品使用流程">
-          <div><b>今日</b><span>知道下一餐做什么</span></div>
-          <i aria-hidden="true" />
-          <div><b>计划</b><span>查看本周与营养依据</span></div>
-          <i aria-hidden="true" />
-          <div><b>采购</b><span>把食材一次买齐</span></div>
-        </div>
+    <section id="how-it-works" class="home-section page-container" aria-labelledby="work-title">
+      <div class="section-intro"><div><span class="section-marker">如何工作</span><h2 id="work-title">一份计划，走完三件事</h2></div><router-link class="section-link" to="/demo">查看完整示例 <span aria-hidden="true">↗</span></router-link></div>
+      <div class="story-grid">
+        <article class="story-card"><div class="story-card__image"><img :src="avocadoImage" alt="牛油果、鸡蛋和蔬菜餐盘" loading="lazy" width="3072" height="4608"></div><div class="story-card__copy"><span>01 / 了解你</span><h3>先把边界说清楚</h3><p>健康画像、饮食偏好、预算与过敏原共同决定推荐范围。</p></div></article>
+        <article class="story-card"><div class="story-card__image"><img :src="fruitImage" alt="苹果、坚果和水果餐食" loading="lazy" width="3648" height="5472"></div><div class="story-card__copy"><span>02 / 安排一周</span><h3>每天都好执行</h3><p>查看每日餐单、菜谱、营养分析和汇总后的采购清单。</p></div></article>
+        <article class="story-card"><div class="story-card__image"><img :src="adjustmentImage" alt="日式餐食与茶具" loading="lazy" width="1200" height="1800"></div><div class="story-card__copy"><span>03 / 随时调整</span><h3>计划跟着生活走</h3><p>不满意就继续提出要求，也能查看历史版本，回到适合自己的安排。</p><router-link class="story-card__link" to="/recipes">先逛逛菜谱库 <span aria-hidden="true">↗</span></router-link></div></article>
       </div>
     </section>
+
+    <section class="home-end page-container"><div class="home-end__copy"><span class="section-marker">开始规划</span><h2>下一餐，<br>从更好的安排开始。</h2><button class="home-primary home-primary--light" type="button" @click="start()">创建我的计划 <span aria-hidden="true">↗</span></button></div><img class="home-end__image" :src="bannerImage" alt="鸡蛋、面包与咖啡组成的早餐" width="1800" height="1200" loading="lazy"></section>
   </div>
 </template>
 
 <style scoped lang="scss">
-.hero { padding-top: clamp(18px, 3vw, 36px); }
-.hero-shell {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, .9fr) minmax(520px, 1.1fr);
-  min-height: 650px;
-  align-items: center;
-  gap: clamp(40px, 6vw, 86px);
-  padding: clamp(42px, 6vw, 76px) 0 clamp(48px, 7vw, 88px);
-}
-
-.hero-copy { position: relative; z-index: 2; max-width: 590px; }
-.hero h1 { color: $color-text-primary; font-size: $text-display; letter-spacing: -.065em; line-height: 1.02; }
-.hero h1 span { display: block; white-space: nowrap; }
-.hero-copy > p { max-width: 55ch; margin-top: $space-5; color: $color-text-secondary; font-size: clamp(16px, 1.4vw, 18px); line-height: 1.78; }
-.hero-actions { display: flex; align-items: center; gap: $space-3; margin-top: $space-6; }
-.hero-primary-action { border-color: $color-brand !important; background: $color-brand !important; box-shadow: none !important; color: $color-text-inverse !important; }
-.hero-primary-action:hover { border-color: $color-brand-hover !important; background: $color-brand-hover !important; }
-.hero-secondary-action {
-  min-height: 50px;
-  padding: 10px 16px;
-  border: 1px solid rgba($color-brand, .32);
-  border-radius: $radius-sm;
-  background: transparent;
-  color: $color-brand;
-  cursor: pointer;
-  font-weight: 720;
-}
-.hero-secondary-action:hover { border-color: $color-brand; background: rgba($color-surface, .52); color: $color-brand-hover; }
-.trust-list { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: $space-6; list-style: none; color: $color-text-secondary; font-size: 13px; }
-.trust-list li { display: inline-flex; align-items: center; gap: 6px; }
-.trust-list :deep(.premium-icon) { --icon-color: #{$color-brand}; --icon-bg: #{$blue-100}; border: 0; box-shadow: none; }
-
-.plan-preview {
-  position: relative;
-  z-index: 2;
-  min-width: 0;
-  padding: clamp(18px, 2.4vw, 28px);
-  border: 1px solid $color-border;
-  border-radius: $radius-md;
-  background: $color-background;
-  box-shadow: $shadow-sm;
-}
-.plan-preview__header { display: flex; align-items: center; justify-content: space-between; gap: $space-4; }
-.plan-preview__header > div { display: grid; }
-.plan-preview__header span { color: $color-text-secondary; font-size: 13px; }
-.plan-preview__header strong { font-size: $text-xl; letter-spacing: -.025em; }
-.week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: $space-5; list-style: none; }
-.week-strip li { display: grid; min-width: 0; justify-items: center; gap: 2px; padding: 10px 4px; border: 1px solid $color-divider; border-radius: $radius-sm; color: $color-text-secondary; }
-.week-strip li.is-active { border-color: $color-brand; background: $color-brand; color: $color-text-inverse; }
-.week-strip span { font-size: 12px; }
-.week-strip strong { font-family: $font-numeric; font-size: 13px; font-variant-numeric: tabular-nums; }
-.week-strip small { font-size: 9px; opacity: .78; }
-.selected-day { margin-top: $space-4; padding: $space-4; border: 1px solid $color-divider; border-radius: $radius-md; background: $color-background; }
-.selected-day__heading { display: flex; align-items: flex-end; justify-content: space-between; gap: $space-3; padding-bottom: $space-3; border-bottom: 1px solid $color-divider; }
-.selected-day__heading > div { display: grid; }
-.selected-day__heading span,
-.selected-day__heading small { color: $color-text-secondary; font-size: 12px; }
-.selected-day__heading strong { font-size: 17px; }
-.meal-list { list-style: none; }
-.meal-list li { display: grid; grid-template-columns: 8px 42px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 52px; border-bottom: 1px solid $color-divider; }
-.meal-list li:last-child { border-bottom: 0; }
-.meal-list > li > i { width: 8px; height: 26px; border-radius: $radius-round; }
-.meal-list .tone-citrus { background: $apricot-500; }
-.meal-list .tone-leaf { background: $leaf-600; }
-.meal-list .tone-tomato { background: $tomato-500; }
-.meal-list span { color: $color-text-secondary; font-size: 12px; }
-.meal-list strong { min-width: 0; overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
-.meal-list small { color: $color-text-secondary; font-family: $font-numeric; font-size: 11px; font-variant-numeric: tabular-nums; }
-.plan-preview__footer { display: grid; grid-template-columns: repeat(3, 1fr); gap: $space-3; margin-top: $space-4; }
-.plan-preview__footer > div { display: grid; padding-left: $space-3; border-left: 3px solid $color-info; }
-.plan-preview__footer span,
-.plan-preview__footer small { color: $color-text-secondary; font-size: 11px; }
-.plan-preview__footer strong { color: $color-brand; font-family: $font-numeric; font-size: 17px; font-variant-numeric: tabular-nums; }
-
-.goal-entry { display: grid; grid-template-columns: 260px 1fr; align-items: center; gap: $space-7; padding-top: $space-7; }
-.goal-entry__heading h2 { font-size: $text-xl; letter-spacing: -.025em; }
-.goal-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-block: 1px solid $color-border; }
-.goal-options button { display: grid; min-width: 0; min-height: 86px; grid-template-columns: minmax(0, 1fr) 64px; align-items: center; gap: 12px; padding: 14px 16px; border: 0; border-right: 1px solid $color-border; background: transparent; color: $color-text-primary; cursor: pointer; text-align: left; transition: background $motion-fast $ease-standard; }
-.goal-options button:last-child { border-right: 0; }
-.goal-options button:hover { background: $color-surface; }
-.goal-option__copy { display: grid; gap: 4px; }
-.goal-option__copy small { color: $color-text-secondary; font-size: 12px; font-weight: 600; }
-.goal-option__copy strong { font-size: 16px; font-weight: 780; letter-spacing: -.02em; }
-.goal-signal { display: grid; width: 64px; height: 40px; place-items: center; color: $color-info; }
-.goal-signal svg { width: 64px; height: 36px; overflow: visible; }
-.goal-signal path,
-.goal-signal circle { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.goal-signal--energy { color: $apricot-500; }
-.goal-signal--protein { color: $leaf-600; }
-.goal-signal--glucose { color: $color-info; }
-.goal-signal--balance { color: $color-success; }
-
-.decision-section { display: grid; grid-template-columns: minmax(280px, .72fr) minmax(0, 1.28fr); gap: clamp(48px, 8vw, 120px); padding-top: clamp(100px, 13vw, 170px); }
-.decision-intro { align-self: start; position: sticky; top: 110px; }
-.decision-intro h2 { max-width: 12ch; font-size: clamp(36px, 4.3vw, 58px); letter-spacing: -.055em; }
-.decision-intro p { max-width: 48ch; margin-top: $space-5; color: $color-text-secondary; }
-.inline-link { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; margin-top: $space-5; border-bottom: 2px solid $color-accent-strong; font-weight: 760; }
-.decision-path { list-style: none; border-top: 1px solid $color-border; }
-.decision-path li { display: grid; grid-template-columns: 42px 50px minmax(0, 1fr); gap: $space-4; padding: clamp(28px, 5vw, 48px) 0; border-bottom: 1px solid $color-border; }
-.decision-path__index { display: grid; width: 34px; height: 34px; place-items: center; border-radius: $radius-xs; background: $color-brand; color: $color-accent; font-family: $font-numeric; font-size: 12px; font-weight: 800; }
-.decision-path li :deep(.premium-icon) { border: 0; box-shadow: none; }
-.decision-path__copy h3 { font-size: clamp(21px, 2.2vw, 29px); letter-spacing: -.035em; }
-.decision-path__copy p { max-width: 54ch; margin-top: $space-2; color: $color-text-secondary; font-size: 14px; }
-.decision-path__evidence { grid-column: 3; justify-self: start; padding: 5px 10px; border-radius: $radius-round; background: $color-surface-accent; color: $color-brand; font-size: 11px; font-weight: 740; }
-
-.execution-section { padding-top: clamp(96px, 12vw, 150px); }
-.execution-map { display: grid; grid-template-columns: minmax(0, .82fr) minmax(460px, 1.18fr); align-items: center; gap: clamp(44px, 7vw, 100px); padding: clamp(38px, 6vw, 76px); border: 1px solid $color-border; border-top: 4px solid $color-accent; border-radius: $radius-lg; background: $color-surface; }
-.execution-map__copy h2 { max-width: 12ch; font-size: clamp(34px, 4.2vw, 56px); letter-spacing: -.05em; }
-.execution-map__copy p { max-width: 52ch; margin: $space-4 0 $space-5; color: $color-text-secondary; }
-.execution-map__route { display: grid; grid-template-columns: 1fr 36px 1fr 36px 1fr; align-items: center; }
-.execution-map__route > div { display: grid; min-height: 154px; align-content: center; gap: 6px; padding: $space-5; border: 1px solid $color-border; border-radius: $radius-sm; background: $color-surface-muted; text-align: center; }
-.execution-map__route b { color: $color-brand; font-size: $text-xl; }
-.execution-map__route span { color: $color-text-secondary; font-size: 12px; }
-.execution-map__route > i { height: 2px; background: $color-brand; }
-
-@media (max-width: 1100px) {
-  .hero-shell { grid-template-columns: minmax(0, .82fr) minmax(460px, 1.18fr); }
-  .goal-entry { grid-template-columns: 1fr; gap: $space-4; }
-  .execution-map { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 900px) {
-  .hero-shell { grid-template-columns: 1fr; }
-  .hero-copy { max-width: 680px; }
-  .hero h1 { max-width: 12ch; }
-  .plan-preview { width: min(100%, 620px); }
-  .goal-options { grid-template-columns: repeat(2, 1fr); }
-  .decision-section { grid-template-columns: 1fr; }
-  .decision-intro { position: static; }
-  .decision-intro h2 { max-width: 15ch; }
-}
-
-@media (max-width: $breakpoint-sm) {
-  .hero { padding-top: 12px; }
-  .hero-shell { min-height: auto; gap: $space-6; padding: 32px 0 24px; }
-  .hero h1 { font-size: clamp(42px, 13vw, 58px); }
-  .hero-copy > p { font-size: 16px; }
-  .hero-actions { align-items: stretch; flex-direction: column; }
-  .hero-actions :deep(.el-button),
-  .hero-secondary-action { width: 100%; margin: 0; }
-  .trust-list { display: grid; }
-  .plan-preview { padding: 16px 12px; border-radius: $radius-md; }
-  .week-strip { gap: 3px; }
-  .week-strip li { padding: 8px 2px; }
-  .week-strip span { font-size: 11px; }
-  .week-strip strong { font-size: 11px; }
-  .selected-day { padding: 12px; }
-  .meal-list li { grid-template-columns: 7px 34px minmax(0, 1fr); }
-  .meal-list small { display: none; }
-  .plan-preview__footer { gap: 5px; }
-  .plan-preview__footer > div { padding-left: 7px; }
-  .plan-preview__footer strong { font-size: 14px; }
-  .goal-entry { padding-top: $space-6; }
-  .goal-options { grid-template-columns: 1fr 1fr; }
-  .goal-options button { min-height: 82px; grid-template-columns: minmax(0, 1fr) 44px; gap: 6px; padding: 10px 8px; }
-  .goal-options button:nth-child(2) { border-right: 0; }
-  .goal-options button:nth-child(-n + 2) { border-bottom: 1px solid $color-border; }
-  .goal-option__copy small { font-size: 11px; }
-  .goal-option__copy strong { font-size: 14px; }
-  .goal-signal,
-  .goal-signal svg { width: 44px; }
-  .decision-section { padding-top: 88px; }
-  .decision-intro h2 { font-size: 38px; }
-  .decision-path li { grid-template-columns: 36px minmax(0, 1fr); gap: 12px; }
-  .decision-path li :deep(.premium-icon) { display: none; }
-  .decision-path__evidence { grid-column: 2; }
-  .execution-section { padding-top: 80px; }
-  .execution-map { min-width: 0; padding: 34px 20px; border-radius: $radius-lg; }
-  .execution-map__route { grid-template-columns: 1fr; gap: 8px; }
-  .execution-map__route > i { width: 2px; height: 22px; justify-self: center; }
-  .execution-map__route > div { min-height: 120px; border-radius: $radius-lg; }
-}
+.editorial-home { overflow: hidden; }
+.home-hero { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(24px, 4vw, 64px); align-items: center; padding-block: clamp(48px, 7vw, 104px) 80px; }
+.home-chip, .section-marker { display: inline-flex; width: fit-content; padding: 7px 12px; border: 1px solid $color-border; border-radius: 12px; background: white; color: $color-text-secondary; font-size: 12px; font-weight: 650; }
+.home-hero h1 { margin-top: 26px; font-size: clamp(48px, 5.5vw, 76px); font-weight: 700; letter-spacing: -.06em; line-height: 1.14; }
+.home-hero__copy > p { max-width: 44ch; margin-top: 26px; color: $color-text-secondary; font-size: clamp(16px, 1.4vw, 18px); line-height: 1.75; }
+.home-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 34px; }
+.home-primary, .home-secondary { display: inline-flex; min-height: 50px; align-items: center; justify-content: center; gap: 24px; padding: 12px 19px; border-radius: 14px; font-size: 14px; font-weight: 650; cursor: pointer; }
+.home-primary { border: 1px solid #09090b; background: #09090b; color: white; }
+.home-primary:hover { background: #27272a; }
+.home-secondary { border: 1px solid #d4d4d8; background: white; color: #18181b; }
+.home-secondary:hover { color: #09090b; border-color: #09090b; }
+.home-hero__foot { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 34px; color: $color-text-secondary; font-size: 12px; }
+.home-hero__foot span::before { content: '✓'; margin-right: 7px; color: $color-text-primary; }
+.home-hero__visual { position: relative; min-height: 520px; overflow: hidden; border-radius: 36px; background: #ded9cb; }
+.home-hero__visual img { width: 100%; height: 100%; min-height: 520px; object-fit: cover; object-position: 52% center; }
+.visual-caption { position: absolute; right: 20px; bottom: 20px; left: 20px; display: grid; gap: 3px; width: fit-content; max-width: calc(100% - 40px); padding: 14px 18px; border-radius: 14px; background: white; color: #09090b; }
+.visual-caption span { color: #52525b; font-size: 12px; }.visual-caption strong { font-size: 15px; }
+.home-section { padding-block: 64px 32px; }.section-intro { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 28px; }.section-intro h2 { margin-top: 18px; font-size: clamp(32px, 4vw, 48px); line-height: 1.18; letter-spacing: -.045em; }.section-intro > p { max-width: 45ch; color: $color-text-secondary; font-size: 15px; }.section-link { color: $color-text-primary; font-weight: 650; }
+.goal-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }.goal-card { display: flex; min-height: 220px; flex-direction: column; justify-content: space-between; padding: 24px; border: 1px solid $color-border; border-radius: 28px; background: white; color: $color-text-primary; text-align: left; cursor: pointer; }.goal-card:hover { border-color: #a1a1aa; }.goal-card__top { display: flex; justify-content: space-between; color: $color-text-secondary; font-size: 13px; }.goal-card__top span:last-child { color: #09090b; font-size: 22px; }.goal-card__bottom { display: grid; gap: 9px; }.goal-card strong { font-size: 24px; }.goal-card small { color: $color-text-secondary; font-size: 13px; line-height: 1.6; }
+.story-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }.story-card { min-height: 430px; overflow: hidden; border: 1px solid $color-border; border-radius: 36px; background: white; }.story-card__image { height: 240px; overflow: hidden; }.story-card__image img { width: 100%; height: 100%; object-fit: cover; object-position: center 63%; }.story-card__copy { padding: 24px 28px 30px; }.story-card span { color: $color-text-secondary; font-size: 13px; }.story-card h3 { margin-top: 10px; font-size: 24px; }.story-card p { margin-top: 9px; color: $color-text-secondary; font-size: 14px; line-height: 1.7; }.story-card__link { display: inline-block; margin-top: 15px; color: $color-text-primary; font-size: 13px; font-weight: 650; }.story-card__link:hover { text-decoration: underline; }
+.home-end { display: grid; min-height: 390px; grid-template-columns: 1fr 1fr; margin-top: 80px; padding: 0; overflow: hidden; border-radius: 36px; background: #18181b; }.home-end__copy { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: clamp(36px, 4vw, 64px); }.home-end .section-marker { border-color: #52525b; background: #27272a; color: white; }.home-end h2 { margin-top: 20px; color: white; font-size: clamp(38px, 4vw, 60px); line-height: 1.14; letter-spacing: -.05em; }.home-end__image { width: 100%; height: 100%; min-height: 390px; object-fit: cover; object-position: center 44%; }.home-primary--light { margin-top: 28px; border-color: white; background: white; color: #09090b; }.home-primary--light:hover { background: #ececee; }
+@media (max-width: 1024px) { .home-hero { grid-template-columns: 1fr 1fr; }.goal-grid { grid-template-columns: repeat(2, 1fr); }.story-grid { grid-template-columns: repeat(2, 1fr); }.story-card:last-child { grid-column: 1 / -1; }.story-card:last-child .story-card__image img { object-position: center 52%; } }
+@media (max-width: 768px) { .home-hero { grid-template-columns: 1fr; padding-block: 42px; }.home-hero__visual, .home-hero__visual img { min-height: 350px; }.section-intro { align-items: flex-start; flex-direction: column; }.story-grid { grid-template-columns: 1fr; }.story-card:last-child { grid-column: auto; }.home-end { grid-template-columns: 1fr; }.home-end__image { height: 260px; min-height: 0; } }
+@media (max-width: 640px) { .home-hero h1 { font-size: 50px; }.home-hero__visual { border-radius: 28px; }.home-hero__visual, .home-hero__visual img { min-height: 310px; }.goal-grid { grid-template-columns: 1fr 1fr; gap: 10px; }.goal-card { min-height: 180px; padding: 18px; border-radius: 20px; }.goal-card strong { font-size: 20px; }.home-section { padding-block: 48px 16px; }.home-end { margin-top: 56px; border-radius: 24px; } }
 </style>

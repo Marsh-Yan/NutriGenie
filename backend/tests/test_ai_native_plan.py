@@ -139,3 +139,18 @@ def test_aggregator_creates_generated_keys_and_shopping_list():
     assert result["nutrition_report"]["avg_daily_calories"] == 603
     assert result["generation_meta"]["constraints_snapshot"]["diet_type"] == "balanced"
     assert result["generation_meta"]["nutrition_source"] == "ingredient_catalog_v1"
+
+
+def test_aggregator_reports_daily_macros_for_multi_day_plan():
+    plan = sample_plan()
+    plan.meals.extend([meal.model_copy(update={"day": 2}) for meal in list(plan.meals)])
+    validation = validate_plan(plan, constraints(), duration_days=2)
+    result = aggregate_generated_plan(plan, validation, duration_days=2, constraints=constraints())
+
+    report = result["nutrition_report"]
+    assert report["total_calories"] == 1206
+    assert report["avg_daily_calories"] == 603
+    assert report["protein_g"] == 108
+    assert report["fat_g"] == 9
+    assert report["carbs_g"] == 24
+    assert report["fiber_g"] == 6

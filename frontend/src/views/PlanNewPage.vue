@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'
 import { useProfileStore } from '@/stores/profile'
 import { useAuthStore } from '@/stores/auth'
+import planPhoto from '@/assets/editorial/avocado.jpg'
 import { useDashboardStore } from '@/stores/dashboard'
 import { usePantryStore } from '@/stores/pantry'
 import { usePlanIndexStore } from '@/stores/planIndex'
@@ -160,15 +161,17 @@ async function submit() {
     <div class="planning-workspace">
       <aside class="intro-panel" aria-labelledby="plan-new-title">
         <div class="intro-copy">
-          <span class="intro-kicker"><i aria-hidden="true" />AI 营养规划工作台</span>
+          <span class="intro-kicker"><i aria-hidden="true" />你的饮食规划</span>
           <h1 id="plan-new-title" class="intro-title">
-            把目标说清楚，<br />
-            <span>剩下的交给 AI。</span>
+            告诉我们，<br />
+            <span>你想怎样吃。</span>
           </h1>
           <p class="intro-desc">
             不需要学习复杂的营养术语。告诉我们你的目标、预算和忌口，AI 会把它们整理成一份真正能执行的饮食计划。
           </p>
         </div>
+
+        <img class="intro-photo" :src="planPhoto" alt="牛油果、鸡蛋和蔬菜餐盘" width="1400" height="2100" loading="lazy" />
 
         <ol class="workflow-list" aria-label="规划生成流程">
           <li>

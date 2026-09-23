@@ -1,0 +1,104 @@
+@use 'variables' as *;
+
+/* Shared visual language for dense product screens and public pages. */
+.app-shell { background: $color-background; }
+.app-shell :is(div, section, article, aside) { background-image: none !important; }
+.app-shell :is(.card, .panel-card, .form-card, .prompt-card, .summary-card, .overview-card, .dashboard-panel, .current-plan-card, .goal-card, .example-tag, .recipe-card, .stat-card) {
+  box-shadow: none !important;
+}
+.app-shell :is(.current-plan-card, .summary-card, .overview-card, .dashboard-panel, .form-card, .prompt-card) {
+  background: $color-surface !important;
+  background-image: none !important;
+  border-color: $color-border !important;
+}
+.app-shell :is(.form-card, .prompt-card, .overview-card, .dashboard-panel, .current-plan-card) {
+  border-radius: 36px !important;
+}
+.app-shell :is(.eyebrow, .page-heading__kicker, .intro-kicker, .panel-eyebrow, .story-eyebrow) {
+  color: $color-text-secondary;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.app-shell :is(.goal-card, .example-tag, .option-item, .story-preview, .snapshot-card) {
+  background-image: none !important;
+  box-shadow: none !important;
+}
+.app-shell :is(.goal-card, .example-tag, .option-item) {
+  border-color: $color-border;
+}
+.app-shell :is(.goal-card, .example-tag, .option-item):hover { border-color: $color-text-placeholder; }
+.app-shell :is(.el-button, .el-input__wrapper, .el-textarea__inner) { border-radius: 14px; }
+.app-shell .el-button--primary { box-shadow: none; }
+
+/* The former ornamental gradients do not carry product information. */
+.auth-page .auth-story {
+  background: linear-gradient(180deg, rgba(9,9,11,.16), rgba(9,9,11,.78)), url('../editorial/breakfast.jpg') center 55% / cover !important;
+  color: white;
+}
+.auth-page .auth-story::before, .auth-page .story-orb { display: none !important; }
+.auth-page .story-copy :is(h1, p, .story-eyebrow), .auth-page .benefit-list :is(strong, small, .benefit-mark) { color: white !important; }
+.auth-page .story-preview { display: none !important; }
+.auth-page .auth-shell { border: 1px solid $color-border; border-radius: 36px; box-shadow: none !important; }
+.auth-page .auth-panel { background: white !important; }
+.auth-page .auth-form .el-input__wrapper { background: white !important; }
+.auth-page .privacy-note span { color: $color-text-secondary; }
+
+.plan-new-page .intro-panel,
+.profile-page .profile-heading,
+.plan-result-page .loading-shell,
+.plan-result-page .overview-card,
+.demo-page .summary-card {
+  background: $color-surface !important;
+  background-image: none !important;
+  border: 1px solid $color-border;
+  box-shadow: none !important;
+}
+.plan-new-page .intro-panel::before,
+.plan-new-page .intro-panel::after,
+.profile-page .form-card::before,
+.plan-result-page .glow-one,
+.plan-result-page .glow-two,
+.demo-page .summary-card::after { display: none !important; }
+.plan-new-page .planning-workspace { gap: 24px; }
+.plan-new-page .intro-panel { border-radius: 36px; }
+.plan-new-page .intro-photo { width: 100%; max-height: 210px; margin-top: 28px; border-radius: 20px; object-fit: cover; object-position: center 66%; }
+.plan-new-page .workflow-list { margin-top: 24px; }
+.plan-new-page .intro-panel { min-height: 0; }
+.plan-new-page .prompt-card { border-radius: 36px; }
+.plan-new-page .intro-title,
+.profile-page .heading-copy h1,
+.plan-result-page .overview-heading h1 { letter-spacing: -.045em; }
+.plan-new-page .intro-title span { color: $color-text-primary; }
+.plan-new-page .intro-kicker i { box-shadow: none; }
+.plan-new-page .profile-readiness .readiness-dot { box-shadow: none; }
+.plan-result-page .overview-card { border-radius: 36px; }
+.plan-result-page .loading-panel,
+.plan-result-page .summary-card { background: white !important; background-image: none !important; box-shadow: none !important; }
+.plan-result-page .progress-panel { backdrop-filter: none; background: white; border-color: $color-border; }
+.plan-result-page .overview-grid div { backdrop-filter: none; background: #fafafa; border-color: $color-border; }
+.demo-page .demo-hero { background: white !important; background-image: none !important; border-color: $color-border; box-shadow: none !important; }
+.demo-page .demo-hero::after { display: none; }
+.demo-page .demo-hero-meta { background: #f4f4f5; border-color: $color-border; box-shadow: none; backdrop-filter: none; }
+.demo-page .overview-card { margin: 0 0 48px; padding: 0; gap: 12px; border: 0; background: transparent !important; }
+.demo-page .overview-item { background: white; border: 1px solid $color-border; border-radius: 20px; }
+.demo-page .overview-item::before { display: none; }
+.demo-page .summary-card { background: white !important; }
+.recipe-library .recipe-mark { background: #f4f4f5 !important; border: 1px solid $color-border; color: $color-text-primary; }
+.recipe-library .recipe-item { border-radius: 28px; }
+.recipe-library .filter-panel { border-radius: 28px; }
+.profile-page .form-card { background: white !important; }
+.profile-page .goal-card.is-checked { background: #f4f4f5 !important; }
+.profile-page .goal-icon, .plan-new-page .example-index { box-shadow: none !important; }
+.dashboard-page .current-plan-card { background: #18181b !important; border-color: #18181b !important; color: white; }
+.dashboard-page .current-plan-card > div > span { color: #d4d4d8 !important; }
+.dashboard-page .current-plan-card h2 { color: white !important; }
+.dashboard-page .current-plan-card p { color: #c4c4c8 !important; }
+.dashboard-page .current-plan-card .el-button { border-color: white; background: white; color: #09090b !important; white-space: nowrap; }
+.dashboard-page .current-plan-card .el-button span { color: inherit !important; }
+.dashboard-page .current-plan-card .el-button:hover { border-color: #f4f4f5; background: #f4f4f5; }
+
+@media (max-width: 768px) {
+  .app-shell :is(.form-card, .prompt-card, .overview-card, .dashboard-panel, .current-plan-card) { border-radius: 24px !important; }
+  .auth-page .auth-shell { border-radius: 28px; }
+  .auth-page .auth-story { min-height: 300px; }
+}
