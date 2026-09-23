@@ -61,3 +61,27 @@ def init_db():
                     "ALTER TABLE profiles ADD COLUMN activity_level VARCHAR(20) "
                     "NOT NULL DEFAULT 'moderate'"
                 ))
+
+    # create_all only creates absent tables; it never upgrades an existing one.
+    # Fail before accepting requests when application models outpace migrations.
+    from app.models.meal_plan import MealPlan
+
+    plan_columns = {column["name"] for column in inspect(engine).get_columns("meal_plans")}
+    required_columns = set(MealPlan.__table__.columns.keys())
+    missing = sorted(required_columns - plan_columns)
+    if missing:
+        raise RuntimeError(
+            "meal_plans 数据库结构落后，缺少列 "
+            + ", ".join(missing)
+            + "；请先执行 alembic upgrade head"
+        )
+    from app.models.plan_execution_event import PlanExecutionEvent
+
+    execution_columns = {column["name"] for column in inspect(engine).get_columns("plan_execution_events")}
+    missing_execution = sorted(set(PlanExecutionEvent.__table__.columns.keys()) - execution_columns)
+    if missing_execution:
+        raise RuntimeError(
+            "plan_execution_events 数据库结构落后，缺少列 "
+            + ", ".join(missing_execution)
+            + "；请先执行 alembic upgrade head"
+        )

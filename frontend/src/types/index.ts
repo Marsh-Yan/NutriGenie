@@ -397,6 +397,9 @@ export interface NutritionReport {
 
 export interface ShoppingList {
   total_cost: number
+  estimated_total_cost_is_lower_bound?: boolean
+  unknown_price_ingredients?: string[]
+  price_coverage_ratio?: number
   items: ShoppingItem[]
   by_category: Record<string, ShoppingCategoryItem[]>
 }

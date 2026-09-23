@@ -28,7 +28,7 @@ def replace_meal_in_snapshot(
 ) -> dict | None:
     if result.get("schema_version") != "ai_native_v2":
         return None
-    source_recipes = result.get("recipes") or []
+    source_recipes = (result.get("recipes") or []) + (result.get("replacement_pool") or [])
     source_days = result.get("weekly_plan") or []
     target_day = next((item for item in source_days if item.get("day") == day), None)
     current = (target_day or {}).get("meals", {}).get(slot)
@@ -134,6 +134,7 @@ def replace_meal_in_snapshot(
                 "max_recipe_repeat": quality.get("max_recipe_repeat", 0),
             },
             ingredient_catalog_version=meta.get("ingredient_catalog_version") or "",
+            existing_recipe_keys={i: key for i, key in enumerate(recipe_keys)},
         )
         return aggregated
     return None

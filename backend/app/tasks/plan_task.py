@@ -258,17 +258,18 @@ def _build_state(db: Session, run: MealPlanRun, plan: MealPlan) -> WorkflowState
     edit_message = message.content if base_version and message else None
     generation_meta = (base_version.result_json or {}).get("generation_meta", {}) if base_version else {}
     reuse_constraints = bool(base_version and edit_message and not _edit_changes_hard_constraints(edit_message))
-    snapshot_constraints = generation_meta.get("constraints_snapshot") if reuse_constraints else None
-    snapshot_intent = generation_meta.get("intent_snapshot") if reuse_constraints else None
-    user_input = plan.user_input or ""
-    if base_version and edit_message and not reuse_constraints:
-        user_input = f"{user_input}\n本次明确修改要求：{edit_message}"
+    snapshot_constraints = generation_meta.get("constraints_snapshot") if base_version else None
+    snapshot_intent = generation_meta.get("intent_snapshot") if base_version else None
+    # Parse only the newest edit. The previous effective requirements are
+    # carried by snapshots rather than reparsing old, potentially conflicting text.
+    user_input = edit_message if base_version and edit_message and not reuse_constraints else (plan.user_input or "")
+    base_days = len((base_version.result_json or {}).get("weekly_plan") or []) if base_version else 0
     ingredient_catalog = load_ingredient_catalog(db)
     return WorkflowState(
         profile_id=plan.profile_id,
         user_input=user_input,
-        duration_days=plan.duration_days or 7,
-        total_budget=float(plan.total_budget or 0),
+        duration_days=base_days or plan.duration_days or 7,
+        total_budget=float((snapshot_constraints or {}).get("total_budget") or plan.total_budget or 0),
         is_edit=bool(base_version),
         skip_intent=reuse_constraints,
         intent_analysis=snapshot_intent,
@@ -279,6 +280,7 @@ def _build_state(db: Session, run: MealPlanRun, plan: MealPlan) -> WorkflowState
         edit_action=message.action_json if base_version and message else None,
         ingredient_catalog=ingredient_catalog.model_dump(mode="json"),
         ingredient_catalog_version=ingredient_catalog.version,
+        rag_enabled=False,
     )
 
 
@@ -311,6 +313,8 @@ def _save_success(
     result = dict(final_state.get("aggregated_result") or {})
     if not result:
         raise RuntimeError("工作流未返回可保存的 AI 方案")
+    if run.base_version_id and plan.current_version_id != run.base_version_id:
+        raise RuntimeError("当前版本已变化，不能用旧版本生成结果覆盖新方案")
 
     previous = (
         db.query(MealPlanVersion)
@@ -336,8 +340,14 @@ def _save_success(
     result["version_no"] = version_no
     version.result_json = result
 
+    from app.services.execution_binding import reconcile_execution
+    reconcile_execution(db, plan_id=plan.plan_id, old_result=plan.result_json,
+                        old_version_id=plan.current_version_id, new_result=result)
+
     plan.current_version_id = version.version_id
     plan.result_json = result
+    plan.duration_days = int(final_state.get("duration_days") or plan.duration_days or 7)
+    plan.total_budget = float(final_state.get("total_budget") or 0)
     plan.status = "completed"
     plan.current_node = None
     plan.error_message = None

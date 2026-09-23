@@ -136,6 +136,51 @@ def test_execution_import_preserves_remote_slots(api):
     assert client.post(import_url, json=legacy).status_code == 404
 
 
+def test_restore_archives_execution_for_changed_recipe_only(api):
+    client, _, ids, session_factory = api
+    plan_id = ids[2]
+    with session_factory() as db:
+        plan = db.get(MealPlan, plan_id)
+        first_result = {"weekly_plan": [{"day": 1, "meals": {
+            "breakfast": {"recipe_key": "eggs", "name": "鸡蛋"},
+            "lunch": {"recipe_key": "rice", "name": "米饭"},
+        }}]}
+        second_result = {"weekly_plan": [{"day": 1, "meals": {
+            "breakfast": {"recipe_key": "oats", "name": "燕麦"},
+            "lunch": {"recipe_key": "rice", "name": "米饭"},
+        }}]}
+        first = MealPlanVersion(plan_id=plan_id, version_no=1, result_json=first_result)
+        second = MealPlanVersion(plan_id=plan_id, version_no=2, result_json=second_result)
+        db.add_all([first, second])
+        db.flush()
+        plan.current_version_id = first.version_id
+        plan.result_json = first_result
+        source_version_id = second.version_id
+        db.commit()
+
+    url = f"/api/v1/plans/{plan_id}/execution"
+    recorded = client.put(url, json={"events": [
+        {"day": 1, "meal_slot": "breakfast", "status": "completed"},
+        {"day": 1, "meal_slot": "lunch", "status": "completed"},
+    ]})
+    assert recorded.status_code == 200
+    assert {event["recipe_key"] for event in recorded.json()["events"]} == {"eggs", "rice"}
+
+    restored = client.post(f"/api/v1/plans/{plan_id}/versions/{source_version_id}/restore")
+    assert restored.status_code == 200, restored.text
+    current = client.get(url).json()["events"]
+    history = client.get(f"{url}/history").json()["events"]
+    assert [(item["meal_slot"], item["recipe_key"]) for item in current] == [("lunch", "rice")]
+    assert [(item["meal_slot"], item["recipe_key"], item["status"]) for item in history] == [
+        ("breakfast", "eggs", "completed")
+    ]
+    updated = client.put(url, json={"events": [
+        {"day": 1, "meal_slot": "breakfast", "status": "completed"},
+    ]})
+    assert updated.status_code == 200
+    assert {item["recipe_key"] for item in updated.json()["events"]} == {"oats", "rice"}
+
+
 def test_feedback_and_pantry_are_owned(api):
     client, current, ids, _ = api
     assert client.post("/api/v1/feedback", json={"plan_id": ids[2], "feedback_type": "too_slow", "rating": 2}).status_code == 201
@@ -243,6 +288,8 @@ def test_migration_upgrades_legacy_snapshot(tmp_path, monkeypatch):
     config.set_main_option("script_location", str(backend / "alembic"))
     command.upgrade(config, "head")
     assert {column["name"] for column in inspect(engine).get_columns("meal_plans")} >= {"title", "source_plan_id", "archived_at"}
+    assert {column["name"] for column in inspect(engine).get_columns("plan_execution_events")} >= {"version_id", "recipe_key"}
+    assert "plan_execution_archive" in inspect(engine).get_table_names()
     assert "pantry_items" in inspect(engine).get_table_names()
     with engine.connect() as connection:
         assert connection.execute(text("SELECT activity_level FROM profiles WHERE profile_id=1")).scalar_one() == "moderate"

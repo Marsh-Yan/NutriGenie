@@ -322,6 +322,7 @@ def normalize_generated_plan(plan: GeneratedPlan, catalog: IngredientCatalog) ->
             item.line_cost_estimate = cost
             item.resolution_source = resolution_source
             item.data_source = CATALOG_SOURCE
+            item.price_known = entry.unit_price > 0 or entry.name == "水"
             resolved_count += 1
             if entry.unit_price > 0:
                 price_covered_count += 1

@@ -5,6 +5,7 @@ __pycache__/
 backend/venv*/
 backend/data/chroma/
 backend/evaluation/reports/
+backend/.local-backups/
 *.sqlite
 *.sqlite3
 *.db

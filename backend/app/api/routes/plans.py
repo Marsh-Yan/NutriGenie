@@ -27,11 +27,12 @@ from app.models.meal_plan import MealPlan
 from app.models.meal_plan_message import MealPlanMessage
 from app.models.meal_plan_run import MealPlanRun
 from app.models.meal_plan_version import MealPlanVersion
-from app.models.plan_execution_event import PlanExecutionEvent
+from app.models.plan_execution_event import PlanExecutionArchive, PlanExecutionEvent
 from app.models.profile import Profile
 from app.models.user import User
 from app.services.security import get_current_user
 from app.services.meal_replacement import replace_meal_in_snapshot
+from app.services.execution_binding import meal_keys, reconcile_execution
 from app.tasks.plan_task import STEPS, enqueue_edit, enqueue_initial_plan, retry_latest_run
 
 router = APIRouter(tags=["plans"])
@@ -62,6 +63,11 @@ def api_create_plan(
     current_user: User = Depends(get_current_user),
 ):
     from app.services.profile_service import get_profile
+    from app.workflow.nodes.intent_analyzer import explicit_duration_days
+
+    requested_days = explicit_duration_days(data.user_input)
+    if requested_days is not None and not 1 <= requested_days <= 7:
+        raise HTTPException(status_code=422, detail="当前仅支持生成 1-7 天餐单")
 
     profile = get_profile(db, data.profile_id)
     if not profile or (current_user.role != "admin" and profile.user_id != current_user.user_id):
@@ -203,6 +209,7 @@ def api_clone_plan(
 
 
 def _execution_payload(db: Session, plan: MealPlan) -> dict:
+    current_keys = meal_keys(plan.result_json)
     events = db.query(PlanExecutionEvent).filter(PlanExecutionEvent.plan_id == plan.plan_id).order_by(
         PlanExecutionEvent.day, PlanExecutionEvent.meal_slot,
     ).all()
@@ -211,8 +218,28 @@ def _execution_payload(db: Session, plan: MealPlan) -> dict:
         "meal_slot": event.meal_slot,
         "status": event.status,
         "note": event.note,
+        "recipe_key": event.recipe_key or current_keys.get((event.day, event.meal_slot)),
+        "version_id": event.version_id,
         "updated_at": event.updated_at,
-    } for event in events]}
+    } for event in events if current_keys.get((event.day, event.meal_slot)) == (event.recipe_key or current_keys.get((event.day, event.meal_slot)))]}
+
+
+@router.get("/plans/{plan_id}/execution/history")
+def api_get_execution_history(
+    plan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    plan = _get_plan_or_404(db, plan_id, current_user)
+    archived = db.query(PlanExecutionArchive).filter(
+        PlanExecutionArchive.plan_id == plan.plan_id,
+    ).order_by(PlanExecutionArchive.archive_id.desc()).all()
+    return {"plan_id": plan_id, "events": [{
+        "day": event.day, "meal_slot": event.meal_slot,
+        "status": event.status, "note": event.note,
+        "recipe_key": event.recipe_key, "version_id": event.version_id,
+        "archived_at": event.archived_at,
+    } for event in archived]}
 
 
 @router.get("/plans/{plan_id}/execution")
@@ -240,6 +267,9 @@ def api_put_execution(
         if (event.day, event.meal_slot) not in available:
             raise HTTPException(status_code=422, detail=f"第 {event.day} 天 {event.meal_slot} 不在当前方案中")
     owner = db.get(Profile, plan.profile_id).user_id
+    current_keys = meal_keys(plan.result_json)
+    reconcile_execution(db, plan_id=plan_id, old_result=plan.result_json,
+                        old_version_id=plan.current_version_id, new_result=plan.result_json)
     for event in data.events:
         existing = db.query(PlanExecutionEvent).filter(
             PlanExecutionEvent.plan_id == plan_id,
@@ -249,10 +279,13 @@ def api_put_execution(
         if existing:
             existing.status = event.status
             existing.note = event.note
+            existing.recipe_key = current_keys[(event.day, event.meal_slot)]
+            existing.version_id = plan.current_version_id
         else:
             db.add(PlanExecutionEvent(
                 plan_id=plan_id, user_id=owner, day=event.day,
                 meal_slot=event.meal_slot, status=event.status, note=event.note,
+                recipe_key=current_keys[(event.day, event.meal_slot)], version_id=plan.current_version_id,
             ))
     try:
         db.commit()
@@ -283,11 +316,13 @@ def api_import_execution(
         ).with_for_update().all()
     }
     owner = db.get(Profile, plan.profile_id).user_id
+    current_keys = meal_keys(plan.result_json)
     for event in data.events:
         if (event.day, event.meal_slot) not in existing:
             db.add(PlanExecutionEvent(
                 plan_id=plan_id, user_id=owner, day=event.day,
                 meal_slot=event.meal_slot, status=event.status, note=event.note,
+                recipe_key=current_keys[(event.day, event.meal_slot)], version_id=plan.current_version_id,
             ))
     try:
         db.commit()
@@ -315,6 +350,14 @@ def api_replace_meal(
         raise HTTPException(status_code=409, detail="方案尚未完成，不能替换餐食")
     if db.query(MealPlanRun).filter(MealPlanRun.plan_id == plan_id, MealPlanRun.status.in_(("pending", "running"))).first():
         raise HTTPException(status_code=409, detail="当前方案正在生成，暂不能替换餐食")
+    executed = db.query(PlanExecutionEvent).filter(
+        PlanExecutionEvent.plan_id == plan_id,
+        PlanExecutionEvent.day == day,
+        PlanExecutionEvent.meal_slot == meal_slot,
+        PlanExecutionEvent.status == "completed",
+    ).first()
+    if executed:
+        raise HTTPException(status_code=409, detail="该餐已标记完成，不能把旧执行记录当作新菜谱")
     profile = db.get(Profile, plan.profile_id)
     result = replace_meal_in_snapshot(
         plan.result_json, day=day, slot=meal_slot, reason=data.reason,
@@ -340,6 +383,8 @@ def api_replace_meal(
     db.flush()
     result = {**result, "version_id": version.version_id, "version_no": version.version_no}
     version.result_json = result
+    reconcile_execution(db, plan_id=plan_id, old_result=plan.result_json,
+                        old_version_id=plan.current_version_id, new_result=result)
     plan.result_json = result
     plan.current_version_id = version.version_id
     db.commit()
@@ -563,7 +608,14 @@ def api_restore_plan_version(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    plan = _get_plan_or_404(db, plan_id, current_user)
+    plan = db.query(MealPlan).filter(MealPlan.plan_id == plan_id).with_for_update().first()
+    if not plan or not _can_access_plan(db, plan, current_user):
+        raise HTTPException(status_code=404, detail="规划任务不存在")
+    if db.query(MealPlanRun).filter(
+        MealPlanRun.plan_id == plan_id,
+        MealPlanRun.status.in_(("pending", "running")),
+    ).first():
+        raise HTTPException(status_code=409, detail="当前方案正在生成，暂不能恢复历史版本")
     source = db.query(MealPlanVersion).filter(MealPlanVersion.plan_id == plan.plan_id, MealPlanVersion.version_id == version_id).first()
     if not source:
         raise HTTPException(status_code=404, detail="方案版本不存在")
@@ -584,6 +636,8 @@ def api_restore_plan_version(
     result["version_id"] = version.version_id
     result["version_no"] = version.version_no
     version.result_json = result
+    reconcile_execution(db, plan_id=plan_id, old_result=plan.result_json,
+                        old_version_id=plan.current_version_id, new_result=result)
     plan.current_version_id = version.version_id
     plan.result_json = result
     plan.status = "completed"

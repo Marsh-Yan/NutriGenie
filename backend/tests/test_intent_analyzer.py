@@ -4,7 +4,10 @@ from app.workflow.nodes.intent_analyzer import (
     _apply_explicit_intent_overrides,
     _rule_based_parse,
     _sync_explicit_constraints_to_state,
+    _merge_edit_intent,
+    analyze_intent,
 )
+import asyncio
 from app.workflow.state import WorkflowState
 
 
@@ -45,6 +48,10 @@ class TestRuleBasedParse:
     def test_budget_no_mention(self):
         result = _rule_based_parse("我想减脂")
         assert result["total_budget"] == 0.0
+
+    def test_budget_without_currency_and_latest_edit(self):
+        assert _rule_based_parse("增肌三天，预算200，高蛋白饮食")["total_budget"] == 200
+        assert _rule_based_parse("预算300元，本次预算改为200元")["total_budget"] == 200
 
     def test_owned_ingredients(self):
         result = _rule_based_parse("家里有鸡蛋和番茄，预算200")
@@ -156,3 +163,27 @@ class TestStateCreation:
         )
         assert state.profile_id == 1
         assert state.total_budget == 300.0
+
+
+def test_reused_intent_snapshot_is_not_overwritten():
+    state = WorkflowState(
+        user_input="减脂一周，预算300元",
+        skip_intent=True,
+        intent_analysis={"health_goal": "muscle_gain", "meal_count_per_day": 3},
+    )
+    result = asyncio.run(analyze_intent(state))
+    assert result.intent_analysis["health_goal"] == "muscle_gain"
+
+
+def test_budget_edit_preserves_previous_goal_diet_and_allergy():
+    previous = {
+        "health_goal": "muscle_gain", "diet_type": "high_protein",
+        "allergies_or_concerns": "花生", "total_budget": 300,
+        "meal_count_per_day": 3,
+    }
+    parsed = _rule_based_parse("预算改为200元")
+    merged = _merge_edit_intent(previous, parsed, "预算改为200元")
+    assert merged["total_budget"] == 200
+    assert merged["health_goal"] == "muscle_gain"
+    assert merged["diet_type"] == "high_protein"
+    assert merged["allergies_or_concerns"] == "花生"

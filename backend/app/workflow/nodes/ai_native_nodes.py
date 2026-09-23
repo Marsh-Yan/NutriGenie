@@ -26,6 +26,13 @@ async def generation_context_node(state: WorkflowState) -> WorkflowState:
         state.generation_error = "缺少约束集，无法准备生成上下文"
         state.errors.append(state.generation_error)
         return state
+    if not state.rag_enabled:
+        state.generation_context = ""
+        state.generation_meta = {"enabled": False, "used": False, "sources": []}
+        catalog = catalog_from_state(state.ingredient_catalog)
+        state.ingredient_catalog = catalog.model_dump(mode="json")
+        state.ingredient_catalog_version = catalog.version
+        return state
     result = await retrieve_generation_context(
         user_input=state.user_input,
         intent=state.intent_analysis,

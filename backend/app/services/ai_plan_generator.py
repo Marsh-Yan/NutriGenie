@@ -179,6 +179,14 @@ def _creative_plan_payload(plan: GeneratedPlan) -> dict:
     }
 
 
+def _output_was_truncated(exc: Exception) -> bool:
+    return (
+        type(exc).__name__ == "LengthFinishReasonError"
+        or "length limit was reached" in str(exc).lower()
+        or "finish_reason=length" in str(exc).lower()
+    )
+
+
 async def _invoke_plan(prompt: str, *, temperature: float) -> GeneratedPlan:
     if not settings.LLM_API_KEY:
         raise PlanGenerationError("未配置 LLM_API_KEY，无法生成 AI 原生餐单")
@@ -205,6 +213,8 @@ async def _invoke_plan(prompt: str, *, temperature: float) -> GeneratedPlan:
         raise
     except Exception as exc:
         logger.exception("AI plan generation failed")
+        if _output_was_truncated(exc):
+            raise PlanGenerationError("LLM 输出达到长度上限，结构化餐单未完整返回") from exc
         raise PlanGenerationError(f"LLM 餐单生成失败: {str(exc)[:500]}") from exc
 
 
@@ -231,7 +241,26 @@ async def generate_plan(
         ingredient_catalog=ingredient_catalog,
         candidate_target=candidate_target,
     )
-    return await _invoke_plan(prompt, temperature=0.7)
+    try:
+        return await _invoke_plan(prompt, temperature=0.7)
+    except PlanGenerationError as exc:
+        if "输出达到长度上限" not in str(exc) or not candidate_target or candidate_target <= 8:
+            raise
+        # A shorter complete answer is safer than trying to parse truncated JSON.
+        reduced_target = max(8, int(candidate_target * 0.7))
+        logger.warning("Plan output truncated; retrying with %s candidates", reduced_target)
+        compact_prompt = _prompt_payload(
+            user_input=user_input,
+            constraints=constraints,
+            intent=intent,
+            context=context,
+            base_plan=base_plan,
+            edit_message=edit_message,
+            action=action,
+            ingredient_catalog=ingredient_catalog,
+            candidate_target=reduced_target,
+        )
+        return await _invoke_plan(compact_prompt, temperature=0.4)
 
 
 async def repair_plan(

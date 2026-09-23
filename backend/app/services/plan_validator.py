@@ -255,6 +255,23 @@ def validate_plan(
             _issue(issues, "missing_meal", f"第 {day} 天缺少 {slot}。", "error", f"meals.day_{day}")
 
     usage = Counter(valid_sequence)
+    for recipe_index in usage:
+        recipe = recipes[recipe_index]
+        for ingredient in recipe.ingredients:
+            name = ingredient.catalog_name or ingredient.name
+            quantity = float(ingredient.quantity)
+            unit = ingredient.unit
+            concern = None
+            if unit == "个" and "鸡蛋" in name and abs(quantity - round(quantity)) > 0.05:
+                concern = f"鸡蛋 {quantity:g} 个不是便于操作的整数份量"
+            elif unit == "g" and any(token in name for token in ("鸡胸肉", "鸡腿肉", "猪里脊", "牛肉", "鱼肉")) and quantity > 250:
+                concern = f"{name} {quantity:g}g 的单餐用量较大"
+            elif unit == "g" and any(token in name for token in ("食用油", "植物油", "橄榄油")) and quantity > 25:
+                concern = f"{name} {quantity:g}g 的单餐用量较大"
+            if concern:
+                message = f"菜品「{recipe.name}」的{concern}，请复核食材和步骤。"
+                _issue(issues, "portion_practicality", message, "warning", f"recipes[{recipe_index}].ingredients")
+                warnings.append(message)
     max_repeat = max(usage.values(), default=0)
     if enforce_diversity and max_repeat > settings.PLAN_MAX_RECIPE_REPEAT:
         _issue(
@@ -284,6 +301,17 @@ def validate_plan(
     calorie_max = float(constraints.get("calorie_max") or 0)
     calorie_target = (calorie_min + calorie_max) / 2 if calorie_min and calorie_max else max(calorie_min, calorie_max, 0)
     calorie_deviation = abs(avg_calories - calorie_target) / calorie_target if calorie_target else 0
+    high_calorie_deviation_days: list[int] = []
+    if calorie_target and meal_count == 3:
+        for day_number, daily in enumerate(days_present, start=1):
+            deviation = abs(daily.calories - calorie_target) / calorie_target
+            if deviation > settings.PLAN_CALORIE_TOLERANCE:
+                high_calorie_deviation_days.append(day_number)
+                message = f"第 {day_number} 天热量 {daily.calories:.0f}kcal 偏离每日目标 {calorie_target:.0f}kcal 达 {deviation:.0%}。"
+                severity = "error" if enforce_quality_targets else "warning"
+                _issue(issues, "daily_calorie_target_deviation", message, severity, f"days[{day_number}]")
+                if severity == "warning":
+                    warnings.append(message)
     if calorie_target and calorie_deviation > settings.PLAN_CALORIE_TOLERANCE:
         message = f"日均热量 {avg_calories:.0f}kcal 偏离目标 {calorie_target:.0f}kcal 达 {calorie_deviation:.0%}。"
         severity = "error" if enforce_quality_targets else "warning"
@@ -292,6 +320,19 @@ def validate_plan(
             warnings.append(message)
 
     target_protein = float(constraints.get("target_protein") or 0)
+    low_protein_days: list[int] = []
+    if target_protein and meal_count == 3:
+        for day_number, daily in enumerate(days_present, start=1):
+            if daily.protein_g < target_protein * 0.85:
+                low_protein_days.append(day_number)
+                message = (
+                    f"第 {day_number} 天蛋白质 {daily.protein_g:.1f}g，"
+                    f"低于每日目标 {target_protein:.1f}g 的 85%。"
+                )
+                severity = "error" if enforce_quality_targets else "warning"
+                _issue(issues, "daily_protein_target_deviation", message, severity, f"days[{day_number}]")
+                if severity == "warning":
+                    warnings.append(message)
     if target_protein and avg_protein < target_protein * 0.85:
         warning = f"日均蛋白质 {avg_protein:.1f}g 低于目标 {target_protein:.1f}g。"
         warnings.append(warning)
@@ -318,6 +359,8 @@ def validate_plan(
             "estimated_plan_cost": round(plan_cost, 2),
             "target_calorie_range": [round(calorie_min, 1), round(calorie_max, 1)],
             "total_budget": round(total_budget, 2),
+            "low_protein_days": low_protein_days,
+            "high_calorie_deviation_days": high_calorie_deviation_days,
             "quality_metrics": {
                 "meal_count": len(valid_sequence),
                 "unique_recipe_count": unique_count,

@@ -6,6 +6,7 @@ from collections import defaultdict
 from typing import Any
 from uuid import uuid4
 
+from app.config import settings
 from app.services.ai_plan_models import GeneratedPlan, NutritionEstimate, PlanValidationResult
 from app.services.plan_validator import canonical_recipe_cost, canonical_recipe_nutrition
 
@@ -60,23 +61,23 @@ def aggregate_generated_plan(
     normalization_meta: dict | None = None,
     optimization_meta: dict | None = None,
     ingredient_catalog_version: str = "",
+    existing_recipe_keys: dict[int, str] | None = None,
 ) -> dict:
     draft_id = uuid4().hex[:8]
-    recipes: list[dict] = []
+    all_recipes: list[dict] = []
     recipe_keys: dict[int, str] = {}
-    used_recipe_indexes = sorted({meal.recipe_index for meal in plan.meals})
+    used_recipe_indexes = sorted({
+        meal.recipe_index for meal in plan.meals if 0 <= meal.recipe_index < len(plan.recipes)
+    })
 
-    for index in used_recipe_indexes:
-        if index < 0 or index >= len(plan.recipes):
-            continue
-        recipe = plan.recipes[index]
-        recipe_key = f"generated-{draft_id}-{index + 1}"
+    for index, recipe in enumerate(plan.recipes):
+        recipe_key = (existing_recipe_keys or {}).get(index) or f"generated-{draft_id}-{index + 1}"
         recipe_keys[index] = recipe_key
         canonical_nutrition = canonical_recipe_nutrition(recipe)
         canonical_cost = canonical_recipe_cost(recipe)
         declared_nutrition = recipe.declared_nutrition_estimate or recipe.nutrition_estimate or canonical_nutrition
         declared_cost = recipe.declared_cost_estimate
-        recipes.append(
+        all_recipes.append(
             {
                 "recipe_key": recipe_key,
                 "source": "ai_generated",
@@ -102,6 +103,7 @@ def aggregate_generated_plan(
                         "line_cost_estimate": round(item.line_cost_estimate or 0, 2),
                         "resolution_source": item.resolution_source,
                         "data_source": item.data_source or "llm_estimate",
+                        "price_known": item.price_known,
                     }
                     for item in recipe.ingredients
                 ],
@@ -117,7 +119,11 @@ def aggregate_generated_plan(
             }
         )
 
-    recipe_lookup = {key: item for key, item in zip(recipe_keys.values(), recipes)}
+    recipes = [all_recipes[index] for index in used_recipe_indexes]
+    replacement_pool = [
+        item for index, item in enumerate(all_recipes) if index not in used_recipe_indexes
+    ]
+    recipe_lookup = {item["recipe_key"]: item for item in all_recipes}
     weekly_plan: list[dict] = []
     shopping: dict[str, dict] = {}
     daily_totals: dict[int, NutritionEstimate] = defaultdict(
@@ -166,12 +172,19 @@ def aggregate_generated_plan(
                         "quantity": 0.0,
                         "unit": ingredient["unit"],
                         "estimated_cost": 0.0,
+                        "price_known": True,
+                        "price_line_count": 0,
+                        "known_price_line_count": 0,
                         "for_recipes": [],
                         "category": _category_for(ingredient["name"]),
                     },
                 )
                 item["quantity"] += float(ingredient["quantity"]) * meal.servings
                 item["estimated_cost"] += float(ingredient["line_cost_estimate"]) * meal.servings
+                known_price = ingredient.get("price_known") is True
+                item["price_known"] = item["price_known"] and known_price
+                item["price_line_count"] += 1
+                item["known_price_line_count"] += int(known_price)
                 reference = {"recipe_key": recipe_key, "name": recipe["name"]}
                 if reference not in item["for_recipes"]:
                     item["for_recipes"].append(reference)
@@ -227,19 +240,52 @@ def aggregate_generated_plan(
             "营养和预算已由标准食材目录重新核算。",
         ] if part
     )
+    unknown_price_names = sorted({
+        item["name"] for item in shopping_items if not item["price_known"]
+    })
+    price_line_count = sum(item["price_line_count"] for item in shopping_items)
+    price_coverage_ratio = (
+        round(sum(item["known_price_line_count"] for item in shopping_items) / price_line_count, 3)
+        if price_line_count else 1.0
+    )
+    unknown_plan_price_names = sorted({
+        ingredient["name"] for recipe in recipes for ingredient in recipe["ingredients"]
+        if ingredient.get("price_known") is not True
+    })
+    budget_limit = float((constraints or {}).get("total_budget") or 0)
+    known_plan_cost = float(validation.derived.get("estimated_plan_cost") or 0)
+    if budget_limit <= 0:
+        budget_assessment = "not_set"
+    elif known_plan_cost > budget_limit * (1 + settings.PLAN_BUDGET_TOLERANCE):
+        budget_assessment = "over_budget"
+    elif unknown_plan_price_names:
+        budget_assessment = "indeterminate"
+    else:
+        budget_assessment = "within_budget"
+    if unknown_price_names:
+        warnings.append("部分食材缺少价格，采购金额仅为已知费用下界，不能据此确认预算达标。")
+    if budget_assessment == "indeterminate" and not unknown_price_names:
+        warnings.append("计划使用的部分食材缺少价格，无法确认总预算是否达标。")
     result = {
         "schema_version": "ai_native_v2",
         "recipes": recipes,
+        "replacement_pool": replacement_pool,
         "weekly_plan": weekly_plan,
         "nutrition_report": nutrition_report,
         "shopping_list": {
             "total_cost": round(sum(item["estimated_cost"] for item in shopping_items), 2),
+            "estimated_total_cost_is_lower_bound": bool(unknown_price_names),
+            "unknown_price_ingredients": unknown_price_names,
+            "price_coverage_ratio": price_coverage_ratio,
             "items": shopping_items,
             "by_category": dict(by_category),
         },
         "validation": {
             **validation.model_dump(mode="json"),
+            "status": "warning" if warnings and validation.passed else validation.status,
             "warnings": warnings,
+            "budget_assessment": budget_assessment,
+            "unknown_price_ingredients": unknown_plan_price_names,
         },
         "generation_meta": {
             "strategy": "ai_native_v2",
@@ -251,6 +297,8 @@ def aggregate_generated_plan(
             "estimate_source": "ingredient_catalog_v1",
             "nutrition_source": "ingredient_catalog_v1",
             "cost_source": "ingredient_catalog_v1",
+            "price_coverage_ratio": price_coverage_ratio,
+            "budget_assessment": budget_assessment,
             "ingredient_catalog_version": ingredient_catalog_version,
             "candidate_count": len(plan.recipes),
             "unique_recipe_count": (optimization_meta or {}).get("unique_recipe_count", 0),

@@ -18,6 +18,35 @@ from app.workflow.state import WorkflowState
 
 logger = logging.getLogger(__name__)
 
+BUDGET_PATTERN = re.compile(
+    r"(?:总)?预算\s*(?:(?:改为|调整为|降至|降到|降低至|提高到|约|大概)\s*)?"
+    r"(\d+(?:\.\d+)?)\s*(?:元|块)?"
+)
+
+
+def explicit_budget(text: str) -> float | None:
+    """Return the latest stated budget, including amounts without a currency suffix."""
+    matches = list(BUDGET_PATTERN.finditer(text or ""))
+    return float(matches[-1].group(1)) if matches else None
+
+
+def explicit_duration_days(text: str) -> int | None:
+    matches = list(re.finditer(r"(\d+|[一二两三四五六七八九十]+)\s*(天|周|个月)", text or ""))
+    if not matches:
+        return None
+    amount, unit = matches[-1].groups()
+    numbers = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
+               "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+    if amount.isdigit():
+        days = int(amount)
+    elif amount.startswith("十") and len(amount) == 2:
+        days = 10 + numbers[amount[1]]
+    elif "十" in amount and len(amount) == 3:
+        days = numbers[amount[0]] * 10 + numbers[amount[2]]
+    else:
+        days = numbers.get(amount, 0)
+    return days * {"天": 1, "周": 7, "个月": 30}[unit]
+
 # ─── 结构化输出 Schema ───────────────────────────
 
 
@@ -75,11 +104,9 @@ def _rule_based_parse(user_input: str) -> dict:
 
     # 天数（系统单次规划上限 30 天）
     duration_days = 7
-    day_match = re.search(r"(\d+)\s*天", text)
-    if day_match:
-        duration_days = min(int(day_match.group(1)), 30)
-    elif week_match := re.search(r"(\d+)\s*周", text):
-        duration_days = min(int(week_match.group(1)) * 7, 30)
+    requested_days = explicit_duration_days(text)
+    if requested_days is not None:
+        duration_days = min(requested_days, 30)
     else:
         # 中文数字匹配
         cn_num_map = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
@@ -97,9 +124,9 @@ def _rule_based_parse(user_input: str) -> dict:
 
     # 预算
     total_budget = 0.0
-    budget_match = re.search(r"预算\s*[约大概]?\s*(\d+(?:\.\d+)?)\s*元", text)
-    if budget_match:
-        total_budget = float(budget_match.group(1))
+    explicit_amount = explicit_budget(text)
+    if explicit_amount is not None:
+        total_budget = explicit_amount
 
     # 已有食材
     owned_ingredients = []
@@ -168,9 +195,9 @@ def _apply_explicit_intent_overrides(user_input: str, llm_intent: dict) -> dict:
         merged["health_goal"] = rule_intent["health_goal"]
     if rule_intent["diet_type"] != "balanced":
         merged["diet_type"] = rule_intent["diet_type"]
-    if re.search(r"(?:\d+|[一二两三四五六七八九十])\s*(?:天|周|个月)", user_input):
+    if explicit_duration_days(user_input) is not None:
         merged["duration_days"] = rule_intent["duration_days"]
-    if re.search(r"预算\s*[约大概]?\s*\d", user_input):
+    if explicit_budget(user_input) is not None:
         merged["total_budget"] = rule_intent["total_budget"]
     if rule_intent.get("allergies_or_concerns"):
         merged["allergies_or_concerns"] = rule_intent["allergies_or_concerns"]
@@ -179,13 +206,39 @@ def _apply_explicit_intent_overrides(user_input: str, llm_intent: dict) -> dict:
     return merged
 
 
+def _merge_edit_intent(previous: dict, parsed: dict, edit_text: str) -> dict:
+    """Apply only fields explicitly changed by the newest edit."""
+    merged = dict(previous)
+    lowered = edit_text.lower()
+    if any(token in lowered for token in ("减脂", "减肥", "增肌", "控糖", "健康目标", "fat_loss", "muscle_gain")):
+        merged["health_goal"] = parsed.get("health_goal", merged.get("health_goal"))
+    if any(token in lowered for token in ("生酮", "高蛋白", "无麸质", "素食", "纯素", "均衡饮食", "keto", "vegan")):
+        merged["diet_type"] = parsed.get("diet_type", merged.get("diet_type"))
+    if explicit_duration_days(edit_text) is not None:
+        merged["duration_days"] = parsed.get("duration_days", merged.get("duration_days"))
+    if explicit_budget(edit_text) is not None:
+        merged["total_budget"] = parsed.get("total_budget", merged.get("total_budget"))
+    if any(token in edit_text for token in ("过敏", "忌口", "不吃", "不能吃")):
+        concern = str(parsed.get("allergies_or_concerns") or "").strip()
+        prior = str(previous.get("allergies_or_concerns") or "").strip()
+        if concern and concern not in prior:
+            merged["allergies_or_concerns"] = "、".join(filter(None, (prior, concern)))
+    if re.search(r"(?:每天|每日|只吃|一天)?\s*[123一二两三]\s*(?:餐|顿)", edit_text):
+        merged["meal_count_per_day"] = parsed.get("meal_count_per_day", merged.get("meal_count_per_day"))
+    if parsed.get("owned_ingredients") and any(token in edit_text for token in ("已有", "家里有", "现有")):
+        merged["owned_ingredients"] = list(dict.fromkeys(
+            list(previous.get("owned_ingredients") or []) + list(parsed["owned_ingredients"])
+        ))
+    return merged
+
+
 def _sync_explicit_constraints_to_state(
     state: WorkflowState, intent_data: dict
 ) -> None:
     """Make explicit natural-language constraints authoritative over defaults."""
-    if re.search(r"(?:\d+|[一二两三四五六七八九十])\s*(?:天|周|个月)", state.user_input):
+    if explicit_duration_days(state.user_input) is not None:
         state.duration_days = max(1, min(int(intent_data.get("duration_days", state.duration_days)), 30))
-    if re.search(r"预算\s*[约大概]?\s*\d", state.user_input):
+    if explicit_budget(state.user_input) is not None:
         state.total_budget = max(0.0, float(intent_data.get("total_budget", state.total_budget) or 0))
 
 
@@ -197,6 +250,9 @@ async def analyze_intent(state: WorkflowState) -> WorkflowState:
     2. 规则解析（降级）
     """
     state.current_node = "intent_analyzer"
+
+    if state.skip_intent and state.intent_analysis:
+        return state
 
     if not state.user_input:
         state.intent_error = "用户输入为空"
@@ -232,6 +288,8 @@ async def analyze_intent(state: WorkflowState) -> WorkflowState:
                 intent_data = _apply_explicit_intent_overrides(
                     state.user_input, intent_data
                 )
+                if state.is_edit and state.intent_analysis:
+                    intent_data = _merge_edit_intent(state.intent_analysis, intent_data, state.user_input)
                 state.intent_analysis = intent_data
                 _sync_explicit_constraints_to_state(state, intent_data)
                 state.intent_explanation = _generate_intent_explanation(intent_data)
@@ -244,6 +302,8 @@ async def analyze_intent(state: WorkflowState) -> WorkflowState:
 
     # ── 降级：规则解析 ──
     intent_data = _rule_based_parse(state.user_input)
+    if state.is_edit and state.intent_analysis:
+        intent_data = _merge_edit_intent(state.intent_analysis, intent_data, state.user_input)
     state.intent_analysis = intent_data
     _sync_explicit_constraints_to_state(state, intent_data)
     state.intent_explanation = _generate_intent_explanation(intent_data) + "（基于规则解析）"
