@@ -20,6 +20,7 @@ class IngredientItem(BaseModel):
     category: str
     unit: str
     unit_price: float
+    price_reference: Optional[dict] = None
     season_tags: Optional[List[str]] = None
     nutrition_per_100g: Optional[NutritionPer100g] = None
 

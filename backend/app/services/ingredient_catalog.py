@@ -91,6 +91,7 @@ class CatalogIngredient(BaseModel):
     category: str
     unit: str
     unit_price: float = 0
+    price_reference: dict | None = None
     calories_per_100g: float = 0
     protein_per_100g: float = 0
     fat_per_100g: float = 0
@@ -165,6 +166,7 @@ def load_seed_catalog() -> IngredientCatalog:
                 category=item.get("category", "other"),
                 unit=item.get("unit", "g"),
                 unit_price=float(item.get("unit_price") or 0),
+                price_reference=item.get("price_reference"),
                 calories_per_100g=float(fact.get("calories_per_100g") or 0),
                 protein_per_100g=float(fact.get("protein_per_100g") or 0),
                 fat_per_100g=float(fact.get("fat_per_100g") or 0),
@@ -196,6 +198,7 @@ def load_ingredient_catalog(db: Session, *, fallback_to_seed: bool = True) -> In
                 category=ingredient.category or "other",
                 unit=ingredient.unit or "g",
                 unit_price=float(ingredient.unit_price or 0),
+                price_reference=ingredient.price_reference,
                 calories_per_100g=float(nutrition.calories_per_100g or 0) if nutrition else 0,
                 protein_per_100g=float(nutrition.protein_per_100g or 0) if nutrition else 0,
                 fat_per_100g=float(nutrition.fat_per_100g or 0) if nutrition else 0,
@@ -323,6 +326,12 @@ def normalize_generated_plan(plan: GeneratedPlan, catalog: IngredientCatalog) ->
             item.resolution_source = resolution_source
             item.data_source = CATALOG_SOURCE
             item.price_known = entry.unit_price > 0 or entry.name == "水"
+            if entry.price_reference and entry.price_reference.get("status") == "estimated":
+                issues.append(NormalizationIssue(
+                    code="price_estimated", message=f"食材「{entry.name}」使用预算估算价，非当前门店实价。",
+                    severity="warning", recipe_index=recipe_index,
+                    ingredient_index=ingredient_index, ingredient_name=entry.name,
+                ))
             resolved_count += 1
             if entry.unit_price > 0:
                 price_covered_count += 1

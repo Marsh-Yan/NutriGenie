@@ -45,6 +45,7 @@ def admin_api():
             unit="g",
             unit_price=0.04,
             storage_days=5,
+            price_reference={"status": "estimated", "estimated_on": "2026-11-01"},
         )
         db.add_all([admin, member, ingredient])
         db.flush()
@@ -122,6 +123,19 @@ def ingredient_payload(name="燕麦"):
             "fiber": 10.1,
         },
     }
+
+
+def test_price_provenance_is_returned_and_invalidated_on_manual_change(admin_api):
+    client, _, ids = admin_api
+    response = client.get("/api/v1/ingredients")
+    assert response.status_code == 200
+    item = next(i for i in response.json()["items"] if i["ingredient_id"] == ids["ingredient"])
+    assert item["price_reference"]["status"] == "estimated"
+    payload = ingredient_payload("番茄")
+    payload["unit_price"] = 0.08
+    updated = client.put(f"/api/v1/admin/ingredients/{ids['ingredient']}", json=payload)
+    assert updated.status_code == 200
+    assert updated.json()["price_reference"] is None
 
 
 def recipe_payload(ingredient_id, name="烤燕麦杯"):

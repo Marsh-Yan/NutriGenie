@@ -17,6 +17,7 @@ class Ingredient(Base):
     )
     unit = Column(String(20), nullable=False, default="g", comment="计量单位")
     unit_price = Column(DECIMAL(8, 2), default=0, comment="每单位价格（元）")
+    price_reference = Column(JSON, nullable=True, comment="价格口径、来源及估算标记")
     season_tags = Column(
         JSON, default=None, comment='["春季","夏季"] 或 null(全年)'
     )

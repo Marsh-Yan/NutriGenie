@@ -37,6 +37,7 @@ def _ingredient_payload(ingredient: Ingredient, nutrition: IngredientNutrition |
         "category": ingredient.category, "unit": ingredient.unit,
         "unit_price": float(ingredient.unit_price), "season_tags": ingredient.season_tags,
         "storage_days": ingredient.storage_days,
+        "price_reference": ingredient.price_reference,
         "nutrition": {
             "calories": float(nutrition.calories_per_100g) if nutrition else 0,
             "protein": float(nutrition.protein_per_100g) if nutrition else 0,
@@ -48,6 +49,10 @@ def _ingredient_payload(ingredient: Ingredient, nutrition: IngredientNutrition |
 
 
 def _save_ingredient(db: Session, ingredient: Ingredient, data: IngredientWrite) -> Ingredient:
+    if (ingredient.name != data.name or ingredient.unit != data.unit
+            or float(ingredient.unit_price) != data.unit_price):
+        # A manual price/unit/name change invalidates old source claims.
+        ingredient.price_reference = None
     ingredient.name = data.name
     ingredient.category = data.category
     ingredient.unit = data.unit

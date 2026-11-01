@@ -58,6 +58,14 @@ def test_alias_is_resolved_and_facts_are_recalculated():
     assert result.plan.recipes[0].nutrition_estimate.calories == 36
 
 
+def test_budget_estimates_retain_provenance_and_warn():
+    catalog = _catalog()
+    catalog.entries[0].price_reference = {"status": "estimated", "estimated_on": "2026-11-01"}
+    result = normalize_generated_plan(_plan(), catalog)
+    assert result.plan.recipes[0].ingredients[0].line_cost_estimate == 3.33
+    assert any(issue.code == "price_estimated" and issue.severity == "warning" for issue in result.issues)
+
+
 def test_unknown_ingredient_is_a_hard_normalization_issue():
     result = normalize_generated_plan(_plan(name="火星蔬菜"), _catalog())
 

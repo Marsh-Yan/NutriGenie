@@ -27,6 +27,7 @@ def api_get_ingredients(
                 category=i["category"],
                 unit=i["unit"],
                 unit_price=i["unit_price"],
+                price_reference=i.get("price_reference"),
                 season_tags=i["season_tags"],
                 nutrition_per_100g=NutritionPer100g(**i["nutrition_per_100g"])
                 if i.get("nutrition_per_100g")

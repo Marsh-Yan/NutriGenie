@@ -42,6 +42,7 @@ def get_ingredients(
                 "category": ing.category,
                 "unit": ing.unit,
                 "unit_price": float(ing.unit_price),
+                "price_reference": ing.price_reference,
                 "season_tags": ing.season_tags,
                 "nutrition_per_100g": {
                     "calories": float(nut.calories_per_100g) if nut else 0,
