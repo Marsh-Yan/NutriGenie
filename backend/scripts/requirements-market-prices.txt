@@ -1,0 +1,2 @@
+# Offline maintenance only; not needed by the application server.
+xlrd==2.0.1
